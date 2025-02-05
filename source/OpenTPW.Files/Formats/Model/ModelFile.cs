@@ -1,14 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Numerics;
+﻿using System.Numerics;
 using System.Text;
 
 namespace OpenTPW;
 
 public partial class ModelFile : BaseFormat
 {
-	public List<Mesh> Meshes { get; private set; }
+	public List<MeshData> MeshDataList { get; private set; }
 
 	public ModelFile( Stream stream )
 	{
@@ -20,13 +17,13 @@ public partial class ModelFile : BaseFormat
 		ReadFromFile( path );
 	}
 
-	public struct Vertex
+	public struct VertexData
 	{
 		public Vector3 Position { get; set; }
 		public uint TextureIndex { get; set; }
 	}
 
-	public class Mesh
+	public class MeshData
 	{
 		public string Name { get; set; }
 		public uint VertexOffset { get; set; }
@@ -38,7 +35,7 @@ public partial class ModelFile : BaseFormat
 		public uint VertexCount { get; set; }
 		public uint VertexOrderLen { get; set; }
 		public uint VertexOrderOffset { get; set; }
-		public Vertex[] Vertices { get; set; }
+		public VertexData[] Vertices { get; set; }
 		public uint[] Indices { get; set; }
 		public Vector2[] TexCoords { get; set; }
 		public Matrix4x4 TransformMatrix { get; set; }
@@ -116,7 +113,7 @@ public partial class ModelFile : BaseFormat
 
 			reader.BaseStream.Seek( meshPtr, SeekOrigin.Begin );
 
-			Meshes = new List<Mesh>( meshCnt );
+			MeshDataList = new List<MeshData>( meshCnt );
 
 			for ( int meshIdx = 0; meshIdx < meshCnt; meshIdx++ )
 			{
@@ -185,6 +182,10 @@ public partial class ModelFile : BaseFormat
 				{
 					// start at texIdOffset, divide by 8 to get index
 					uint frameId = (material.FrameOffset - textureListOffset) / 8;
+
+					if ( frameId > frameData.Count )
+						continue;
+
 					var frame = frameData[(int)frameId];
 
 					reader.BaseStream.Seek( frame.FrameNameOff, SeekOrigin.Begin );
@@ -197,7 +198,7 @@ public partial class ModelFile : BaseFormat
 					material.Flags = reader.ReadUInt32();
 				}
 
-				Meshes.Add( new Mesh
+				MeshDataList.Add( new MeshData
 				{
 					Name = name,
 					VertCnt = materialCount,
@@ -215,10 +216,10 @@ public partial class ModelFile : BaseFormat
 			}
 
 			// Process mesh data
-			for ( int meshIdx = 0; meshIdx < Meshes.Count; meshIdx++ )
+			for ( int meshIdx = 0; meshIdx < MeshDataList.Count; meshIdx++ )
 			{
-				Mesh mesh = Meshes[meshIdx];
-				uint meshPosEnd = (meshIdx + 1 < Meshes.Count) ? Meshes[meshIdx + 1].VertexOffset : Meshes[0].MaterialOffset;
+				MeshData mesh = MeshDataList[meshIdx];
+				uint meshPosEnd = (meshIdx + 1 < MeshDataList.Count) ? MeshDataList[meshIdx + 1].VertexOffset : MeshDataList[0].MaterialOffset;
 				uint cnt = (meshPosEnd - mesh.VertexOffset) / (3 * 4 * 4);
 
 				reader.BaseStream.Seek( mesh.UvOffset, SeekOrigin.Begin );
@@ -279,7 +280,7 @@ public partial class ModelFile : BaseFormat
 				}
 
 				// Re-order vertices
-				Vertex[] reorderedVertices = new Vertex[vertexOrder.Length];
+				VertexData[] reorderedVertices = new VertexData[vertexOrder.Length];
 				for ( int i = 0; i < vertexOrder.Length; i++ )
 				{
 					int textureIndex = 0;
@@ -292,7 +293,7 @@ public partial class ModelFile : BaseFormat
 						}
 					}
 
-					var vertex = new Vertex()
+					var vertex = new VertexData()
 					{
 						Position = vertices[vertexOrder[i]],
 						TextureIndex = (uint)textureIndex
@@ -327,17 +328,10 @@ public partial class ModelFile : BaseFormat
 		}
 	}
 
-	private void CalculateNormals( Mesh mesh )
+	private void CalculateNormals( MeshData mesh )
 	{
 		Vector3[] normals = new Vector3[mesh.Vertices.Length];
 
-		// Initialize all normals to zero
-		for ( int i = 0; i < normals.Length; i++ )
-		{
-			normals[i] = Vector3.Zero;
-		}
-
-		// Calculate face normals and accumulate them for each vertex
 		for ( int i = 0; i < mesh.Indices.Length; i += 3 )
 		{
 			uint i1 = mesh.Indices[i];
@@ -352,19 +346,23 @@ public partial class ModelFile : BaseFormat
 			Vector3 edge2 = v3 - v1;
 
 			Vector3 faceNormal = Vector3.Cross( edge1, edge2 );
-			faceNormal = faceNormal.Normal; // Ensure face normal is unit length
+			if ( faceNormal.LengthSquared > 0 )
+			{
+				faceNormal = faceNormal.Normal;
 
-			// Accumulate the face normal to all three vertices
-			normals[i1] += faceNormal;
-			normals[i2] += faceNormal;
-			normals[i3] += faceNormal;
+				normals[i1] += faceNormal;
+				normals[i2] += faceNormal;
+				normals[i3] += faceNormal;
+			}
 		}
 
-		// Normalize all vertex normals to average them
+		// Normalize all accumulated normals
 		for ( int i = 0; i < normals.Length; i++ )
 		{
 			if ( normals[i] != Vector3.Zero )
+			{
 				normals[i] = normals[i].Normal;
+			}
 		}
 
 		mesh.Normals = normals;

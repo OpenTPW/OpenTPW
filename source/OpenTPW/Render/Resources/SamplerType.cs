@@ -7,5 +7,7 @@ public enum SamplerType
 	Point,
 
 	AnisotropicWrap,
-	AnisotropicRepeat
+	AnisotropicRepeat,
+
+	Default = AnisotropicWrap
 }

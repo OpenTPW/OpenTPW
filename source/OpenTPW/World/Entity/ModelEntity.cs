@@ -1,42 +1,38 @@
-﻿using Veldrid;
+﻿namespace OpenTPW;
 
-namespace OpenTPW;
-
-public partial class ModelEntity : Entity
+public partial class ModelEntity : Thing
 {
 	public Model? Model { get; set; }
-
-	public ModelEntity()
-	{
-		Spawn();
-	}
-
-	public virtual void Spawn()
-	{
-
-	}
 
 	protected override void OnRender()
 	{
 		if ( Model == null )
 			return;
 
-		var uniformBuffer = new ObjectUniformBuffer
+		foreach ( var meshHandle in Model.Meshes )
 		{
-			g_mModel = ModelMatrix,
-			g_mView = Camera.ViewMatrix,
-			g_mProj = Camera.ProjMatrix,
-			g_vLightPos = Level.SunLight?.Position ?? Vector3.Zero,
-			g_vLightColor = Level.SunLight?.Color ?? Vector3.One,
-			g_vCameraPos = Camera.Position,
-			g_flTime = Time.Now,
+			var mesh = meshHandle.Get();
+			if ( mesh == null )
+				continue;
 
-			_padding0 = 0,
-			_padding1 = 0,
-			_padding2 = 0,
-		};
+			var uniformBuffer = new ObjectUniformBuffer
+			{
+				g_mModel = mesh.LocalTransform.GetMatrix() * ModelMatrix,
+				g_mViewProjection = Graphics.ViewProjectionMatrix,
+				g_vLightPos = Level.SunLight?.Position ?? Vector3.Zero,
+				g_vLightColor = Level.SunLight?.Color ?? Vector3.One,
+				g_vCameraPos = Camera.Position,
+				g_flTime = Time.Now,
 
-		Model.Material.Set( "ObjectUniformBuffer", uniformBuffer );
-		Model.Draw();
+				_padding0 = 0,
+				_padding1 = 0,
+				_padding2 = 0,
+			};
+
+			using var ctx = new ResourceContext();
+			ctx.Set( "ObjectUniformBuffer", uniformBuffer );
+
+			mesh?.Draw();
+		}
 	}
 }

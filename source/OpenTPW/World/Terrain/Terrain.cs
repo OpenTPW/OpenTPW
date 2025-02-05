@@ -2,13 +2,13 @@
 
 public class Terrain : ModelEntity
 {
-	public override void Spawn()
-	{
-		var texture = new Texture( "levels/jungle/terrain/textures/jgr_bas1.wct" );
+	//public Terrain()
+	//{
+	//	var texture = new Texture( "levels/jungle/terrain/textures/jgr_bas1.wct" );
 
-		var material = Material.Default;
-		material.Set( "Color", texture );
+	//	var material = Material.Default;
+	//	material.Set( "Color", texture );
 
-		Model = Primitives.Plane.GenerateModel( material, new Point2( 32, 32 ) );
-	}
+	//	Model = Primitives.Plane.Create( material, new Point2( 32, 32 ) );
+	//}
 }

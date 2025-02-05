@@ -11,8 +11,7 @@ vertex {
   //
   layout( set = 0, binding = 0 ) uniform ObjectUniformBuffer {
       mat4 g_mModel;
-      mat4 g_mView;
-      mat4 g_mProj;
+      mat4 g_mViewProj;
 
       vec3 g_vLightPos;
       vec3 g_vLightColor;
@@ -34,7 +33,7 @@ vertex {
       vs_out.vPosition = vec3( g_oUbo.g_mModel * vec4( position, 1.0 ));
 
       vec4 pos = g_oUbo.g_mModel * vec4( position, 1.0 );
-      gl_Position = g_oUbo.g_mProj * g_oUbo.g_mView * pos;
+      gl_Position = g_oUbo.g_mViewProj * pos;
   }
 }
 
@@ -58,8 +57,7 @@ fragment {
   //
   layout( set = 0, binding = 0 ) uniform ObjectUniformBuffer {
       mat4 g_mModel;
-      mat4 g_mView;
-      mat4 g_mProj;
+      mat4 g_mViewProj;
 
       vec3 g_vLightPos;
       vec3 g_vLightColor;

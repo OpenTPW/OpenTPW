@@ -50,6 +50,7 @@ internal static class Game
 		//
 		Render.OnUpdate += level.Update;
 		Render.OnRender += level.Render;
+		Render.OnRenderUI += level.RenderUI;
 		Render.Run();
 	}
 }

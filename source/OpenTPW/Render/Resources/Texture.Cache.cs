@@ -9,7 +9,7 @@ partial class Texture
 		if ( string.IsNullOrEmpty( path ) )
 			return false;
 
-		var existingTexture = Asset.All.OfType<Texture>().ToList().FirstOrDefault( t => t.Path == path );
+		var existingTexture = Resource.All.OfType<Texture>().ToList().FirstOrDefault( t => t.Path == path );
 		if ( existingTexture != null )
 		{
 			texture = existingTexture;

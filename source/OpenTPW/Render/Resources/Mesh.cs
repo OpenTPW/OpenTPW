@@ -3,7 +3,7 @@ using Veldrid;
 
 namespace OpenTPW;
 
-public class Model : Asset
+public class Mesh : Resource
 {
 	public DeviceBuffer VertexBuffer { get; private set; } = null!;
 	public DeviceBuffer? IndexBuffer { get; private set; } = null;
@@ -14,7 +14,9 @@ public class Model : Asset
 	private uint indexCount;
 	private uint vertexCount;
 
-	public Model( Vertex[] vertices, uint[] indices, Material material )
+	public Transform LocalTransform { get; set; } = new();
+
+	public Mesh( Vertex[] vertices, uint[] indices, Material material )
 	{
 		Material = material;
 		IsIndexed = true;
@@ -24,7 +26,7 @@ public class Model : Asset
 		All.Add( this );
 	}
 
-	public Model( Vertex[] vertices, Material material )
+	public Mesh( Vertex[] vertices, Material material )
 	{
 		Material = material;
 		IsIndexed = false;
@@ -68,7 +70,7 @@ public class Model : Asset
 		commandList.SetVertexBuffer( 0, VertexBuffer );
 		commandList.SetPipeline( Material.Pipeline );
 
-		Material.CreateEphemeralResourceSet( out var resourceSets );
+		Material.GetTemporaryResourceSet( out var resourceSets );
 
 		for ( uint i = 0; i < resourceSets.Length; ++i )
 			commandList.SetGraphicsResourceSet( i, resourceSets[i] );

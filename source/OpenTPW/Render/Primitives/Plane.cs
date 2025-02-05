@@ -38,7 +38,7 @@ partial class Primitives
 			3, 1, 0,
 		};
 
-		public static Model GenerateModel( Material material, Point2? _repeats = null )
+		public static Mesh Create( Material material, Point2? _repeats = null )
 		{
 			var repeats = _repeats ?? new Point2( 1, 1 );
 
@@ -78,8 +78,8 @@ partial class Primitives
 				}
 			}
 
-			var model = new Model( vertices, indices, material );
-			return model;
+			var mesh = new Mesh( vertices, indices, material );
+			return mesh;
 		}
 	}
 }

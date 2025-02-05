@@ -3,8 +3,7 @@ vertex "content/shaders/includes/3d.vert"
 common {
   layout( set = 0, binding = 0 ) uniform ObjectUniformBuffer {
     mat4 g_mModel;
-    mat4 g_mView;
-    mat4 g_mProj;
+    mat4 g_mViewProj;
 
     vec3 g_vLightPos;
     vec3 g_vLightColor;

@@ -1,20 +1,19 @@
 ﻿using Veldrid;
-using Vortice.Direct3D11;
-using Vortice.Win32;
 
 namespace OpenTPW;
 
-public class Shader : Asset
+public class Shader : Resource
 {
 	private ShaderInfo shaderInfo;
 
-	public VertexElementDescription[] VertexElements => shaderInfo.Reflection.VertexElements;
-	public ResourceLayoutDescription[] ResourceLayouts => shaderInfo.Reflection.ResourceLayouts;
 	public Veldrid.Shader[] ShaderProgram => shaderInfo.ShaderProgram;
 	public bool IsDirty { get; private set; }
 	public Action OnRecompile { get; set; }
 
 	private FileSystemWatcher watcher;
+
+	public ResourceLayoutDescription[] ResourceLayoutDescriptions { get; private set; } 
+	public ResourceLayout[] ResourceLayouts { get; private set; }
 
 	internal Shader( string path )
 	{
@@ -67,5 +66,8 @@ public class Shader : Asset
 		shaderInfo = ShaderCompiler.CompileShader( Path );
 		OnRecompile?.Invoke();
 		IsDirty = false;
+
+		ResourceLayoutDescriptions = shaderInfo.Reflection.ResourceLayouts;
+		ResourceLayouts = shaderInfo.Reflection.ResourceLayouts.Select( x => Device.ResourceFactory.CreateResourceLayout( x ) ).ToArray();
 	}
 }

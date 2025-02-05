@@ -96,10 +96,7 @@ public partial class TextureFile : BaseFormat
 		if ( fileData.HasAlphaChannel )
 			DecodeChannel( ref state, size, ref alphaData, ref outputA, ComputeDequantizationScaleA( fileData.AChannelQuantizationScale ), isHalfScale, true );
 
-		uint alignedWidth = GetAlignedSize( (uint)fileData.Width );
-		uint alignedHeight = GetAlignedSize( (uint)fileData.Height );
-
-		var outputBytes = Enumerable.Repeat( 0f, fileData.Width * fileData.Height * 4 ).ToList();
+		var outputBytes = new byte[fileData.Width * fileData.Height * 4];
 
 		for ( int y = 0; y < fileData.Height; y++ )
 		{
@@ -117,20 +114,14 @@ public partial class TextureFile : BaseFormat
 				// Alpha channel remains untouched..
 				float a = outputA[y * size + x];
 
-				outputBytes[((y * fileData.Width + x) * 4)] = r;
-				outputBytes[((y * fileData.Width + x) * 4) + 1] = g;
-				outputBytes[((y * fileData.Width + x) * 4) + 2] = b;
-				outputBytes[((y * fileData.Width + x) * 4) + 3] = a;
+				outputBytes[((y * fileData.Width + x) * 4)] = (byte)r.Clamp( 0, 255 );
+				outputBytes[((y * fileData.Width + x) * 4) + 1] = (byte)g.Clamp( 0, 255 );
+				outputBytes[((y * fileData.Width + x) * 4) + 2] = (byte)b.Clamp( 0, 255 );
+				outputBytes[((y * fileData.Width + x) * 4) + 3] = (byte)a.Clamp( 0, 255 );
 			}
 		}
 
-		List<byte> textureData = Enumerable.Repeat( (byte)0, fileData.Width * fileData.Height * 4 ).ToList();
-		for ( int i = 0; i < outputBytes.Count; i++ )
-		{
-			textureData[i] = (byte)outputBytes[i].Clamp( 0, 255 );
-		}
-
-		Data = new TextureData( fileData.Width, fileData.Height, textureData.ToArray() );
+		Data = new TextureData( fileData.Width, fileData.Height, outputBytes );
 	}
 
 	private static byte[] Decompress( byte[] data )

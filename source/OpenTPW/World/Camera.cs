@@ -10,6 +10,8 @@ public static class Camera
 	public static Matrix4x4 ViewMatrix { get; set; }
 	public static Matrix4x4 ProjMatrix { get; set; }
 
+	public static Matrix4x4 Matrix => ViewMatrix * ProjMatrix;
+
 	private static CameraMode CameraMode = new();
 
 	private static void CalcViewProjMatrix()
@@ -33,7 +35,7 @@ public static class Camera
 			fieldOfView.DegreesToRadians(),
 			Screen.Aspect,
 			0.1f,
-			10000.0f
+			2000.0f
 		);
 	}
 

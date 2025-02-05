@@ -103,7 +103,7 @@ partial class TextureFile
 		// Step 2: decode rows
 		//
 		if ( isHalfScale )
-			dequantizationScale *= MathF.PI * 1/6f;
+			dequantizationScale *= 0.5f;
 
 		D4Coefficients coefs = new( dequantizationScale );
 		for ( int i = 0; i < size; i++ )

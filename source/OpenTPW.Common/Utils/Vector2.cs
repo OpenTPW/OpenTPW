@@ -82,6 +82,9 @@ public struct Vector2 : IEquatable<Vector2>
 
 	public static bool operator !=( Vector2 left, Vector2 right ) => !(left == right);
 
+
+	public static explicit operator Vector2( Point2 v ) => new Vector2( v.X, v.Y );
+
 	public override bool Equals( object? obj )
 	{
 		if ( obj is Vector2 vec )

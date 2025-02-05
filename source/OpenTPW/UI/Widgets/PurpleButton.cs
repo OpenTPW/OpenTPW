@@ -29,25 +29,28 @@ internal class PurpleButton : Panel
 		rect.Y -= 130;
 		rect.X -= 740;
 
-		//
-		// End
-		//
-		material.Set( "Color", ButtonText1 );
-		rect.X += 190;
-		Graphics.Quad( rect, uvs.Shift( new Vector2( 0, 0.50f ) ), material );
+		using ( var ctx = new ResourceContext() )
+		{
+			//
+			// End
+			//
+			ctx.Set( "Color", ButtonText1 );
+			rect.X += 190;
+			Graphics.Quad( rect, uvs.Shift( new Vector2( 0, 0.50f ) ), material );
 
-		//
-		// Middle
-		//
-		material.Set( "Color", ButtonText1 );
-		rect.X += 190;
-		Graphics.Quad( rect.Shift( new Vector2( 0, 28 ) ), uvs.Shift( new Vector2( 0, 0f ) ), material );
+			//
+			// Middle
+			//
+			ctx.Set( "Color", ButtonText1 );
+			rect.X += 190;
+			Graphics.Quad( rect.Shift( new Vector2( 0, 28 ) ), uvs.Shift( new Vector2( 0, 0f ) ), material );
 
-		//
-		// Start
-		//
-		rect.X += 200;
-		material.Set( "Color", ButtonText2 );
-		Graphics.Quad( rect, uvs.Shift( new Vector2( 0f, 0.50f ) ), material );
+			//
+			// Start
+			//
+			rect.X += 200;
+			ctx.Set( "Color", ButtonText2 );
+			Graphics.Quad( rect, uvs.Shift( new Vector2( 0f, 0.50f ) ), material );
+		}
 	}
 }

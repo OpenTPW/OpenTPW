@@ -1,14 +1,13 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 using System.Reflection;
-using Veldrid;
 
 namespace OpenTPW;
 
-public class Entity
+public class Thing
 {
 	public Level Level { get; set; }
-	public static List<Entity> All { get; set; } = Assembly.GetCallingAssembly().GetTypes().OfType<Entity>().ToList();
+	public static List<Thing> All { get; set; } = Assembly.GetCallingAssembly().GetTypes().OfType<Thing>().ToList();
 
 	/// <summary>
 	/// Right, Up, Forward (FLU)
@@ -28,7 +27,8 @@ public class Entity
 	{
 		get
 		{
-			var matrix = Matrix4x4.CreateScale( Scale.GetSystemVector3() );
+			var matrix = Matrix4x4.Identity;
+			matrix *= Matrix4x4.CreateScale( Scale.GetSystemVector3() );
 			matrix *= Matrix4x4.CreateFromQuaternion( Rotation );
 			matrix *= Matrix4x4.CreateTranslation( Position.GetSystemVector3() );
 
@@ -36,7 +36,7 @@ public class Entity
 		}
 	}
 
-	public Entity()
+	public Thing()
 	{
 		Level = Level.Current;
 		All.Add( this );
@@ -46,6 +46,11 @@ public class Entity
 	public void Render()
 	{
 		OnRender();
+	}
+
+	public void RenderUI()
+	{
+		OnRenderUI();
 	}
 
 	public void Update()
@@ -58,9 +63,10 @@ public class Entity
 	}
 
 	protected virtual void OnRender() { }
+	protected virtual void OnRenderUI() { }
 	protected virtual void OnUpdate() { }
 	protected virtual void OnDelete() { }
 
-	public bool Equals( Entity x, Entity y ) => x.GetHashCode() == y.GetHashCode();
-	public int GetHashCode( [DisallowNull] Entity obj ) => base.GetHashCode();
+	public bool Equals( Thing x, Thing y ) => x.GetHashCode() == y.GetHashCode();
+	public int GetHashCode( [DisallowNull] Thing obj ) => base.GetHashCode();
 }

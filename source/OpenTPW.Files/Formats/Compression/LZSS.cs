@@ -2,54 +2,58 @@
 
 internal static class LZSS
 {
+	private const int WINDOW_BITS = 12;
+	private const int LENGTH_BITS = 7;
+	private const int MIN_LENGTH = 1;
+
 	public static bool Decompress( BitReader inputBuffer, BinaryWriter outputBuffer )
 	{
-		while ( true )
+		// Pre-allocate buffer for the sliding window
+		var buffer = new byte[1 << WINDOW_BITS];  // 4KB buffer based on 12-bit offset
+		var stream = outputBuffer.BaseStream;
+
+		try
 		{
-			var isDelta = inputBuffer.GetBits( 1 );
-
-			// One byte literal
-			if ( isDelta == 0 )
+			while ( true )
 			{
-				var literalValue = inputBuffer.GetBits( 8 );
-				outputBuffer.Write( (byte)literalValue );
-			}
-			else
-			{
-				int offset = (int)inputBuffer.GetBits( 12 );
+				if ( inputBuffer.GetBits( 1 ) == 0 )
+				{
+					// Literal byte
+					outputBuffer.Write( (byte)inputBuffer.GetBits( 8 ) );
+					continue;
+				}
 
+				// Get match offset and length
+				int offset = (int)inputBuffer.GetBits( WINDOW_BITS );
 				if ( offset == 0 )
 					break;
 
-				int length = (int)(inputBuffer.GetBits( 7 )) + 1;
+				int length = (int)inputBuffer.GetBits( LENGTH_BITS ) + MIN_LENGTH;
 
-				if ( offset > outputBuffer.BaseStream.Length )
-					throw new Exception( "Offset > stream length" );
+				if ( offset > stream.Position )
+					throw new Exception( "Invalid offset: greater than current stream position" );
 
-				long initialPosition = outputBuffer.BaseStream.Position;
+				long currentPos = stream.Position;
 
-				outputBuffer.BaseStream.Seek( initialPosition - offset, SeekOrigin.Begin );
+				// Read the match data into our pre-allocated buffer
+				stream.Position = currentPos - offset;
+				int bytesRead = stream.Read( buffer, 0, offset );
+				stream.Position = currentPos;
 
-				var window = new byte[offset];
-				for ( int i = 0; i < offset; ++i )
+				// Write the match data, handling wrap-around
+				for ( int i = 0, j = 0; i < length; i++, j++ )
 				{
-					window[i] = (byte)outputBuffer.BaseStream.ReadByte();
+					if ( j >= bytesRead )
+						j = 0;  // Wrap around within the actual data we read
+					outputBuffer.Write( buffer[j] );
 				}
-
-				// Resize window to fit length
-				var buffer = new byte[length];
-				for ( int i = 0; i < length; ++i )
-				{
-					buffer[i] = window[i % offset];
-				}
-
-				outputBuffer.BaseStream.Seek( initialPosition, SeekOrigin.Begin );
-
-				for ( int i = 0; i < length; ++i )
-					outputBuffer.Write( buffer[i] );
 			}
-		}
 
-		return true;
+			return true;
+		}
+		catch
+		{
+			return false;  // Return false on decompression failure instead of throwing
+		}
 	}
 }

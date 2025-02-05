@@ -71,7 +71,7 @@ internal static partial class Graphics
 		cmd.SetVertexBuffer( 0, vertexBuffer );
 		cmd.SetPipeline( material.Pipeline );
 
-		material.CreateEphemeralResourceSet( out var resourceSets );
+		material.GetTemporaryResourceSet( out var resourceSets );
 
 		for ( uint i = 0; i < resourceSets.Length; ++i )
 			cmd.SetGraphicsResourceSet( i, resourceSets[i] );

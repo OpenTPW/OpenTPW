@@ -2,7 +2,7 @@
 
 namespace OpenTPW.UI;
 
-public class RootPanel : Entity
+public class RootPanel : Thing
 {
 	public List<Panel> Children { get; set; } = new();
 	public static RootPanel? Instance { get; set; }
@@ -12,7 +12,7 @@ public class RootPanel : Entity
 		Instance ??= this;
 	}
 
-	protected override void OnRender()
+	protected override void OnRenderUI()
 	{
 		Children.ForEach( child => child.Draw() );
 	}

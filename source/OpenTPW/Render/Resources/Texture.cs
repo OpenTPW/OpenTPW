@@ -4,7 +4,7 @@ using Veldrid;
 
 namespace OpenTPW;
 
-public partial class Texture : Asset
+public partial class Texture : Resource
 {
 	public SamplerType SamplerType { get; private set; } = SamplerType.AnisotropicRepeat;
 

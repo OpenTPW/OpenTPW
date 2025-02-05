@@ -1,4 +1,6 @@
-﻿using Veldrid;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Numerics;
+using Veldrid;
 using Veldrid.StartupUtilities;
 
 namespace OpenTPW;
@@ -15,22 +17,30 @@ public partial class Renderer
 	public Action? PostUpdate;
 
 	public Action? OnRender;
+	public Action? OnRenderUI;
 
 	public Renderer()
 	{
-		Window = new( Settings.Default.GameWindowSize.X, Settings.Default.GameWindowSize.Y, "Theme Park World", true );
+		Window = new( Settings.Default.GameWindowSize.X, Settings.Default.GameWindowSize.Y, Localization.Parse( "#ThemeParkWorld" ), true );
 		Window.OnResized = OnWindowResized;
-		Window.Visible = true;
 
 		CreateGraphicsDevice();
-		// Swap the buffers so that the screen isn't a mangled mess
-		Device.SwapBuffers();
 		CreateMultisampledFramebuffer();
+		CreateBlitPipeline();
+		CreateSamplers();
 
 		CommandList = Device.ResourceFactory.CreateCommandList();
 		_lastFrame = DateTime.Now;
+
+		Window.Visible = true;
 	}
 
+	private void CreateSamplers()
+	{
+		Sampler.CreateSamplers();
+	}
+
+	[MemberNotNull( nameof( MultisampledFramebuffer ), nameof( ResolveColorTexture ) )]
 	private void CreateMultisampledFramebuffer()
 	{
 		var colorTextureInfo = TextureDescription.Texture2D(
@@ -73,14 +83,8 @@ public partial class Renderer
 		MultisampledFramebuffer = Device.ResourceFactory.CreateFramebuffer( framebufferDescription );
 	}
 
-	public Framebuffer MultisampledFramebuffer;
-	public Veldrid.Texture ResolveColorTexture;
-
-	private Pipeline _blitPipeline;
-	private ResourceSet _blitResourceSet;
-	private ResourceLayout _blitResourceLayout;
-
-	public void Run()
+	[MemberNotNull( nameof( _blitResourceLayout ), nameof( _blitPipeline ), nameof( _blitResourceSet ) )]
+	private void CreateBlitPipeline()
 	{
 		var layoutDescription = new ResourceLayoutDescription(
 			new ResourceLayoutElementDescription( "g_tInput", ResourceKind.TextureReadOnly, ShaderStages.Fragment ),
@@ -91,7 +95,6 @@ public partial class Renderer
 
 		// Create shader
 		var shader = new Shader( "content/shaders/blit.shader" );
-		var blitShader = shader.ShaderProgram;
 
 		var pipelineDescription = new GraphicsPipelineDescription(
 			BlendStateDescription.SingleAlphaBlend,
@@ -113,7 +116,17 @@ public partial class Renderer
 			ResolveColorTexture,
 			Device.LinearSampler
 		) );
+	}
 
+	public Framebuffer MultisampledFramebuffer;
+	public Veldrid.Texture ResolveColorTexture;
+
+	private Pipeline _blitPipeline;
+	private ResourceSet _blitResourceSet;
+	private ResourceLayout _blitResourceLayout;
+
+	public void Run()
+	{
 		OnWindowResized( Window.Size );
 
 		while ( Window.SdlWindow.Exists )
@@ -124,7 +137,7 @@ public partial class Renderer
 
 	private void PreRender()
 	{
-		foreach ( var shader in Asset.All.OfType<Shader>().Where( x => x.IsDirty ) )
+		foreach ( var shader in Resource.All.OfType<Shader>().Where( x => x.IsDirty ) )
 		{
 			shader.Recompile();
 		}
@@ -143,10 +156,27 @@ public partial class Renderer
 
 		// Render level to MSAA buffer
 		CommandList.PushDebugGroup( "Main Render" );
-		OnRender?.Invoke();
+
+		Camera.Update();
+		using ( var _ = new Graphics.Scope( (Point2)Screen.Size, Camera.Matrix ) )
+		{
+			OnRender?.Invoke();
+		}
+
+		CommandList.PopDebugGroup();
+
+		CommandList.PushDebugGroup( "UI Render" );
+		var uiMatrix = Matrix4x4.CreateOrthographic( 1280 * Screen.Aspect, 1280, 0.1f, 10000.0f );
+
+		using ( var _ = new Graphics.Scope( (Point2)Screen.RawSize, uiMatrix ) )
+		{
+			OnRenderUI?.Invoke();
+		}
+
 		CommandList.PopDebugGroup();
 
 		// Resolve MSAA to non-MSAA texture
+		CommandList.PushDebugGroup( "Resolve and Blit" );
 		CommandList.ResolveTexture( MultisampledFramebuffer.ColorTargets[0].Target, ResolveColorTexture );
 
 		// Blit to screen
@@ -156,6 +186,7 @@ public partial class Renderer
 		CommandList.SetPipeline( _blitPipeline );
 		CommandList.SetGraphicsResourceSet( 0, _blitResourceSet );
 		CommandList.Draw( 3, 1, 0, 0 );
+		CommandList.PopDebugGroup();
 
 		CommandList.End();
 

@@ -79,10 +79,10 @@ partial class Primitives
 			}
 		}
 
-		public static Model GenerateModel( Material material )
+		public static Mesh Create( Material material )
 		{
-			var model = new Model( Vertices.ToArray(), indices, material );
-			return model;
+			var mesh = new Mesh( Vertices.ToArray(), indices, material );
+			return mesh;
 		}
 	}
 }

@@ -7,7 +7,7 @@ internal sealed class BFSTReader : BaseFormat
 	private ExpandedMemoryStream memoryStream;
 	public byte[] buffer;
 
-	private static BFMUReader LookupTable = new BFMUReader( $"Language/English/MBToUni.dat" );
+	private static BFMUReader LookupTable = new BFMUReader( $"Language/american/MBToUni.dat" );
 
 	public BFSTReader( string path )
 	{

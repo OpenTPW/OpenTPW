@@ -7,8 +7,7 @@ vertex {
 
     layout(set = 0, binding = 0) uniform ObjectUniformBuffer {
         mat4 g_mModel;
-        mat4 g_mView;
-        mat4 g_mProj;
+        mat4 g_mViewProj;
         vec3 g_vLightPos;
         vec3 g_vLightColor;
         vec3 g_vCameraPos;
@@ -32,8 +31,8 @@ vertex {
         vs_out.vPosition = vec3(g_oUbo.g_mModel * vec4(position, 1.0));
 
         vec4 pos = g_oUbo.g_mModel * vec4(position, 1.0);
-        vs_out.vWorldPosition = vec3(g_oUbo.g_mView * pos);
-        gl_Position = g_oUbo.g_mProj * g_oUbo.g_mView * pos;
+        vs_out.vWorldPosition = vec3(g_oUbo.g_mViewProj * pos);
+        gl_Position = g_oUbo.g_mViewProj * pos;
 
         outTexIndex = texIndex;
         outMatFlags = matFlags;
@@ -55,8 +54,7 @@ fragment {
 
     layout(set = 0, binding = 0) uniform ObjectUniformBuffer {
         mat4 g_mModel;
-        mat4 g_mView;
-        mat4 g_mProj;
+        mat4 g_mViewProj;
         vec3 g_vLightPos;
         vec3 g_vLightColor;
         vec3 g_vCameraPos;
@@ -87,6 +85,8 @@ fragment {
     const uint FLAG_X_AXIS_ANIM = 8;
     const uint FLAG_Y_AXIS_ANIM = 16;
     const uint FLAG_GOURAUD_SHADED = 32;
+
+    const uint FLAG_UNSHADED = 255;
         
     void main() 
     {
@@ -129,14 +129,11 @@ fragment {
         vec3 vOutColor;
 
         // Apply Gouraud shading if the flag is set, otherwise use flat shading
-        if ((outMatFlags & FLAG_GOURAUD_SHADED) != 0) {
+        if ((outMatFlags & FLAG_UNSHADED) != 0) {
             vOutColor = vTextureSample.xyz * vShading;
         } else {
-            vOutColor = vTextureSample.xyz * vShading;
+            vOutColor = vTextureSample.xyz;
         }
-
-        // Handle opaque alpha testing
-        if (vTextureSample.a < 0.1) discard;
 
         fragColor = vec4(vOutColor, vTextureSample.a);
 

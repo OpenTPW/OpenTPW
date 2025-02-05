@@ -1,6 +1,6 @@
 ﻿namespace OpenTPW;
 
-public class Ride : Entity
+public class Ride : Thing
 {
 	public RideVM VM { get; private set; }
 

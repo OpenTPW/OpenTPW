@@ -1,4 +1,5 @@
-﻿namespace OpenTPW;
+﻿
+namespace OpenTPW;
 
 public struct Point2
 {
@@ -29,4 +30,6 @@ public struct Point2
 	{
 
 	}
+
+	public static explicit operator Point2( Vector2 v ) => new Point2( (int)v.X, (int)v.Y );
 }

@@ -12,8 +12,7 @@ struct ObjectUniformBuffer
 	 */
 
 	public Matrix4x4 g_mModel; // 64
-	public Matrix4x4 g_mView; // 64
-	public Matrix4x4 g_mProj; // 64
+	public Matrix4x4 g_mViewProjection; // 64
 
 	public Vector3 g_vLightPos; // 12
 	public float _padding0; // 4

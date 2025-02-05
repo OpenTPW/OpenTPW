@@ -48,7 +48,7 @@ public class Cursor : Panel, Singleton<Cursor>
 		var size = new Vector2( 32 );
 
 		var position = Input.Mouse.Position;
-		position.Y = Screen.Height - position.Y;
+		position.Y = Screen.Size.Y - position.Y;
 		position.Y -= size.Y;
 
 		var frame = ((Time.Now * 3).CeilToInt()) % 4;
@@ -58,7 +58,7 @@ public class Cursor : Panel, Singleton<Cursor>
 		var rect = new Rectangle( position, size );
 		var uvRect = new Rectangle( uv0, uv1 - uv0 );
 
-		using ( _ = new Graphics.Scope( Screen.Size ) )
+		using ( _ = new Graphics.Scope( (Point2)Screen.Size ) )
 		{
 			Graphics.Quad( rect, uvRect, material );
 		}

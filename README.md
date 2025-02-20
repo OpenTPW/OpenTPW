@@ -5,9 +5,8 @@
     <p align="center">
         OpenTPW is an open-source re-implementation of <a href="https://en.wikipedia.org/wiki/Theme_Park_World">Sim Theme Park / Theme Park World</a>.
         <br>
-        <a href="https://opentpw.gu3.me/formats/">Documentation</a> |
-        <a href="https://github.com/ThemeParkWorld/OpenTPW/issues">Issues</a> |
-        <a href="https://github.com/ThemeParkWorld/OpenTPW/pulls">Pull Requests</a>
+        <a href="https://opentpw.org/">Website</a> |
+        <a href="https://docs.opentpw.org/">Documentation</a>
     </p>
 </p>
 

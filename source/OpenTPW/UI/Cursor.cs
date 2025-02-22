@@ -3,64 +3,55 @@
 public class Cursor : Panel, Singleton<Cursor>
 {
 	private Texture? _texture;
-
-	private Input.CursorTypes _cursorType;
-
-	public Input.CursorTypes CursorType
-	{
-		get => _cursorType;
-		set
-		{
-			_cursorType = value;
-			LoadTexture();
-		}
-	}
+	private Material _material;
 
 	public Cursor()
 	{
-		// TODO: Move this to Input
-		CursorType = Input.CursorTypes.Normal;
+		_material = Material.UIBasic.Copy();
+
+		LoadCursorTexture();
 	}
 
 	private string GetImageName( Input.CursorTypes cursorType )
 	{
-		// bullfrog PLEASE...
 		if ( cursorType == Input.CursorTypes.Cash )
-			return "Cash";
+			return "Cash"; // This one isn't technically prefixed with a C
 
 		return "C" + cursorType.ToString()[..3].ToLower();
 	}
 
-	private void LoadTexture()
+	private void LoadCursorTexture()
 	{
-		var cursorPath = $"/data/ui/cursors/{GetImageName( _cursorType )}.tga";
+		var cursorPath = $"/data/ui/cursors/{GetImageName( Input.CursorType )}.tga";
 		_texture = new Texture( GameDir.GetPath( cursorPath ), TextureFlags.PinkChromaKey );
+
+		_material.Set( "Color", _texture );
+	}
+
+	protected override void OnUpdate()
+	{
+		Bounds = new Rectangle(
+		  	Input.Mouse.Position,
+			new Vector2( 32f )
+		);
 	}
 
 	protected override void OnRender()
 	{
-		if ( _texture == null )
-			return;
+		int numFrames = 4;
+		int speed = 3;
 
-		var material = Material.UI;
-		material.Set( "Color", _texture );
+		var time = Time.Now * speed;
+		var currentFrame = time.CeilToInt() % numFrames;
 
-		var size = new Vector2( 32 );
-
-		var position = Input.Mouse.Position;
-		position.Y = Screen.Size.Y - position.Y;
-		position.Y -= size.Y;
-
-		var frame = ((Time.Now * 3).CeilToInt()) % 4;
-		var uv0 = new Vector2( frame * 0.25f, 0f );
+		var uv0 = new Vector2( currentFrame * 0.25f, 0f );
 		var uv1 = uv0 + new Vector2( 0.25f, 1f );
 
-		var rect = new Rectangle( position, size );
 		var uvRect = new Rectangle( uv0, uv1 - uv0 );
 
 		using ( _ = new Graphics.Scope( (Point2)Screen.Size ) )
 		{
-			Graphics.Quad( rect, uvRect, material );
+			Graphics.Quad( Bounds, uvRect, _material );
 		}
 	}
 }

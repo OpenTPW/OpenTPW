@@ -25,7 +25,7 @@ public partial class Image : Panel
 
 	protected override void OnRender()
 	{
-		var material = Material.UI;
+		var material = Material.UIBasic;
 		material.Set( "Color", Texture );
 		Graphics.Quad( Rect, UvRect, material );
 	}

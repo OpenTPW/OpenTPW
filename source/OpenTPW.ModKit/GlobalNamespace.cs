@@ -3,7 +3,6 @@ global using static OpenTPW.ModKit.GlobalNamespace;
 
 namespace OpenTPW.ModKit;
 
-using OpenTPW;
 using Veldrid;
 
 public static class GlobalNamespace

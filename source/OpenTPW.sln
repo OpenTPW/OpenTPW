@@ -5,13 +5,9 @@ VisualStudioVersion = 17.0.32112.339
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OpenTPW", "OpenTPW\OpenTPW.csproj", "{B8C94B77-D94F-48BA-B2E9-9CF0752C2189}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OpenTPW.Tests", "OpenTPW.Tests\OpenTPW.Tests.csproj", "{96BBB7AC-AC1F-4430-8039-21D03E4903AD}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OpenTPW.Files", "OpenTPW.Files\OpenTPW.Files.csproj", "{42D3A6E7-2013-4684-BA98-43461D82D35F}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OpenTPW.Common", "OpenTPW.Common\OpenTPW.Common.csproj", "{23857BBA-5680-4871-9C35-8A4699461B51}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenTPW.ModKit", "OpenTPW.ModKit\OpenTPW.ModKit.csproj", "{5C8022A2-4124-496A-9DA6-C55421EAFBB4}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -23,10 +19,6 @@ Global
 		{B8C94B77-D94F-48BA-B2E9-9CF0752C2189}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B8C94B77-D94F-48BA-B2E9-9CF0752C2189}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B8C94B77-D94F-48BA-B2E9-9CF0752C2189}.Release|Any CPU.Build.0 = Release|Any CPU
-		{96BBB7AC-AC1F-4430-8039-21D03E4903AD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{96BBB7AC-AC1F-4430-8039-21D03E4903AD}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{96BBB7AC-AC1F-4430-8039-21D03E4903AD}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{96BBB7AC-AC1F-4430-8039-21D03E4903AD}.Release|Any CPU.Build.0 = Release|Any CPU
 		{42D3A6E7-2013-4684-BA98-43461D82D35F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{42D3A6E7-2013-4684-BA98-43461D82D35F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{42D3A6E7-2013-4684-BA98-43461D82D35F}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -35,10 +27,6 @@ Global
 		{23857BBA-5680-4871-9C35-8A4699461B51}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{23857BBA-5680-4871-9C35-8A4699461B51}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{23857BBA-5680-4871-9C35-8A4699461B51}.Release|Any CPU.Build.0 = Release|Any CPU
-		{5C8022A2-4124-496A-9DA6-C55421EAFBB4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{5C8022A2-4124-496A-9DA6-C55421EAFBB4}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{5C8022A2-4124-496A-9DA6-C55421EAFBB4}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{5C8022A2-4124-496A-9DA6-C55421EAFBB4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

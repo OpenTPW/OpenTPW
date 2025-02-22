@@ -2,7 +2,7 @@
 
 namespace OpenTPW.UI;
 
-public class RootPanel : Thing
+public class RootPanel : Actor
 {
 	public List<Panel> Children { get; set; } = new();
 	public static RootPanel? Instance { get; set; }

@@ -65,7 +65,7 @@ public class Mesh : Resource
 
 	internal void Draw()
 	{
-		var commandList = Render.CommandList;
+		var commandList = Render.GetCommandList();
 
 		commandList.SetVertexBuffer( 0, VertexBuffer );
 		commandList.SetPipeline( Material.Pipeline );

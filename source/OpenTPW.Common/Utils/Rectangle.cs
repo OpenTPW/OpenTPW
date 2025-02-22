@@ -16,4 +16,12 @@ public record struct Rectangle( float X, float Y, float Width, float Height )
 	{
 		return new Rectangle( X + offset.X, Y + offset.Y, Width, Height );
 	}
+
+	public bool Contains( Vector2 position )
+	{
+		return position.X >= TopLeft.X &&
+			   position.Y <= TopLeft.Y &&
+			   position.X <= BottomRight.X &&
+			   position.Y >= BottomRight.Y;
+	}
 }

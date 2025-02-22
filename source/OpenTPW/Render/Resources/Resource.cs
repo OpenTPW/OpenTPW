@@ -12,7 +12,7 @@ public class Resource
 
 	public static T? Get<T>( string path ) where T : Resource
 	{
-		foreach ( var asset in Resource.All )
+		foreach ( var asset in All.ToArray() )
 		{
 			if ( asset.Path == path && asset.GetType() == typeof( T ) )
 			{

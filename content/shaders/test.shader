@@ -19,6 +19,7 @@ vertex {
         vec3 vNormal;
         vec3 vPosition;
         vec3 vWorldPosition;
+        vec3 vPositionCS;
     } vs_out;
 
     layout(location = 5) out flat int outTexIndex;
@@ -31,7 +32,8 @@ vertex {
         vs_out.vPosition = vec3(g_oUbo.g_mModel * vec4(position, 1.0));
 
         vec4 pos = g_oUbo.g_mModel * vec4(position, 1.0);
-        vs_out.vWorldPosition = vec3(g_oUbo.g_mViewProj * pos);
+        vs_out.vWorldPosition = pos.xyz;
+        vs_out.vPositionCS = (g_oUbo.g_mViewProj * pos).xyz;
         gl_Position = g_oUbo.g_mViewProj * pos;
 
         outTexIndex = texIndex;
@@ -45,6 +47,7 @@ fragment {
         vec3 vNormal;
         vec3 vPosition;
         vec3 vWorldPosition;
+        vec3 vPositionCS;
     } vs_out;
 
     layout(location = 5) in flat int texIndex;
@@ -101,7 +104,7 @@ fragment {
         }*/
 
         vec3 N = normalize(vs_out.vNormal);
-        vec3 L = normalize(g_oUbo.g_vLightPos - vs_out.vWorldPosition);
+        vec3 L = normalize(vs_out.vWorldPosition);
         
         vec3 vDiffuse = max(dot(N, L), 0.0) * g_oUbo.g_vLightColor;
         vec3 vAmbient = vec3(0.4);
@@ -138,9 +141,12 @@ fragment {
         fragColor = vec4(vOutColor, vTextureSample.a);
 
         // Calculate fog using view space depth
-        float viewSpaceDepth = length(vs_out.vWorldPosition);
+        float viewSpaceDepth = length(vs_out.vPositionCS);
         float fogFactor = exp(viewSpaceDepth * 0.01) * 0.025;
         fogFactor = clamp( fogFactor, 0, 1 );
+
+        if ( fragColor.a < 0.1 )
+            discard; // bad practice, but will do for now
         
         // Mix with fog
         fragColor.xyz = mix(fragColor.xyz, vec3( 0.301, 0.84, 1 ), fogFactor);

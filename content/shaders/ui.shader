@@ -26,7 +26,7 @@ fragment {
   layout( location = 0 ) out vec4 out_color;
 
   void main() {
-    out_color = texture( sampler2D( Color, s_Color ), vec2( vs_out.texCoords.x, 1 - vs_out.texCoords.y ) );
+    out_color = texture( sampler2D( Color, s_Color ), vs_out.texCoords );
 
     // Veldrid has no support for native alpha-testing, so we have to pull this shit
     // If it causes too many performance issues I guess we'll have to sort on CPU

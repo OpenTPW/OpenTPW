@@ -77,6 +77,10 @@ public partial class Texture : Resource
 
 	private int CalculateMipLevels( int width, int height, int depth )
 	{
+		// Tiny textures - don't bother with mips
+		if ( width < 16 && height < 16 )
+			return 1;
+
 		int maxDimension = Math.Max( width, Math.Max( height, depth ) );
 		int mipLevels = (int)Math.Floor( Math.Log( maxDimension, 2 ) ) + 1;
 

@@ -1,6 +1,6 @@
 ﻿namespace OpenTPW;
 
-public sealed class LobbyIsland : ModelEntity
+public sealed class LobbyIsland : StaticModelActor
 {
 	public LobbyIsland( Vector3 _position, string themeName )
 	{
@@ -9,6 +9,6 @@ public sealed class LobbyIsland : ModelEntity
 		var modelPrefix = themeName[0..3];
 		var islePath = $"lobby/terrain/{modelPrefix}_isle.md2";
 
-		Model = new Model( islePath, Material.Test );
+		Model = new Model( islePath, Material.World );
 	}
 }

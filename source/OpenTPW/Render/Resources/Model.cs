@@ -67,4 +67,33 @@ public class Model : Resource
 			_meshes.Add( meshHandle );
 		}
 	}
+
+	public void Draw( Transform transform )
+	{
+		foreach ( var meshHandle in Meshes )
+		{
+			var mesh = meshHandle.Get();
+			if ( mesh == null )
+				continue;
+
+			var uniformBuffer = new ObjectUniformBuffer
+			{
+				g_mModel = mesh.LocalTransform.GetMatrix() * transform.GetMatrix(),
+				g_mViewProjection = Graphics.ViewProjectionMatrix,
+				g_vLightPos = new Vector3( 100, 100, 100 ),
+				g_vLightColor = new Vector3( 0, 0, 0 ),
+				g_vCameraPos = Camera.Position,
+				g_flTime = Time.Now,
+
+				_padding0 = 0,
+				_padding1 = 0,
+				_padding2 = 0,
+			};
+
+			using var ctx = new ResourceContext();
+			ctx.Set( "ObjectUniformBuffer", uniformBuffer );
+
+			mesh?.Draw();
+		}
+	}
 }

@@ -1,10 +1,11 @@
-﻿using System.Numerics;
+using System.Numerics;
 
 namespace OpenTPW;
 
-public class Model : Resource
+public partial class Model : Resource
 {
-	private List<MeshHandle> _meshes = [];
+	private readonly List<MeshHandle> _meshes = [];
+
 	public IEnumerable<MeshHandle> Meshes => _meshes;
 
 	public Model( params Mesh[] meshes )
@@ -12,88 +13,70 @@ public class Model : Resource
 		_meshes = meshes.Select( MeshHandle.From ).ToList();
 	}
 
-	public Model( string path, Material baseMaterial )
+	public Model( string path, Material baseMaterial, Func<string, Texture?>? textureOverride = null )
 	{
 		var modelFile = new ModelFile( path );
-		var textureDirectory = System.IO.Path.Combine( System.IO.Path.GetDirectoryName( path ), "textures" );
-
-		foreach ( var meshData in modelFile.MeshDataList )
+		Animation = new ModelAnimationPlayer( modelFile );
+		var materials = new ModelMaterialBuilder( path, baseMaterial, TextureFlags.Wrap, textureOverride, warnOnMissing: true );
+		for ( int meshIndex = 0; meshIndex < modelFile.MeshDataList.Count; meshIndex++ )
 		{
-			var material = baseMaterial.Copy();
-			var textures = new List<Texture>();
-
-			for ( int i = 0; i < 16; ++i )
+			var meshData = modelFile.MeshDataList[meshIndex];
+			int nodeIndex = modelFile.Nodes.FindIndex( node => node.Offset == meshData.NodeOffset );
+			foreach ( var batch in ModelGeometry.CreateBatches( meshData ) )
 			{
-				textures.Add( Texture.Missing );
-
-				if ( meshData.Materials.Length > i )
+				var material = materials.Create( batch.Materials );
+				var mesh = new Mesh( batch.Vertices, batch.Indices, material )
 				{
-					var j = meshData.Materials[i];
-					var texturePath = System.IO.Path.Combine( textureDirectory, $"{j.Name}.wct" );
-					textures[i] = new Texture( texturePath, TextureFlags.Wrap );
-				}
+					LocalMatrix = ModelGeometry.ToEngineMatrix( meshData.TransformMatrix )
+				};
+				_meshes.Add( MeshHandle.From( mesh ) );
+				_animationMeshes.Add( new AnimatedMesh( mesh, meshData, batch, nodeIndex, meshIndex, new Vector3[meshData.Vertices.Length] ) );
 			}
+		}
 
-			material.Set( $"Color", [.. textures] );
-
-			var vertices = new List<Vertex>();
-			for ( int i = 0; i < meshData.Vertices.Length; ++i )
-			{
-				vertices.Add( new Vertex()
-				{
-					Position = new Vector3( meshData.Vertices[i].Position.X, meshData.Vertices[i].Position.Z, meshData.Vertices[i].Position.Y ),
-					Normal = meshData.Normals[i],
-					TexCoords = meshData.TexCoords[i],
-					TexIndex = (int)meshData.Vertices[i].TextureIndex,
-					MatFlags = meshData.Materials[(int)meshData.Vertices[i].TextureIndex].Flags
-				} );
-			}
-
-			var mesh = new Mesh( [.. vertices], meshData.Indices, material );
-			Matrix4x4.Decompose( meshData.TransformMatrix, out var scl, out var rot, out var pos );
-
-			var position = new Vector3( pos.X, pos.Z, pos.Y - 2.5f );
-			var rotation = new Rotation( rot.X, rot.Z, rot.Y, -rot.W );
-			var scale = new Vector3( scl.X, scl.Z, scl.Y );
-
-			mesh.LocalTransform = new Transform()
-			{
-				Position = position,
-				Rotation = rotation,
-				Scale = scale
-			};
-
-			var meshHandle = MeshHandle.From( mesh );
-			_meshes.Add( meshHandle );
+		DiscoverAnimations( path );
+		if ( modelFile.Animation != null )
+		{
+			_clips["default"] = modelFile.Animation;
+			PlayAnimation( "default" );
+		}
+		else if ( _animationPaths.ContainsKey( "i" ) )
+		{
+			PlayAnimation( "i" );
 		}
 	}
 
 	public void Draw( Transform transform )
 	{
+		Draw( transform.GetMatrix(), new Vector3( 100, 100, 100 ), Vector3.Zero );
+	}
+
+	internal void Draw( Matrix4x4 modelMatrix, Vector3 lightPosition, Vector3 lightColor )
+	{
+		PrepareAnimation();
 		foreach ( var meshHandle in Meshes )
 		{
 			var mesh = meshHandle.Get();
 			if ( mesh == null )
+			{
 				continue;
+			}
 
 			var uniformBuffer = new ObjectUniformBuffer
 			{
-				g_mModel = mesh.LocalTransform.GetMatrix() * transform.GetMatrix(),
+				g_mModel = mesh.GetLocalMatrix() * modelMatrix,
 				g_mViewProjection = Graphics.ViewProjectionMatrix,
-				g_vLightPos = new Vector3( 100, 100, 100 ),
-				g_vLightColor = new Vector3( 0, 0, 0 ),
+				g_vLightPos = lightPosition,
+				g_vLightColor = lightColor,
 				g_vCameraPos = Camera.Position,
 				g_flTime = Time.Now,
-
 				_padding0 = 0,
 				_padding1 = 0,
 				_padding2 = 0,
 			};
-
 			using var ctx = new ResourceContext();
 			ctx.Set( "ObjectUniformBuffer", uniformBuffer );
-
-			mesh?.Draw();
+			mesh.Draw();
 		}
 	}
 }

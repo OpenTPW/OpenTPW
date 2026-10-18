@@ -1,4 +1,4 @@
-﻿using StbImageSharp;
+using StbImageSharp;
 using System.Runtime.InteropServices;
 using Veldrid;
 
@@ -7,7 +7,6 @@ namespace OpenTPW;
 public partial class Texture : Resource
 {
 	public SamplerType SamplerType { get; private set; } = SamplerType.AnisotropicRepeat;
-
 	public uint Width { get; private set; }
 	public uint Height { get; private set; }
 
@@ -22,9 +21,13 @@ public partial class Texture : Resource
 	public Texture( string path, TextureFlags flags = TextureFlags.None )
 	{
 		if ( path.HasExtension( ".wct" ) )
+		{
 			UpdateFromWct( path, flags );
+		}
 		else
+		{
 			UpdateFromStb( path, flags );
+		}
 	}
 
 	/// <summary>
@@ -39,15 +42,17 @@ public partial class Texture : Resource
 	{
 		var fileData = new byte[stream.Length];
 		stream.Read( fileData, 0, fileData.Length );
-
-		var image = ImageResult.FromMemory( fileData, ColorComponents.RedGreenBlueAlpha );
-
-		var data = image.Data;
-		var width = (uint)image.Width;
-		var height = (uint)image.Height;
 		var debugName = $"Stream {stream.GetHashCode()}";
+		UpdateFromImageBytes( debugName, fileData, flags );
+	}
 
-		CreateTexture( debugName, data, width, height, flags );
+	/// <summary>Replace runtime pixels without changing the material's texture binding. Call on the render thread.</summary>
+	public void UpdatePixels( byte[] data )
+	{
+		if ( data.Length != checked( (int)(Width * Height * 4) ) )
+			throw new ArgumentException( "Pixel data must match this texture's dimensions.", nameof( data ) );
+		Device.UpdateTexture( NativeTexture, data, 0, 0, 0, Width, Height, 1, 0, 0 );
+		if ( NativeTexture.MipLevels > 1 ) Render.ImmediateSubmit( cmd => cmd.GenerateMipmaps( NativeTexture ) );
 	}
 
 	/// <summary>
@@ -55,14 +60,13 @@ public partial class Texture : Resource
 	/// </summary>
 	private void UpdateFromStb( string path, TextureFlags flags )
 	{
-		var fileData = File.ReadAllBytes( path );
+		UpdateFromImageBytes( path, File.ReadAllBytes( path ), flags );
+	}
+
+	private void UpdateFromImageBytes( string debugName, byte[] fileData, TextureFlags flags )
+	{
 		var image = ImageResult.FromMemory( fileData, ColorComponents.RedGreenBlueAlpha );
-
-		var data = image.Data;
-		var width = (uint)image.Width;
-		var height = (uint)image.Height;
-
-		CreateTexture( path, data, width, height, flags );
+		CreateTexture( debugName, image.Data, (uint)image.Width, (uint)image.Height, flags );
 	}
 
 	/// <summary>
@@ -71,7 +75,6 @@ public partial class Texture : Resource
 	private void UpdateFromWct( string path, TextureFlags flags )
 	{
 		var textureFileData = new TextureFile( path ).Data;
-
 		CreateTexture( path, textureFileData.Data, (uint)textureFileData.Width, (uint)textureFileData.Height, flags );
 	}
 
@@ -79,18 +82,21 @@ public partial class Texture : Resource
 	{
 		// Tiny textures - don't bother with mips
 		if ( width < 16 && height < 16 )
+		{
 			return 1;
+		}
 
 		int maxDimension = Math.Max( width, Math.Max( height, depth ) );
 		int mipLevels = (int)Math.Floor( Math.Log( maxDimension, 2 ) ) + 1;
-
 		return mipLevels;
 	}
 
 	private void PreprocessTextureData( ref byte[] data, ref uint width, ref uint height, TextureFlags flags )
 	{
 		if ( flags == TextureFlags.None )
+		{
 			return;
+		}
 
 		if ( flags.HasFlag( TextureFlags.PinkChromaKey ) )
 		{
@@ -99,7 +105,6 @@ public partial class Texture : Resource
 				var r = data[i];
 				var g = data[i + 1];
 				var b = data[i + 2];
-
 				if ( r == 255 && g == 0 && b == 255 )
 				{
 					// Set alpha to 0
@@ -111,55 +116,62 @@ public partial class Texture : Resource
 
 	private void CreateTexture( string debugName, byte[] data, uint width, uint height, TextureFlags flags )
 	{
-		if ( TryGetCachedTexture( debugName, out var cachedTexture ) )
+		creationFlags = flags;
+		if ( TryGetCachedTexture( debugName, flags, out var cachedTexture ) )
 		{
 			NativeTexture = cachedTexture!.NativeTexture;
 			NativeTextureView = cachedTexture!.NativeTextureView;
-
+			Path = cachedTexture.Path;
+			Width = cachedTexture.Width;
+			Height = cachedTexture.Height;
+			SamplerType = cachedTexture.SamplerType;
 			return;
 		}
 
 		PreprocessTextureData( ref data, ref width, ref height, flags );
-
 		if ( flags.HasFlag( TextureFlags.PointFilter ) )
+		{
 			SamplerType = SamplerType.Point;
+		}
 
 		if ( flags.HasFlag( TextureFlags.Wrap ) )
+		{
 			SamplerType = SamplerType.AnisotropicWrap;
+		}
 
 		if ( flags.HasFlag( TextureFlags.Repeat ) )
+		{
 			SamplerType = SamplerType.AnisotropicRepeat;
+		}
 
-		uint mipLevels = (uint)CalculateMipLevels( (int)width, (int)height, 1 );
+		bool distanceField = flags.HasFlag( TextureFlags.DistanceField );
+		if ( distanceField )
+		{
+			SamplerType = SamplerType.Linear;
+		}
 
-		var textureDescription = TextureDescription.Texture2D(
-			width,
+		uint mipLevels = distanceField ? 1u : (uint)CalculateMipLevels( (int)width, (int)height, 1 );
+		var textureDescription = TextureDescription.Texture2D( width,
 			height,
 			mipLevels,
 			1,
 			PixelFormat.R8_G8_B8_A8_UNorm,
-			TextureUsage.Sampled | TextureUsage.GenerateMipmaps
-		);
-
+			distanceField ? TextureUsage.Sampled : TextureUsage.Sampled | TextureUsage.GenerateMipmaps );
 		var texture = Device.ResourceFactory.CreateTexture( textureDescription );
-
 		var textureDataPtr = Marshal.AllocHGlobal( data.Length );
 		Marshal.Copy( data, 0, textureDataPtr, data.Length );
 		Device.UpdateTexture( texture, textureDataPtr, (uint)data.Length, 0, 0, 0, width, height, 1, 0, 0 );
 		Marshal.FreeHGlobal( textureDataPtr );
-
 		var textureView = Device.ResourceFactory.CreateTextureView( texture );
-
 		Path = debugName;
 		NativeTexture = texture;
 		NativeTextureView = textureView;
 		Width = width;
 		Height = height;
-
-		Render.ImmediateSubmit( cmd =>
+		if ( !distanceField )
 		{
-			cmd.GenerateMipmaps( NativeTexture );
-		} );
+			Render.ImmediateSubmit( cmd => cmd.GenerateMipmaps( NativeTexture ) );
+		}
 
 		All.Add( this );
 	}

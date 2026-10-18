@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 
 namespace OpenTPW;
 
@@ -11,7 +11,9 @@ public class BaseFileSystem
 	public BaseFileSystem( string relativePath )
 	{
 		if ( !Directory.Exists( relativePath ) )
+		{
 			Directory.CreateDirectory( relativePath );
+		}
 
 		basePath = Path.GetFullPath( relativePath, Directory.GetCurrentDirectory() );
 	}
@@ -39,6 +41,12 @@ public class BaseFileSystem
 	public bool FileExists( string relativePath )
 	{
 		var absolutePath = GetAbsolutePath( relativePath );
+		var (archivePath, internalPath) = FindArchivePath( absolutePath );
+		if ( !string.IsNullOrEmpty( archivePath ) )
+		{
+			return GetArchive( archivePath )?.GetFile( internalPath ) != null;
+		}
+
 		return File.Exists( absolutePath );
 	}
 
@@ -52,7 +60,6 @@ public class BaseFileSystem
 	{
 		var absolutePath = GetAbsolutePath( relativePath );
 		var (archivePath, _) = FindArchivePath( absolutePath );
-
 		if ( !string.IsNullOrEmpty( archivePath ) )
 		{
 			throw new NotImplementedException( "Can't write to archives" );
@@ -60,7 +67,9 @@ public class BaseFileSystem
 
 		string? directoryName = Path.GetDirectoryName( absolutePath );
 		if ( !Directory.Exists( directoryName ) )
+		{
 			Directory.CreateDirectory( directoryName );
+		}
 
 		return File.OpenWrite( absolutePath );
 	}
@@ -69,7 +78,6 @@ public class BaseFileSystem
 	{
 		var absolutePath = GetAbsolutePath( relativePath );
 		var (archivePath, internalPath) = FindArchivePath( absolutePath );
-
 		if ( !string.IsNullOrEmpty( archivePath ) )
 		{
 			var archive = GetArchive( archivePath );
@@ -83,7 +91,6 @@ public class BaseFileSystem
 	{
 		var absolutePath = GetAbsolutePath( relativePath );
 		var (archivePath, internalPath) = FindArchivePath( absolutePath );
-
 		if ( !string.IsNullOrEmpty( archivePath ) )
 		{
 			var archive = GetArchive( archivePath );
@@ -97,7 +104,6 @@ public class BaseFileSystem
 	{
 		var absolutePath = GetAbsolutePath( relativePath );
 		var (archivePath, internalPath) = FindArchivePath( absolutePath );
-
 		if ( !string.IsNullOrEmpty( archivePath ) )
 		{
 			var archive = GetArchive( archivePath );
@@ -121,19 +127,17 @@ public class BaseFileSystem
 	{
 		var absolutePath = GetAbsolutePath( relativePath );
 		var (archivePath, internalPath) = FindArchivePath( absolutePath );
-
 		if ( !string.IsNullOrEmpty( archivePath ) )
 		{
 			var archive = GetArchive( archivePath );
 			var entries = directories ? archive.GetDirectories( internalPath ) : archive.GetFiles( internalPath );
-			return entries.Select( entry => Path.Combine( relativePath, entry ) ).ToArray();
+			return entries.Select( entry => Path.Combine( relativePath, entry ).Replace( "\\", "/" ) ).ToArray();
 		}
 
 		if ( directories )
 		{
 			var fileSystemDirectories = Directory.GetDirectories( absolutePath );
 			var fileSystemArchives = Directory.GetFiles( absolutePath ).Where( x => archiveHandlers.Keys.Contains( Path.GetExtension( x ) ) ).Select( x => x[..x.LastIndexOf( "." )] );
-
 			return fileSystemDirectories.Concat( fileSystemArchives ).ToArray();
 		}
 		else
@@ -162,27 +166,24 @@ public class BaseFileSystem
 
 	private (string ArchivePath, string InternalPath) FindArchivePath( string path )
 	{
-		var parts = path.Split( Path.DirectorySeparatorChar );
+		var parts = path.Split( "/" );
 		var currentPath = new StringBuilder();
-
 		foreach ( var part in parts )
 		{
 			if ( currentPath.Length > 0 )
 			{
-				currentPath.Append( Path.DirectorySeparatorChar );
+				currentPath.Append( '/' );
 			}
 
 			currentPath.Append( part );
-
 			foreach ( var handler in archiveHandlers )
 			{
 				var extension = handler.Key;
 				var potentialArchivePath = $"{currentPath}{extension}";
-
 				if ( archiveHandlers.ContainsKey( extension ) && File.Exists( potentialArchivePath ) )
 				{
 					var remainingPath = path.Substring( currentPath.Length );
-					return (potentialArchivePath, remainingPath.TrimStart( Path.DirectorySeparatorChar ));
+					return (potentialArchivePath, remainingPath.TrimStart( '/' ));
 				}
 			}
 
@@ -197,7 +198,7 @@ public class BaseFileSystem
 
 	public string GetAbsolutePath( string relativePath )
 	{
-		return Path.Combine( basePath, relativePath.TrimStart( '/' ) ).Replace( "/", "\\" );
+		return Path.Combine( basePath, relativePath.TrimStart( '/' ) ).Replace( "\\", "/" );
 	}
 
 	public string GetRelativePath( string absolutePath )
@@ -209,7 +210,6 @@ public class BaseFileSystem
 	public bool IsArchive( string path )
 	{
 		var (archivePath, internalPath) = FindArchivePath( path );
-
 		return !string.IsNullOrEmpty( archivePath );
 	}
 
@@ -217,18 +217,8 @@ public class BaseFileSystem
 	{
 		var directoryName = GetAbsolutePath( relativeDir );
 		var watcher = new FileSystemWatcher( directoryName, filter );
-
-		watcher.NotifyFilter = NotifyFilters.Attributes
-							 | NotifyFilters.CreationTime
-							 | NotifyFilters.DirectoryName
-							 | NotifyFilters.FileName
-							 | NotifyFilters.LastAccess
-							 | NotifyFilters.LastWrite
-							 | NotifyFilters.Security
-							 | NotifyFilters.Size;
-
+		watcher.NotifyFilter = NotifyFilters.Attributes | NotifyFilters.CreationTime | NotifyFilters.DirectoryName | NotifyFilters.FileName | NotifyFilters.LastAccess | NotifyFilters.LastWrite | NotifyFilters.Security | NotifyFilters.Size;
 		watcher.EnableRaisingEvents = true;
-
 		return watcher;
 	}
 }

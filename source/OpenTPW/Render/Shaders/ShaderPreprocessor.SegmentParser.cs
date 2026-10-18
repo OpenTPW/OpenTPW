@@ -10,8 +10,11 @@ partial class ShaderPreprocessor
 	/// </summary>
 	internal class ShaderSegmentParser : BaseParser
 	{
-		public ShaderSegmentParser( string input ) : base( input )
+		private readonly string sourceDirectory;
+
+		public ShaderSegmentParser( string input, string? sourceDirectory = null ) : base( input )
 		{
+			this.sourceDirectory = sourceDirectory ?? Directory.GetCurrentDirectory();
 		}
 
 		private string ConsumeBlock()
@@ -66,7 +69,10 @@ partial class ShaderPreprocessor
 					var path = ConsumeWhile( x => x != '"' );
 					ConsumeChar(); // "
 
-					var contents = File.ReadAllText( path );
+					// New includes are relative to their shader. Keep the old paths
+					// rooted at the working directory working for existing shaders.
+					string relativePath = Path.Combine( sourceDirectory, path );
+					var contents = File.ReadAllText( File.Exists( relativePath ) ? relativePath : path );
 
 					blocks.Add( name, contents );
 				}

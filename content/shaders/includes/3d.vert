@@ -18,7 +18,7 @@ layout( location = 0 ) out struct VS_OUT {
 
 void main() {
   vs_out.vTexCoords = texCoords;
-  vs_out.vNormal = normal;
+  vs_out.vNormal = normalize( mat3( transpose( inverse( g_oUbo.g_mModel ) ) ) * normal );
   vs_out.vPosition = vec3( g_oUbo.g_mModel * vec4( position, 1.0 ));
 
   vec4 pos = g_oUbo.g_mModel * vec4( position, 1.0 );

@@ -1,4 +1,4 @@
-﻿namespace OpenTPW;
+namespace OpenTPW;
 
 public static class LoadingScreen
 {
@@ -18,6 +18,7 @@ public static class LoadingScreen
 	/// Show loading screen?
 	/// </summary>
 	public static bool Visible { get; set; }
+	public static string? ParkName { get; set; }
 
 	/// <summary>
 	/// 0 to 1

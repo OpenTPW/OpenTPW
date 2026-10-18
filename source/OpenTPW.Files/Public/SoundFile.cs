@@ -2,96 +2,55 @@
 
 // BIG SHOUT TO Toksisitee - https://github.com/Toksisitee/PopSoundEditor
 
-public class SoundFile : BaseFormat
+public class SoundFile : BaseFormat, IDisposable
 {
-	private ExpandedMemoryStream memoryStream;
-	public byte[] buffer;
+	private MemoryStream memoryStream = null!;
+	public byte[] buffer = null!;
 
-	public SoundFile( string path )
+	public SoundFile( string path ) => ReadFromFile( path );
+	public SoundFile( Stream stream ) => ReadFromStream( stream );
+	public void Dispose() => memoryStream.Dispose();
+
+	protected override void ReadFromStream( Stream stream )
 	{
-		ReadFromFile( path );
-	}
-
-	public SoundFile( Stream stream )
-	{
-		ReadFromStream( stream );
-	}
-
-	public void Dispose()
-	{
-		memoryStream.Dispose();
-	}
-
-	protected void ReadFromStream( Stream stream )
-	{
-		// Set up read buffer
-		var tempStreamReader = new StreamReader( stream );
-		var fileLength = (int)tempStreamReader.BaseStream.Length;
-
-		buffer = new byte[fileLength];
-		tempStreamReader.BaseStream.Read( buffer, 0, fileLength );
-		tempStreamReader.Close();
-
-		memoryStream = new ExpandedMemoryStream( buffer );
+		using var copy = new MemoryStream();
+		stream.CopyTo( copy );
+		buffer = copy.ToArray();
+		memoryStream = new MemoryStream( buffer, writable: false );
 	}
 
 	public MP2File GetFile( MemoryStream stream, int offset = 0, bool dataOnly = false )
+		=> ReadEntry( memoryStream, offset, dataOnly );
+
+	internal static MP2File ReadEntry( Stream stream, long offset, bool dataOnly = false )
 	{
-		/*
-		 * 4 bytes: Header size
-		 * 4 bytes: Data size
-		 * 16 bytes: File name (usually null terminated)
-		 * 4 bytes: Sample rate (Int16)
-		 * 4 bytes: BitsPerSample
-		 * 4 bytes: Sound type
-		 * 4 bytes: Unknown
-		 * 4 bytes: Samples
-		 * 4 bytes: Unknown
-		 * n bytes: File data
-		*/
-
-		memoryStream.Seek( offset, SeekOrigin.Begin );
-
-		var headerSize = memoryStream.ReadInt32();
-		var soundDataSize = memoryStream.ReadInt32();
-		var fileName = memoryStream.ReadString( 16 ).TrimEnd( '\0' );
-		
-		// Add MP2 to end of file so we can handle it properly
-		if ( !fileName.EndsWith( ".mp2" ) )
+		const int MinimumHeaderSize = 40;
+		if ( offset < 0 || offset > stream.Length - MinimumHeaderSize )
+			throw new InvalidDataException( "SDT sound header is outside the bank." );
+		stream.Position = offset;
+		using var reader = new BinaryReader( stream, System.Text.Encoding.ASCII, leaveOpen: true );
+		int headerSize = reader.ReadInt32();
+		int size = reader.ReadInt32();
+		if ( headerSize < MinimumHeaderSize || headerSize > stream.Length - offset ||
+			size < 0 || size > stream.Length - offset - headerSize )
+			throw new InvalidDataException( "Invalid SDT sound size." );
+		string name = System.Text.Encoding.ASCII.GetString( reader.ReadExactBytes( 16 ) ).TrimEnd( '\0' );
+		name = Path.ChangeExtension( name, ".mp2" );
+		// A ushort rate, byte resolution and byte type share these four bytes.
+		int rate = reader.ReadUInt16();
+		int bits = reader.ReadByte();
+		int type = reader.ReadByte();
+		_ = reader.ReadInt32();
+		int samples = reader.ReadInt32();
+		_ = reader.ReadInt32();
+		stream.Position = offset + headerSize;
+		byte[] sound = reader.ReadExactBytes( size );
+		byte[] data = [];
+		if ( !dataOnly )
 		{
-			bool hasExtension = fileName.Contains( '.' );
-			if ( !hasExtension )
-			{
-				fileName += ".mp2";
-			}
-			else
-			{
-				fileName = fileName.Substring( 0, fileName.LastIndexOf( "." ) ) + ".mp2";
-			}
+			stream.Position = offset;
+			data = reader.ReadExactBytes( checked( headerSize + size ) );
 		}
-
-		var sampleRate = memoryStream.ReadInt16();
-		var bitsPerSample = memoryStream.ReadInt32();
-		var soundType = memoryStream.ReadInt32();
-
-		// Unknown
-		_ = memoryStream.ReadInt32();
-
-		var samples = memoryStream.ReadInt32();
-
-		// Unknown
-		_ = memoryStream.ReadInt32();
-
-		// Rest of Data
-		var soundData = memoryStream.ReadBytes( soundDataSize );
-
-		// Gather full byte data of file
-		var dataSize = headerSize + soundDataSize;
-
-		// We seek back to offset to capture full data set
-		memoryStream.Seek ( offset, SeekOrigin.Begin );
-		byte[] data = memoryStream.ReadBytes( dataSize );
-		
-		return new MP2File( headerSize, fileName, soundData, sampleRate, bitsPerSample, soundType, samples, data );
+		return new MP2File( headerSize, name, sound, rate, bits, type, samples, data );
 	}
 }

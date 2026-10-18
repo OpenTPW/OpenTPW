@@ -1,16 +1,17 @@
-﻿namespace OpenTPW;
+namespace OpenTPW;
 
 public partial class TextureFile
 {
 	struct ImageDecodeState
 	{
+		public bool InterleavedRows;
 		public List<float> DequantizationBuffer;
 		public List<float> RowDecodeBuffer;
 
 		public ImageDecodeState( int size )
 		{
-			DequantizationBuffer = Enumerable.Repeat( 0f, size * size * size ).ToList();
-			RowDecodeBuffer = Enumerable.Repeat( 0f, size * size * size ).ToList();
+			DequantizationBuffer = Enumerable.Repeat( 0f, size * size ).ToList();
+			RowDecodeBuffer = Enumerable.Repeat( 0f, size * size ).ToList();
 		}
 	}
 }

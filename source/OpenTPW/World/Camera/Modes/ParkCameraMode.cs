@@ -1,63 +1,60 @@
-﻿namespace OpenTPW;
+using OpenTPW.UI;
+
+namespace OpenTPW;
 
 public class ParkCameraMode : CameraMode
 {
-	private Vector3 wishVelocity = new();
-	private Vector3 velocity = new();
-	private float wishYaw;
-	private bool wasPressed;
-	private Vector2 mouseAnchor;
-	private float cameraSpeed = 128f;
-	private float wishHeight = 2f;
-	private float yaw;
+	// Camera tuning uses world units, degrees, and units per second.
+	private static readonly Vector3 EntranceViewOffset = new( 5, 75, 0 );
+	private float RotationStepDegrees => 90;
+	private float MovementSpeed => 80;
+	private float WheelZoomStep => 16;
+	private float MinimumHeight => 48;
+	private float MaximumHeight => 640;
+	private float HorizontalDistancePerHeight => .75f;
+	private float ParkFieldOfView => 60;
+	internal static Vector3 StartPosition { get; set; }
+	internal static Vector2 Bounds { get; set; }
+	private Vector3 target;
+	private bool initialized;
+	private float height = 65;
+	private float yaw = 90;
 
 	public override void Update()
 	{
-		//
-		// Get user input
-		//
-		var wishDir = new Vector3( Input.Forward, Input.Right, 0 ).Normal;
-
-		if ( Input.Mouse.Right && !wasPressed )
+		if ( !initialized )
 		{
-			mouseAnchor = Input.Mouse.Position;
+			target = StartPosition + EntranceViewOffset;
+			initialized = true;
 		}
 
-		if ( Input.Mouse.Right )
+		if ( RootPanel.Instance?.Children.Any( panel => panel.IsModal ) == true || LoadingScreen.Visible )
 		{
-			var delta = mouseAnchor - Input.Mouse.Position;
-			wishDir = new Vector3( delta.Y, -delta.X, 0 ) / 512f;
+			return;
 		}
-
-		wasPressed = Input.Mouse.Right;
-
-		wishVelocity = Rotation.Forward * wishDir.X * Time.Delta * cameraSpeed;
-		wishVelocity += Rotation.Right * wishDir.Y * Time.Delta * cameraSpeed;
-		wishVelocity.Z = 0;
-
-		wishHeight += -Input.Mouse.Wheel;
-		wishHeight = wishHeight.Clamp( 1f, 10f );
 
 		if ( Input.Pressed( InputButton.RotateLeft ) )
-			wishYaw -= 90;
+		{
+			yaw -= RotationStepDegrees;
+		}
+
 		if ( Input.Pressed( InputButton.RotateRight ) )
-			wishYaw += 90;
+		{
+			yaw += RotationStepDegrees;
+		}
 
-		//
-		// Apply everything
-		//
+		var heading = Rotation.From( 0, yaw, 0 );
+		var direction = heading.Forward * Input.Forward + heading.Right * Input.Right;
+		target += direction.WithZ( 0 ) * Time.Delta * MovementSpeed;
+		target.X = target.X.Clamp( 0, Bounds.X );
+		target.Y = target.Y.Clamp( 0, Bounds.Y );
+		height = (height - Input.Mouse.Wheel * WheelZoomStep).Clamp( MinimumHeight, MaximumHeight );
 
-		// Apply velocity
-		velocity += wishVelocity * Time.Delta;
+		var targetPostion = target - heading.Forward * height * HorizontalDistancePerHeight + Vector3.Up * height;
+		var targetRotation = Rotation.LookAt( target - Position );
 
-		// Apply drag
-		velocity = velocity.LerpTo( Vector3.Zero, Time.Delta * 5f );
-
-		// Rotate camera
-		yaw = yaw.LerpTo( wishYaw, 10f * Time.Delta );
-
-		// Move camera
-		Position += velocity;
-		Position = Position.WithZ( Position.Z.LerpTo( wishHeight, 10f * Time.Delta ) );
+		Position = Position.LerpTo( targetPostion, Time.Delta * 50f );
+		Rotation = Rotation.LerpTo( targetRotation, Time.Delta * 15f );
+		FieldOfView = ParkFieldOfView;
 	}
 }

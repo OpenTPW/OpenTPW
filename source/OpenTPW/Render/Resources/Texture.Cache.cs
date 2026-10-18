@@ -2,14 +2,17 @@
 
 partial class Texture
 {
-	private static bool TryGetCachedTexture( string path, out Texture? texture )
+	private TextureFlags creationFlags;
+
+	private static bool TryGetCachedTexture( string path, TextureFlags flags, out Texture? texture )
 	{
 		texture = null;
 
 		if ( string.IsNullOrEmpty( path ) )
 			return false;
 
-		var existingTexture = Resource.All.OfType<Texture>().ToList().FirstOrDefault( t => t.Path == path );
+		// Filtering and chroma-key processing are part of an asset's identity.
+		var existingTexture = Resource.All.OfType<Texture>().FirstOrDefault( t => t.Path == path && t.creationFlags == flags );
 		if ( existingTexture != null )
 		{
 			texture = existingTexture;

@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
 		<OutputType>Exe</OutputType>
@@ -19,6 +19,11 @@
 
 	<ItemGroup>
 		<Content Include="icon.ico" />
+		<Content Include="../../content/shaders/includes/world*" Link="content/shaders/includes/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+        <Content Include="../../content/shaders/terrain.shader" Link="content/shaders/terrain.shader" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+        <Content Include="../../content/shaders/ui_particles.shader" Link="content/shaders/ui_particles.shader" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+		<Content Include="../../content/shaders/msdf.shader" Link="content/shaders/msdf.shader" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+		<Content Include="../../content/fonts/msdf/**" Link="content/fonts/msdf/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
 	</ItemGroup>
 
 	<ItemGroup>

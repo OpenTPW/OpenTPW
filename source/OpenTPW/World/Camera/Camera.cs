@@ -1,9 +1,10 @@
-﻿using System.Numerics;
+using System.Numerics;
 
 namespace OpenTPW;
 
 public static class Camera
 {
+	public static float FieldOfView => CameraMode.FieldOfView;
 	public static Vector3 Position => CameraMode?.Position ?? Vector3.Zero;
 	public static Rotation Rotation => CameraMode?.Rotation ?? Rotation.Identity;
 

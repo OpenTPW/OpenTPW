@@ -22,10 +22,9 @@ public class Shader : Resource
 
 		Recompile();
 
-		var directoryName = System.IO.Path.GetDirectoryName( Path );
-		var fileName = System.IO.Path.GetFileName( Path );
+		var directoryName = System.IO.Path.GetDirectoryName( System.IO.Path.GetFullPath( Path ) )!;
 
-		watcher = new FileSystemWatcher( directoryName, fileName );
+		watcher = new FileSystemWatcher( directoryName ) { IncludeSubdirectories = true };
 
 		watcher.NotifyFilter = NotifyFilters.Attributes
 							 | NotifyFilters.CreationTime
@@ -55,7 +54,15 @@ public class Shader : Resource
 
 	private void OnWatcherChanged( object sender, FileSystemEventArgs e )
 	{
-		IsDirty = true;
+		string shaderPath = System.IO.Path.GetFullPath( Path );
+		string includeDirectory = System.IO.Path.Combine( System.IO.Path.GetDirectoryName( shaderPath )!, "includes" )
+			+ System.IO.Path.DirectorySeparatorChar;
+		if ( e.FullPath.Equals( shaderPath, StringComparison.OrdinalIgnoreCase ) ||
+			e.FullPath.StartsWith( includeDirectory, StringComparison.OrdinalIgnoreCase ) )
+		{
+			// Shared include edits must also trigger the existing shader hot reload.
+			IsDirty = true;
+		}
 	}
 
 	public void Recompile()

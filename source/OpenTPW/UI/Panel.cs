@@ -1,12 +1,20 @@
-﻿namespace OpenTPW.UI;
+namespace OpenTPW.UI;
 
 public class Panel
 {
-	public Rectangle Bounds;
+	public Vector2 Position;
+
+	internal RootPanel? Parent { get; set; }
+
+	public virtual bool IsModal => false;
+
+	protected bool CanReceiveInput => Parent == null || Parent.Children.LastOrDefault( p => p.IsModal ) is not
+	{
+	} modal || ReferenceEquals( modal, this );
 
 	public Panel()
 	{
-		Bounds = new( 0, 0, 0, 0 );
+		Position = Vector2.Zero;
 	}
 
 	public void Update()
@@ -14,9 +22,17 @@ public class Panel
 		OnUpdate();
 	}
 
-	protected virtual void OnRender() { }
-	protected virtual void OnUpdate() { }
-	protected virtual void OnDelete() { }
+	protected virtual void OnRender()
+	{
+	}
+
+	protected virtual void OnUpdate()
+	{
+	}
+
+	protected virtual void OnDelete()
+	{
+	}
 
 	public void Draw()
 	{
@@ -26,6 +42,7 @@ public class Panel
 	public void Delete()
 	{
 		OnDelete();
-		LobbyScene.Current.Hud.Children.Remove( this );
+		Parent?.Children.Remove( this );
+		Parent = null;
 	}
 }

@@ -1,45 +1,5 @@
-vertex {
-    layout(location = 0) in vec3 position;
-    layout(location = 1) in vec3 normal;
-    layout(location = 2) in vec2 texCoords;
-    layout(location = 3) in int texIndex;
-    layout(location = 4) in uint matFlags;
-
-    layout(set = 0, binding = 0) uniform ObjectUniformBuffer {
-        mat4 g_mModel;
-        mat4 g_mViewProj;
-        vec3 g_vLightPos;
-        vec3 g_vLightColor;
-        vec3 g_vCameraPos;
-        float g_flTime;
-    } g_oUbo;
-
-    layout(location = 0) out VS_OUT {
-        vec2 vTexCoords;
-        vec3 vNormal;
-        vec3 vPosition;
-        vec3 vWorldPosition;
-        vec3 vPositionCS;
-    } vs_out;
-
-    layout(location = 5) out flat int outTexIndex;
-    layout(location = 6) out flat uint outMatFlags;
-
-    void main() {
-        vs_out.vTexCoords = texCoords;
-        vs_out.vTexCoords.y = 1.0 - vs_out.vTexCoords.y;
-        vs_out.vNormal = normal;
-        vs_out.vPosition = vec3(g_oUbo.g_mModel * vec4(position, 1.0));
-
-        vec4 pos = g_oUbo.g_mModel * vec4(position, 1.0);
-        vs_out.vWorldPosition = pos.xyz;
-        vs_out.vPositionCS = (g_oUbo.g_mViewProj * pos).xyz;
-        gl_Position = g_oUbo.g_mViewProj * pos;
-
-        outTexIndex = texIndex;
-        outMatFlags = matFlags;
-    }
-}
+common "includes/world-bindings.glsl"
+vertex "includes/world.vert"
 
 fragment {
     layout(location = 0) in VS_OUT {
@@ -55,57 +15,14 @@ fragment {
 
     layout(location = 0) out vec4 fragColor;
 
-    layout(set = 0, binding = 0) uniform ObjectUniformBuffer {
-        mat4 g_mModel;
-        mat4 g_mViewProj;
-        vec3 g_vLightPos;
-        vec3 g_vLightColor;
-        vec3 g_vCameraPos;
-        float g_flTime;
-    } g_oUbo;
-
-    layout( set = 1, binding = 0 ) uniform texture2D Color0;
-    layout( set = 1, binding = 1 ) uniform texture2D Color1;
-    layout( set = 1, binding = 2 ) uniform texture2D Color2;
-    layout( set = 1, binding = 3 ) uniform texture2D Color3;
-    layout( set = 1, binding = 4 ) uniform texture2D Color4;
-    layout( set = 1, binding = 5 ) uniform texture2D Color5;
-    layout( set = 1, binding = 6 ) uniform texture2D Color6;
-    layout( set = 1, binding = 7 ) uniform texture2D Color7;
-    layout( set = 1, binding = 8 ) uniform texture2D Color8;
-    layout( set = 1, binding = 9 ) uniform texture2D Color9;
-    layout( set = 1, binding = 10 ) uniform texture2D Color10;
-    layout( set = 1, binding = 11 ) uniform texture2D Color11;
-    layout( set = 1, binding = 12 ) uniform texture2D Color12;
-    layout( set = 1, binding = 13 ) uniform texture2D Color13;
-    layout( set = 1, binding = 14 ) uniform texture2D Color14;
-    layout( set = 1, binding = 15 ) uniform texture2D Color15;
-    layout( set = 1, binding = 16 ) uniform sampler s_Color;
-
-    const uint FLAG_BASE = 1;
-    const uint FLAG_TRANSPARENT = 2;
-    const uint FLAG_UNK = 4;
-    const uint FLAG_X_AXIS_ANIM = 8;
-    const uint FLAG_Y_AXIS_ANIM = 16;
-    const uint FLAG_GOURAUD_SHADED = 32;
-
-    const uint FLAG_UNSHADED = 255;
-        
-    void main() 
+    void main()
     {
         vec2 finalTexCoords = vs_out.vTexCoords;
 
-        /*if ((outMatFlags & FLAG_X_AXIS_ANIM) != 0) {
-            finalTexCoords.x = finalTexCoords.x + g_oUbo.g_flTime * 0.1;
-        }
+        vec3 N = vs_out.vNormal / max(length(vs_out.vNormal), 0.00001);
+        // StaticModelActor supplies the world-space direction toward the sun.
+        vec3 L = normalize(g_oUbo.g_vLightPos);
 
-        if ((outMatFlags & FLAG_Y_AXIS_ANIM) != 0) {
-            finalTexCoords.y = finalTexCoords.y + g_oUbo.g_flTime * 0.1;
-        }*/
-
-        vec3 N = normalize(vs_out.vNormal);
-        vec3 L = normalize(vs_out.vWorldPosition);
-        
         vec3 vDiffuse = max(dot(N, L), 0.0) * g_oUbo.g_vLightColor;
         vec3 vAmbient = vec3(0.4);
 
@@ -129,14 +46,9 @@ fragment {
         if ( texIndex == 15 ) vTextureSample = texture( sampler2D( Color15, s_Color ), finalTexCoords);
 
         vec3 vShading = vDiffuse + vAmbient;
-        vec3 vOutColor;
-
-        // Apply Gouraud shading if the flag is set, otherwise use flat shading
-        if ((outMatFlags & FLAG_UNSHADED) != 0) {
-            vOutColor = vTextureSample.xyz * vShading;
-        } else {
-            vOutColor = vTextureSample.xyz;
-        }
+        // World materials use directional lighting. Raw MD2 flags are kept
+        // for future decoding, not treated as a guessed "unshaded" mask.
+        vec3 vOutColor = vTextureSample.xyz * vShading;
 
         fragColor = vec4(vOutColor, vTextureSample.a);
 
@@ -146,8 +58,8 @@ fragment {
         fogFactor = clamp( fogFactor, 0, 1 );
 
         if ( fragColor.a < 0.1 )
-            discard; // bad practice, but will do for now
-        
+            discard;
+
         // Mix with fog
         fragColor.xyz = mix(fragColor.xyz, vec3( 0.301, 0.84, 1 ), fogFactor);
     }

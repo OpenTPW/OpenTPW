@@ -8,7 +8,8 @@ internal static partial class ShaderPreprocessor
 	{
 		var fileContents = File.ReadAllText( filePath );
 
-		var segmentParser = new ShaderSegmentParser( fileContents );
+		var directory = Path.GetDirectoryName( Path.GetFullPath( filePath ) )!;
+		var segmentParser = new ShaderSegmentParser( fileContents, directory );
 		segmentParser.Parse( out var vertexStage1, out var fragmentStage1 );
 
 		var result = new PreprocessedShader( vertexStage1, fragmentStage1 );

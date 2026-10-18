@@ -1,4 +1,4 @@
-﻿namespace OpenTPW;
+namespace OpenTPW;
 
 /// <summary>
 /// Common variable set; all rides have these variables.
@@ -16,5 +16,6 @@ public enum RideVariables : int
 	VAR_WORN,
 	VAR_RUNNING,
 	VAR_PAD,
-	VAR_PARAM
+	VAR_PARAM,
+	VAR_MAX
 }

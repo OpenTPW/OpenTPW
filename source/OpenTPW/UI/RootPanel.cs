@@ -1,4 +1,4 @@
-﻿using Veldrid;
+using Veldrid;
 
 namespace OpenTPW.UI;
 
@@ -14,21 +14,45 @@ public class RootPanel : Actor
 
 	protected override void OnRenderUI()
 	{
-		Children.ForEach( child => child.Draw() );
+		Children.ToList().ForEach( child => child.Draw() );
 	}
 
 	protected override void OnUpdate()
 	{
-		Children.ForEach( child => child.Update() );
+		var modal = Children.LastOrDefault( child => child.IsModal );
+		if ( modal != null )
+		{
+			modal.Update();
+			return;
+		}
+
+		foreach ( var child in Children.ToArray() )
+		{
+			child.Update();
+			if ( Children.Any( panel => panel.IsModal ) )
+			{
+				break;
+			}
+		}
 	}
 
 	public T AddChild<T>( T? obj = null ) where T : Panel
 	{
 		if ( obj is null )
+		{
 			obj = Activator.CreateInstance( typeof( T ) ) as T;
+		}
 
+		obj!.Parent = this;
 		Children.Add( obj );
-
 		return obj;
+	}
+
+	public void ClearChildren()
+	{
+		foreach ( var child in Children.ToArray() )
+		{
+			child.Delete();
+		}
 	}
 }

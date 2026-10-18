@@ -25,14 +25,20 @@ public class Actor
 
 	public Matrix4x4 ModelMatrix
 	{
-		get
-		{
-			var matrix = Matrix4x4.Identity;
-			matrix *= Matrix4x4.CreateScale( Scale.GetSystemVector3() );
-			matrix *= Matrix4x4.CreateFromQuaternion( Rotation );
-			matrix *= Matrix4x4.CreateTranslation( Position.GetSystemVector3() );
+		get => Transform.CreateMatrix( Position, Rotation, Scale );
+	}
 
-			return matrix;
+	internal static void UpdateAll() => ForEachSnapshot( static actor => actor.Update() );
+	internal static void RenderAll() => ForEachSnapshot( static actor => actor.Render() );
+	internal static void RenderUIAll() => ForEachSnapshot( static actor => actor.RenderUI() );
+	internal static void DeleteAll() => ForEachSnapshot( static actor => actor.Delete() );
+
+	private static void ForEachSnapshot( Action<Actor> callback )
+	{
+		// Callbacks may add or remove actors. Every scene uses the same snapshot rule.
+		foreach ( var actor in All.ToArray() )
+		{
+			callback( actor );
 		}
 	}
 

@@ -1,4 +1,4 @@
-﻿using System.Numerics;
+using System.Numerics;
 
 namespace OpenTPW;
 
@@ -12,12 +12,13 @@ partial class Graphics
 	public class Scope : IDisposable
 	{
 		Point2 _oldScreenSize;
+		Matrix4x4 _oldCameraMatrix;
 
 		public Scope( Point2 newScreenSize, Matrix4x4? cameraMatrix )
 		{
 			_oldScreenSize = BaseScreenSize;
+			_oldCameraMatrix = CameraMatrix;
 			BaseScreenSize = newScreenSize;
-
 			CameraMatrix = cameraMatrix ?? CameraMatrix;
 		}
 
@@ -28,6 +29,7 @@ partial class Graphics
 		void IDisposable.Dispose()
 		{
 			BaseScreenSize = _oldScreenSize;
+			CameraMatrix = _oldCameraMatrix;
 		}
 	}
 }

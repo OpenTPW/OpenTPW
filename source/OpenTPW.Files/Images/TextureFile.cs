@@ -1,12 +1,38 @@
-﻿using ICSharpCode.SharpZipLib.Zip.Compression.Streams;
-
 namespace OpenTPW;
 
 public record struct TextureData( int Width, int Height, byte[] Data );
 
 public partial class TextureFile : BaseFormat
 {
+	// Reproduce the original x87/MMX rounding rather than modern color conversion.
+	private const double RoundingBias = 12582912.0;
+
 	public TextureData Data { get; set; }
+
+	// SGN stores the same wavelet chunks as WCT, with floating point scales.
+	internal static TextureData DecodeSignBackground( int width, int height, float y, float cb, float cr, float a,
+		byte[] color, byte[] alpha )
+	{
+		ushort Quant( float scale, float step )
+		{
+			float value = (scale - 1) / step;
+			if ( !float.IsFinite( value ) || value < 0 || value > ushort.MaxValue || value != MathF.Truncate( value ) )
+				throw new InvalidDataException( "Unsupported SGN quantization scale." );
+			return (ushort)value;
+		}
+		using var stream = new MemoryStream();
+		using ( var writer = new BinaryWriter( stream, System.Text.Encoding.UTF8, true ) )
+		{
+			writer.Write( new byte[] { 0x12, 1, 32, 3 } );
+			writer.Write( (ushort)width ); writer.Write( (ushort)height );
+			writer.Write( Quant( y, .5f ) ); writer.Write( Quant( cb, .25f ) );
+			writer.Write( Quant( cr, .25f ) ); writer.Write( Quant( a, 1 ) );
+			writer.Write( color.Length ); writer.Write( alpha.Length ); writer.Write( 0 );
+			writer.Write( color ); writer.Write( alpha );
+		}
+		stream.Position = 0;
+		return new TextureFile( stream ).Data;
+	}
 
 	static float ComputeDequantizationScaleY( int n ) => 1.0f - ((float)n * -0.5f);
 	static float ComputeDequantizationScaleCbCr( int n ) => 1.0f - ((float)n * -0.25f);
@@ -31,73 +57,97 @@ public partial class TextureFile : BaseFormat
 		}
 
 		using var binaryReader = new BinaryReader( stream );
+		if ( stream.CanSeek && stream.Length - stream.Position < 28 )
+		{
+			throw new InvalidDataException( "Truncated WCT header" );
+		}
 
-		//
-		// Read header
-		//
+		var fileData = ReadHeader( binaryReader );
+		if ( stream.CanSeek && (long)fileData.ColorChunkSize + fileData.AlphaChunkSize > stream.Length - stream.Position )
+		{
+			throw new InvalidDataException( "Truncated WCT chunks" );
+		}
+
+		fileData.ColorChunk = ReadChunk( binaryReader, fileData.ColorChunkSize );
+		if ( fileData.AlphaChunkSize > 0 )
+		{
+			fileData.AlphaChunk = ReadChunk( binaryReader, fileData.AlphaChunkSize );
+		}
+
+		Data = DecodeImage( fileData );
+	}
+
+	private static TextureFileData ReadHeader( BinaryReader binaryReader )
+	{
 		var fileData = new TextureFileData()
 		{
 			Flags = (TextureFlags)binaryReader.ReadByte(),
-			HasAlphaChannel = binaryReader.ReadByte() == 0x01,
+			HasAlphaChannel = binaryReader.ReadByte() != 0,
 			BitsPerPixel = binaryReader.ReadByte(),
 			Version = binaryReader.ReadByte(),
-			Width = binaryReader.ReadInt16(),
-			Height = binaryReader.ReadInt16(),
-			YChannelQuantizationScale = binaryReader.ReadInt16(),
-			CbChannelQuantizationScale = binaryReader.ReadInt16(),
-			CrChannelQuantizationScale = binaryReader.ReadInt16(),
-			AChannelQuantizationScale = binaryReader.ReadInt16(),
-
+			Width = binaryReader.ReadUInt16(),
+			Height = binaryReader.ReadUInt16(),
+			YChannelQuantizationScale = binaryReader.ReadUInt16(),
+			CbChannelQuantizationScale = binaryReader.ReadUInt16(),
+			CrChannelQuantizationScale = binaryReader.ReadUInt16(),
+			AChannelQuantizationScale = binaryReader.ReadUInt16(),
 			ColorChunkSize = binaryReader.ReadInt32(),
 			AlphaChunkSize = binaryReader.ReadInt32(),
-
 			Checksum = binaryReader.ReadInt32()
 		};
+		// 0x564C00 accepts codec 0x12 (BILZ/raw) and 0x13 (LZSS).
+		// Bit zero selects the codec, not a half-resolution inverse transform.
+		if ( fileData.Flags is not TextureFlags.Bilz and not TextureFlags.Lzss )
+		{
+			throw new InvalidDataException( "Unsupported WCT codec" );
+		}
 
-		//
-		// Read blocks
-		//
+		if ( fileData.Width == 0 || fileData.Height == 0 || fileData.Width > 2048 || fileData.Height > 2048 )
+		{
+			throw new InvalidDataException( "Invalid WCT dimensions" );
+		}
 
-		// Color
-		if ( fileData.ColorChunkSize == 0 )
-			throw new InvalidDataException( "Texture does not have color data" );
+		if ( fileData.BitsPerPixel != 24 && fileData.BitsPerPixel != 32 )
+		{
+			throw new InvalidDataException( "Unsupported WCT pixel depth" );
+		}
 
-		fileData.ColorChunk = binaryReader.ReadBytes( fileData.ColorChunkSize );
+		fileData.HasAlphaChannel = fileData.BitsPerPixel == 32 && fileData.AlphaChunkSize > 0;
+		if ( fileData.ColorChunkSize <= 0 || fileData.AlphaChunkSize < 0 )
+		{
+			throw new InvalidDataException( "Invalid WCT chunk sizes" );
+		}
 
-		// Alpha
-		if ( fileData.AlphaChunkSize > 0 )
-			fileData.AlphaChunk = binaryReader.ReadBytes( fileData.AlphaChunkSize );
+		return fileData;
+	}
 
-		//
-		// Decompress blocks
-		//
+	private TextureData DecodeImage( TextureFileData fileData )
+	{
 		var alphaData = Array.Empty<byte>();
-		var colorData = Decompress( fileData.ColorChunk );
-
+		var size = (int)GetAlignedSize( (uint)Math.Max( fileData.Height, fileData.Width ) );
+		var colorData = Decompress( fileData.ColorChunk, fileData.Flags, size * size * 9 / 2 );
 		if ( fileData.HasAlphaChannel )
-			alphaData = Decompress( fileData.AlphaChunk );
-
-		//
-		// Decode image
-		//
-		var size = (int)Math.Max( GetAlignedSize( (uint)Math.Max( fileData.Height, fileData.Width ) ), 8 );
+		{
+			alphaData = Decompress( fileData.AlphaChunk, fileData.Flags, size * size * 3 );
+		}
 
 		var outputY = Enumerable.Repeat( 0f, size * size ).ToList();
 		var outputCb = Enumerable.Repeat( 0f, size * size ).ToList();
 		var outputCr = Enumerable.Repeat( 0f, size * size ).ToList();
 		var outputA = Enumerable.Repeat( 255f, size * size ).ToList();
-
-		var isHalfScale = !fileData.Flags.HasFlag( TextureFlags.FullScale );
-		var state = new ImageDecodeState( size );
-		DecodeChannel( ref state, size, ref colorData, ref outputY, ComputeDequantizationScaleY( fileData.YChannelQuantizationScale ), isHalfScale );
-		DecodeChannel( ref state, size / 2, ref colorData, ref outputCb, ComputeDequantizationScaleCbCr( fileData.CbChannelQuantizationScale ), isHalfScale );
-		DecodeChannel( ref state, size / 2, ref colorData, ref outputCr, ComputeDequantizationScaleCbCr( fileData.CrChannelQuantizationScale ), isHalfScale );
-
+		var state = new ImageDecodeState( size )
+		{
+			InterleavedRows = fileData.Flags == TextureFlags.Lzss
+		};
+		DecodeChannel( ref state, size, ref colorData, ref outputY, ComputeDequantizationScaleY( fileData.YChannelQuantizationScale ) );
+		DecodeChannel( ref state, size / 2, ref colorData, ref outputCb, ComputeDequantizationScaleCbCr( fileData.CbChannelQuantizationScale ) );
+		DecodeChannel( ref state, size / 2, ref colorData, ref outputCr, ComputeDequantizationScaleCbCr( fileData.CrChannelQuantizationScale ) );
 		if ( fileData.HasAlphaChannel )
-			DecodeChannel( ref state, size, ref alphaData, ref outputA, ComputeDequantizationScaleA( fileData.AChannelQuantizationScale ), isHalfScale, true );
+		{
+			DecodeChannel( ref state, size, ref alphaData, ref outputA, ComputeDequantizationScaleA( fileData.AChannelQuantizationScale ) );
+		}
 
 		var outputBytes = new byte[fileData.Width * fileData.Height * 4];
-
 		for ( int y = 0; y < fileData.Height; y++ )
 		{
 			for ( int x = 0; x < fileData.Width; x++ )
@@ -106,77 +156,46 @@ public partial class TextureFile : BaseFormat
 				float cy = outputY[y * size + x];
 				float cb = outputCb[((y / 2) * (size / 2) + (x / 2))];
 				float cr = outputCr[((y / 2) * (size / 2) + (x / 2))];
+				byte r, g, b;
+				if ( state.InterleavedRows )
+				{
+					int iy = RoundedWord( cy );
+					int icb = (sbyte)RoundedWord( cb ), icr = (sbyte)RoundedWord( cr );
+					r = Saturate( iy + (int)(1.402 * icr) );
+					g = Saturate( iy - (int)(0.344136 * icb) - (int)(0.714136 * icr) );
+					b = Saturate( iy + (int)(1.772 * icb) );
+				}
+				else
+				{
+					r = ToColorByte( cy, (double)1.402f * cr );
+					g = Saturate( RoundedWord( cy - (double)0.344136f * cb - (double)0.714136f * cr ) );
+					b = ToColorByte( cy, (double)1.772f * cb );
+				}
 
-				float r = cy + 1.402f * (cr);
-				float g = cy - 0.344136f * (cb) - 0.714136f * (cr);
-				float b = cy + 1.772f * (cb);
-
-				// Alpha channel remains untouched..
 				float a = outputA[y * size + x];
-
-				outputBytes[((y * fileData.Width + x) * 4)] = (byte)r.Clamp( 0, 255 );
-				outputBytes[((y * fileData.Width + x) * 4) + 1] = (byte)g.Clamp( 0, 255 );
-				outputBytes[((y * fileData.Width + x) * 4) + 2] = (byte)b.Clamp( 0, 255 );
-				outputBytes[((y * fileData.Width + x) * 4) + 3] = (byte)a.Clamp( 0, 255 );
+				outputBytes[((y * fileData.Width + x) * 4)] = r;
+				outputBytes[((y * fileData.Width + x) * 4) + 1] = g;
+				outputBytes[((y * fileData.Width + x) * 4) + 2] = b;
+				outputBytes[((y * fileData.Width + x) * 4) + 3] = Saturate( RoundedWord( a ) );
 			}
 		}
 
-		Data = new TextureData( fileData.Width, fileData.Height, outputBytes );
+		return new TextureData( fileData.Width, fileData.Height, outputBytes );
 	}
 
-	private static byte[] Decompress( byte[] data )
-	{
-		// Check if the file contains 'BILZ' as the first 4 bytes - if so then it is a zlib
-		// compressed chunk
-		if ( data[0] == 0x42 && data[1] == 0x49 && data[2] == 0x4C && data[3] == 0x5A )
-			return DecompressZLIB( data );
+	private static int RoundedWord( double value ) => (short)BitConverter.SingleToInt32Bits( (float)(value + RoundingBias) );
+	private static byte Saturate( int value ) => (byte)Math.Clamp( value, 0, 255 );
 
-		// Not zlib, so must be data compressed with LZSS
-		return DecompressLZSS( data );
+	// Codec 0x12 rounds the biased chroma contribution before adding luma,
+	// then uses signed MMX saturation. Codec 0x13 uses integer lookup tables.
+	private static byte ToColorByte( double luma, double chroma )
+	{
+		float biased = (float)(chroma + RoundingBias);
+		return Saturate( (short)BitConverter.SingleToInt32Bits( (float)(luma + biased) ) );
 	}
 
-	private static byte[] DecompressZLIB( byte[] data )
+	private static byte[] ReadChunk( BinaryReader reader, int length )
 	{
-		/*
-		 * Theme Park World uses ZLIB 1.1.3
-		 * We can therefore deduce that the custom ZLIB header is as follows:
-		 * - 4 bytes: "BILZ" magic number
-		 * - 4 bytes: decompressed size
-		 * - 4 bytes: stream size
-		 * - 4 bytes: Constant - MAX_WBITS (15) - from zlib
-		 * - 4 bytes: Constant - DEF_MEM_LEVEL (9) - from zlib
-		 * - 4 bytes: Unused
-		 * - 4 bytes: Unused 
-		 */
-
-		// We don't need to use any of this data - so we'll just skip it entirely
-		data = data[0x1C..]; // Unused data
-
-		const int maxSize = 256 * 256 * 3 + 128 * 128 * 3 + 128 * 128 * 3 + 256 * 256 * 3;
-		using var outputStream = new MemoryStream( maxSize );
-		using var outputWriter = new BinaryWriter( outputStream );
-		{
-			using var inputStream = new MemoryStream( data );
-			using var compressed = new InflaterInputStream( inputStream );
-			compressed.CopyTo( outputStream );
-		}
-
-		return outputStream.ToArray();
-	}
-
-	private static byte[] DecompressLZSS( byte[] data )
-	{
-		/*					Y (full)      + Cb (half)     + Cr (half)     + Alpha (full) */
-		const int maxSize = 256 * 256 * 3 + 128 * 128 * 3 + 128 * 128 * 3 + 256 * 256 * 3;
-		using var outputStream = new MemoryStream( maxSize );
-		using var outputWriter = new BinaryWriter( outputStream );
-
-		var blockReader = new BitReader( data );
-		if ( !LZSS.Decompress( blockReader, outputWriter ) )
-		{
-			throw new Exception( "LZSS failed to decompress" );
-		}
-
-		return outputStream.ToArray();
+		return reader.ReadExactBytes( length, "Truncated WCT chunk" );
 	}
 }

@@ -27,15 +27,7 @@ public partial class Material : Resource
 	private MaterialFlags _creationFlags;
 
 	public Material( string shaderPath, MaterialFlags flags = MaterialFlags.None )
-	{
-		_creationFlags = flags;
-
-		Shader = new Shader( shaderPath );
-		Shader.OnRecompile += () => SetupResources( flags );
-		SetupResources( flags );
-
-		All.Add( this );
-	}
+		: this( shaderPath, typeof( ObjectUniformBuffer ), flags ) { }
 
 	protected Material( string shaderPath, Type uniformBufferType, MaterialFlags flags = MaterialFlags.None )
 	{

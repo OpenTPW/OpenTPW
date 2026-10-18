@@ -1,9 +1,10 @@
-﻿namespace OpenTPW;
+namespace OpenTPW;
 
 public static partial class Input
 {
 	public enum CursorTypes
 	{
+		Normal,
 		Cash,
 		Busy,
 		Camcorder,
@@ -15,7 +16,6 @@ public static partial class Input
 		Line,
 		Move,
 		NoGo,
-		Normal,
 		Path,
 		Pick,
 		Pivot,

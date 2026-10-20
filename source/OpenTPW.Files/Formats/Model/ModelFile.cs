@@ -10,6 +10,12 @@ public partial class ModelFile : BaseFormat
 {
 	public List<Mesh> Meshes { get; private set; }
 
+	/// <summary>
+	/// Every node in the model: first one per mesh (in the same order as <see cref="Meshes"/>),
+	/// then the transform-only nodes, which are attachment points such as emitters and paths.
+	/// </summary>
+	public List<Node> Nodes { get; private set; }
+
 	public ModelFile( Stream stream )
 	{
 		ReadFromStream( stream );
@@ -40,11 +46,58 @@ public partial class ModelFile : BaseFormat
 		public uint VertexOrderOffset { get; set; }
 		public Vertex[] Vertices { get; set; }
 		public uint[] Indices { get; set; }
+
+		/// <summary>
+		/// Texture coordinates as stored. V runs bottom-up relative to the image that
+		/// <see cref="TextureFile"/> decodes, so sample at (u, 1 - v).
+		/// </summary>
 		public Vector2[] TexCoords { get; set; }
+
+		/// <summary>
+		/// Transform relative to the parent node (row vectors, translation in the last row).
+		/// Use <see cref="WorldTransform"/> to place the mesh in model space.
+		/// </summary>
 		public Matrix4x4 TransformMatrix { get; set; }
+
+		/// <summary>
+		/// Transform to model space: <see cref="TransformMatrix"/> times the parent's world transform.
+		/// </summary>
+		public Matrix4x4 WorldTransform { get; set; }
+
+		/// <summary>
+		/// Index into <see cref="Nodes"/> of the parent node, or -1 for a root.
+		/// </summary>
+		public int ParentIndex { get; set; }
+
 		public MaterialData[] Materials { get; set; }
 
 		public Vector3[] Normals { get; set; }
+	}
+
+	public class Node
+	{
+		public string Name { get; set; }
+		public uint Flags { get; set; }
+
+		/// <summary>
+		/// Index into <see cref="Nodes"/> of the parent node, or -1 for a root.
+		/// </summary>
+		public int ParentIndex { get; set; }
+
+		/// <summary>
+		/// Transform relative to the parent node (row vectors, translation in the last row).
+		/// </summary>
+		public Matrix4x4 LocalTransform { get; set; }
+
+		/// <summary>
+		/// Transform to model space: <see cref="LocalTransform"/> times the parent's world transform.
+		/// </summary>
+		public Matrix4x4 WorldTransform { get; set; }
+
+		/// <summary>
+		/// The mesh at this node, or null for a transform-only node.
+		/// </summary>
+		public Mesh Mesh { get; set; }
 	}
 
 	public struct FrameData
@@ -65,14 +118,54 @@ public partial class ModelFile : BaseFormat
 		public ushort EndIndex;
 		public uint Pad;
 
+		/// <summary>
+		/// Texture name, or null for a material without a texture.
+		/// </summary>
 		public string Name;
 		public uint Flags;
+	}
+
+	private const int MeshRecordSize = 160;
+	private const int NodeRecordSize = 88;
+
+	private static string ReadString( BinaryReader reader, long offset )
+	{
+		reader.BaseStream.Seek( offset, SeekOrigin.Begin );
+		var name = new StringBuilder();
+
+		for ( char c = reader.ReadChar(); c != '\0'; c = reader.ReadChar() )
+			name.Append( c );
+
+		return name.ToString();
+	}
+
+	private static Matrix4x4 ReadMatrix( BinaryReader reader )
+	{
+		var m = new float[16];
+		for ( int i = 0; i < 16; i++ )
+			m[i] = reader.ReadSingle();
+
+		return new Matrix4x4(
+			m[0], m[1], m[2], m[3],
+			m[4], m[5], m[6], m[7],
+			m[8], m[9], m[10], m[11],
+			m[12], m[13], m[14], m[15]
+		);
 	}
 
 	protected override void ReadFromStream( Stream stream )
 	{
 		using ( BinaryReader reader = new BinaryReader( stream, Encoding.ASCII, true ) )
 		{
+			Meshes = new List<Mesh>();
+			Nodes = new List<Node>();
+
+			// Animation files (e.g. "<model>m1.md2") are a bare header with no mesh table;
+			// their tracks refer to the nodes of the base model.
+			reader.BaseStream.Seek( 0x70, SeekOrigin.Begin );
+			if ( reader.ReadUInt32() == 0 )
+				return;
+
 			reader.BaseStream.Seek( 0x50, SeekOrigin.Begin );
 			uint off2 = reader.ReadUInt32();
 
@@ -88,7 +181,9 @@ public partial class ModelFile : BaseFormat
 				textures.Add( texName );
 			}
 
-			reader.BaseStream.Seek( 0x44, SeekOrigin.Begin );
+			// Node count covers meshes and transform-only nodes; meshes come first.
+			reader.BaseStream.Seek( 0x42, SeekOrigin.Begin );
+			ushort nodeCnt = reader.ReadUInt16();
 			ushort meshCnt = reader.ReadUInt16();
 
 			reader.BaseStream.Seek( 0x50, SeekOrigin.Begin );
@@ -113,32 +208,33 @@ public partial class ModelFile : BaseFormat
 
 			reader.BaseStream.Seek( 0x70, SeekOrigin.Begin );
 			uint meshPtr = reader.ReadUInt32();
+			uint nodePtr = reader.ReadUInt32();
 
-			reader.BaseStream.Seek( meshPtr, SeekOrigin.Begin );
+			// Parent links are file offsets of records in either table; turn them into node indices.
+			int NodeIndexAt( uint offset )
+			{
+				if ( offset >= meshPtr && offset < meshPtr + MeshRecordSize * meshCnt && (offset - meshPtr) % MeshRecordSize == 0 )
+					return (int)((offset - meshPtr) / MeshRecordSize);
+
+				int transformNodeCnt = nodeCnt - meshCnt;
+				if ( offset >= nodePtr && offset < nodePtr + NodeRecordSize * transformNodeCnt && (offset - nodePtr) % NodeRecordSize == 0 )
+					return meshCnt + (int)((offset - nodePtr) / NodeRecordSize);
+
+				return -1;
+			}
 
 			Meshes = new List<Mesh>( meshCnt );
+			Nodes = new List<Node>( nodeCnt );
 
 			for ( int meshIdx = 0; meshIdx < meshCnt; meshIdx++ )
 			{
-				reader.BaseStream.Seek( meshPtr + (160 * meshIdx), SeekOrigin.Begin );
+				reader.BaseStream.Seek( meshPtr + (MeshRecordSize * meshIdx), SeekOrigin.Begin );
 
-				reader.BaseStream.Seek( 16, SeekOrigin.Current ); // Skip initial mesh data
+				uint nodeFlags = reader.ReadUInt32();
+				int parentIndex = NodeIndexAt( reader.ReadUInt32() );
+				reader.BaseStream.Seek( 8, SeekOrigin.Current ); // Skip sibling and child links
 
-				// Read mat4
-				Matrix4x4 transformMatrix;
-
-				{
-					var ma = new Vector4( reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle() );
-					var mb = new Vector4( reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle() );
-					var mc = new Vector4( reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle() );
-					var md = new Vector4( reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle() );
-					transformMatrix = new Matrix4x4(
-						ma.X, ma.Y, ma.Z, ma.W,
-						mb.X, mb.Y, mb.Z, mb.W,
-						mc.X, mc.Y, mc.Z, mc.W,
-						md.X, md.Y, md.Z, md.W
-					);
-				}
+				Matrix4x4 transformMatrix = ReadMatrix( reader );
 
 				uint texIndex = reader.ReadUInt32();
 				uint nOff = reader.ReadUInt32();
@@ -155,15 +251,7 @@ public partial class ModelFile : BaseFormat
 				uint vertexOrderOffset = reader.ReadUInt32();
 				reader.BaseStream.Seek( 8, SeekOrigin.Current ); // Skip _38 and _39
 
-				reader.BaseStream.Seek( nOff, SeekOrigin.Begin );
-				string name = "";
-				char c;
-
-				do
-				{
-					c = reader.ReadChar();
-					name += c;
-				} while ( c != '\0' );
+				string name = ReadString( reader, nOff );
 
 				reader.BaseStream.Seek( materialOffset, SeekOrigin.Begin );
 				List<MaterialData> materials = new();
@@ -183,6 +271,10 @@ public partial class ModelFile : BaseFormat
 
 				foreach ( var material in materials )
 				{
+					// No texture (e.g. "Hoarding" in lobby/terrain/Spa_isle.md2)
+					if ( material.FrameOffset == 0 )
+						continue;
+
 					// start at texIdOffset, divide by 8 to get index
 					uint frameId = (material.FrameOffset - textureListOffset) / 8;
 					var frame = frameData[(int)frameId];
@@ -197,7 +289,7 @@ public partial class ModelFile : BaseFormat
 					material.Flags = reader.ReadUInt32();
 				}
 
-				Meshes.Add( new Mesh
+				var mesh = new Mesh
 				{
 					Name = name,
 					VertCnt = materialCount,
@@ -210,8 +302,67 @@ public partial class ModelFile : BaseFormat
 					VertexOrderLen = vertexOrderLength,
 					VertexOrderOffset = vertexOrderOffset,
 					TransformMatrix = transformMatrix,
+					ParentIndex = parentIndex,
 					Materials = materials.ToArray()
+				};
+
+				Meshes.Add( mesh );
+				Nodes.Add( new Node
+				{
+					Name = name,
+					Flags = nodeFlags,
+					ParentIndex = parentIndex,
+					LocalTransform = transformMatrix,
+					Mesh = mesh
 				} );
+			}
+
+			// Transform-only nodes follow the meshes in node numbering
+			for ( int nodeIdx = meshCnt; nodeIdx < nodeCnt; nodeIdx++ )
+			{
+				reader.BaseStream.Seek( nodePtr + (NodeRecordSize * (nodeIdx - meshCnt)), SeekOrigin.Begin );
+
+				uint nodeFlags = reader.ReadUInt32();
+				int parentIndex = NodeIndexAt( reader.ReadUInt32() );
+				reader.BaseStream.Seek( 8, SeekOrigin.Current ); // Skip sibling and child links
+
+				Matrix4x4 transformMatrix = ReadMatrix( reader );
+
+				_ = reader.ReadUInt32(); // Node index
+				uint nameOffset = reader.ReadUInt32();
+
+				Nodes.Add( new Node
+				{
+					Name = ReadString( reader, nameOffset ),
+					Flags = nodeFlags,
+					ParentIndex = parentIndex,
+					LocalTransform = transformMatrix
+				} );
+			}
+
+			// Parents can come after their children, so resolve world transforms recursively
+			var resolved = new bool[Nodes.Count];
+
+			Matrix4x4 ResolveWorld( int nodeIdx, int depth )
+			{
+				var node = Nodes[nodeIdx];
+				if ( resolved[nodeIdx] )
+					return node.WorldTransform;
+
+				var world = node.LocalTransform;
+				if ( node.ParentIndex >= 0 && depth < Nodes.Count )
+					world *= ResolveWorld( node.ParentIndex, depth + 1 );
+
+				node.WorldTransform = world;
+				resolved[nodeIdx] = true;
+				return world;
+			}
+
+			for ( int nodeIdx = 0; nodeIdx < Nodes.Count; nodeIdx++ )
+			{
+				var world = ResolveWorld( nodeIdx, 0 );
+				if ( Nodes[nodeIdx].Mesh != null )
+					Nodes[nodeIdx].Mesh.WorldTransform = world;
 			}
 
 			// Process mesh data

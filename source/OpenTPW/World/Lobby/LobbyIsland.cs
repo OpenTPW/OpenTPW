@@ -25,19 +25,25 @@ public sealed class LobbyIsland : Entity
 				else
 				{
 					var j = mesh.Materials[i];
-					textures.Add( new Texture( $"lobby/terrain/textures/{j.Name}.wct", TextureFlags.Repeat ) );
+					textures.Add( j.Name == null ? Texture.Missing : new Texture( $"lobby/terrain/textures/{j.Name}.wct", TextureFlags.Repeat ) );
 				}
 			}
 
 			material.Set( $"Color", [.. textures] );
 
+			// Apply the world transform to the vertices rather than decomposing it: some matrices
+			// aren't pure rotations (e.g. l_trunk2 in Jun_isle.md2), and the game uses them as they are
+			var world = mesh.WorldTransform;
 			var vertices = new List<Vertex>();
 			for ( int i = 0; i < mesh.Vertices.Length; ++i )
 			{
+				var position = System.Numerics.Vector3.Transform( mesh.Vertices[i].Position.GetSystemVector3(), world );
+				var normal = System.Numerics.Vector3.TransformNormal( mesh.Normals[i].GetSystemVector3(), world );
+
 				vertices.Add( new Vertex()
 				{
-					Position = new Vector3( mesh.Vertices[i].Position.X, mesh.Vertices[i].Position.Z, mesh.Vertices[i].Position.Y ),
-					Normal = mesh.Normals[i],
+					Position = new Vector3( position.X, position.Z, position.Y ),
+					Normal = new Vector3( normal.X, normal.Z, normal.Y ).Normal,
 					TexCoords = mesh.TexCoords[i],
 					TexIndex = (int)mesh.Vertices[i].TextureIndex,
 					MatFlags = mesh.Materials[(int)mesh.Vertices[i].TextureIndex].Flags
@@ -45,18 +51,12 @@ public sealed class LobbyIsland : Entity
 			}
 
 			var model = new Model( [.. vertices], mesh.Indices, material );
-			Matrix4x4.Decompose( mesh.TransformMatrix, out var scl, out var rot, out var pos );
-
-			var position = new Vector3( pos.X, pos.Z, pos.Y - 2.5f );
-			var rotation = new Quaternion( rot.X, rot.Z, rot.Y, -rot.W );
-			var scale = new Vector3( scl.X, scl.Z, scl.Y );
 
 			_ = new ModelEntity()
 			{
 				Model = model,
-				Scale = scale,
-				Rotation = rotation,
-				Position = position + Position,
+				Rotation = Quaternion.Identity,
+				Position = Position + new Vector3( 0, 0, -2.5f ),
 			};
 		}
 	}

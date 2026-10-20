@@ -30,7 +30,7 @@ public class Level
 		_ = new LobbyIsland( new Vector3( 400, 400, 0 ), "Jungle" );
 		_ = new LobbyIsland( new Vector3( 600, 400, 0 ), "Hallow" );
 		_ = new LobbyIsland( new Vector3( 600, 600, 0 ), "Fantasy" );
-		// _ = new LobbyIsland( new Vector3( 400, 600, 0 ), "Space" );
+		_ = new LobbyIsland( new Vector3( 400, 600, 0 ), "Space" );
 
 		Camera.SetCameraMode<LobbyCameraMode>();
 	}

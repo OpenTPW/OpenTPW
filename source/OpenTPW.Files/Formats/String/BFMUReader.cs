@@ -1,10 +1,31 @@
 ﻿using System.Text;
 
 namespace OpenTPW;
+
+/// <summary>
+/// A code page ("MBToUni.dat") mapping the game's character codes to UTF-16.
+/// </summary>
 public sealed class BFMUReader : BaseFormat
 {
-	private ExpandedMemoryStream memoryStream;
-	public byte[] buffer;
+	/*
+	Header
+		4 bytes: Magic number - "BFMU"
+		2 bytes: Number of lead bytes (0 in English, 54 in Traditional Chinese, 86 in Simplified Chinese)
+		2 bytes: Character count in single-byte languages; don't rely on it
+	Then one UTF-16 code unit per character until the end of the file.
+
+	Codes start at 1. With L lead bytes, the bytes 256 - L to 255 start two-byte codes:
+		single byte c:        character c - 1
+		lead l, trail t:      character (255 - L) + (l - (256 - L)) * 255 + (t - 1)
+	*/
+
+	/// <summary>
+	/// How many of the top byte values start a two-byte code.
+	/// </summary>
+	public int LeadByteCount { get; private set; }
+	public char[] Characters { get; private set; }
+
+	private int FirstLeadByte => 256 - LeadByteCount;
 
 	public BFMUReader( string path )
 	{
@@ -15,90 +36,57 @@ public sealed class BFMUReader : BaseFormat
 	{
 		ReadFromStream( stream );
 	}
+
 	public void Dispose()
 	{
-		memoryStream.Dispose();
 	}
 
 	protected override void ReadFromStream( Stream stream )
 	{
-		// Set up read buffer
-		var tempStreamReader = new StreamReader( stream );
-		var fileLength = (int)tempStreamReader.BaseStream.Length;
+		using var reader = new BinaryReader( stream, Encoding.ASCII, true );
 
-		buffer = new byte[fileLength];
-		tempStreamReader.BaseStream.Read( buffer, 0, fileLength );
-		tempStreamReader.Close();
-
-		memoryStream = new ExpandedMemoryStream( buffer );
-
-		var magicNumber = memoryStream.ReadString( 4 );
-
+		var magicNumber = Encoding.ASCII.GetString( reader.ReadBytes( 4 ) );
 		if ( magicNumber != "BFMU" )
 			throw new Exception( $"Magic number did not match: {magicNumber}" );
 
-		//ReadFile();
-		//CharacterArray();
+		LeadByteCount = reader.ReadUInt16();
+		_ = reader.ReadUInt16();
+
+		var characterCount = (int)(stream.Length - 8) / 2;
+		Characters = new char[characterCount];
+		for ( int i = 0; i < characterCount; i++ )
+			Characters[i] = (char)reader.ReadUInt16();
 	}
 
-	public List<char> CharacterArray()
+	public List<char> CharacterArray() => Characters.ToList();
+
+	/// <summary>
+	/// The character for a single-byte code.
+	/// </summary>
+	public char GetCharacter( int character )
 	{
-		List<char> allCharacters = new List<char>();
-
-		// Skip Header
-		memoryStream.Seek( 6, SeekOrigin.Begin );
-
-		// Read Character Length
-		var charCount = memoryStream.ReadByte();
-		
-		//Skip 0x0 unsued byte
-		_ = memoryStream.ReadByte();
-
-		for ( int i = 0; i < charCount; i++ )
-		{
-			var currentChar = memoryStream.ReadBytes(2);
-			foreach(var character in Encoding.Unicode.GetChars( currentChar ) )
-			{
-				allCharacters.Add( character );
-			}
-		}
-		return allCharacters;
-	}
-
-	public void ReadFile()
-	{
-		/*
-		
-		Header
-
-		4 bytes: Magic number - "BFMU"
-		2 bytes: Likely specifies the character encoding - usually 0x00
-		2 bytes: Character count
-
-		# For each character
-
-		2 bytes - The character itself in either Unicode or multibyte form
-
-		*/
-
-		var encoding = memoryStream.ReadBytes( 2 );
-		Log.Info($"Encoding: {encoding}", true );
-		var charCount = memoryStream.ReadBytes( 2 );
-
-		for ( int i = 0; i < memoryStream.Length - memoryStream.Position; i++ )
-		{
-			//Log.Info( $"Character: {GetCharacter( memoryStream.Position )} @ Position: {memoryStream.Position}", true );
-			_= memoryStream.ReadByte();
-		}
-
-	}
-
-	public char GetCharacter(int character)
-	{
-		var array = CharacterArray();
-		
 		// Characters are offset by 0x01 in the BFMU!
-		return array[character - 0x01];
+		return Characters[character - 0x01];
 	}
 
+	/// <summary>
+	/// Decodes a string of character codes, including two-byte codes in languages that use them.
+	/// </summary>
+	public string Decode( ReadOnlySpan<byte> codes )
+	{
+		var str = new StringBuilder( codes.Length );
+
+		for ( int i = 0; i < codes.Length; i++ )
+		{
+			int code = codes[i];
+			int index = code - 1;
+
+			if ( LeadByteCount > 0 && code >= FirstLeadByte && i + 1 < codes.Length )
+				index = (FirstLeadByte - 1) + (code - FirstLeadByte) * 255 + (codes[++i] - 1);
+
+			str.Append( index >= 0 && index < Characters.Length ? Characters[index] : '?' );
+		}
+
+		return str.ToString();
+	}
 }

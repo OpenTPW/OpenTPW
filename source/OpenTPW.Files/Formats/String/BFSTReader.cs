@@ -86,30 +86,21 @@ internal sealed class BFSTReader : BaseFormat
 			// need to account offset for inital 12 bytes
 			memoryStream.Seek( offset + 12, SeekOrigin.Begin );
 
-			// Unknown - we still want to verify it is 0x1
+			// Always 0x1, except for empty entries, which are four zero bytes
+			// (e.g. #140 in the Traditional Chinese TAG_SYSTEM.str)
 			var unknownOne = memoryStream.ReadByte();
-			if ( unknownOne != 1 )
+
+			// String length in bytes (24 bits; UITEXT.str has strings over 255 bytes)
+			var stringLength = memoryStream.ReadByte() | (memoryStream.ReadByte() << 8) | (memoryStream.ReadByte() << 16);
+
+			if ( unknownOne != 1 && !(unknownOne == 0 && stringLength == 0) )
 			{
 				throw new Exception( $"String Offset not working - offset set to {unknownOne} @ Pos:{memoryStream.Position}" );
 			}
 
-			// String Length
-			var stringLength = memoryStream.ReadByte();
-
-			//unused after string length
-			_ = memoryStream.ReadByte();
-			_ = memoryStream.ReadByte();
-
-			StringBuilder str = new StringBuilder();
-			// Characters
-			for ( int j = 0; j < stringLength; j++ )
-			{
-				var mtuPos = memoryStream.ReadByte();
-				var readCharacter = LookupTable.GetCharacter( mtuPos );
-				str.Append( readCharacter );
-			}
-
-			outputList.Add( str.ToString() );
+			// Characters, one or two bytes each
+			var codes = memoryStream.ReadBytes( stringLength );
+			outputList.Add( LookupTable.Decode( codes ) );
 
 			// Go back to intial position
 			memoryStream.Seek( initialMemPos, SeekOrigin.Begin );

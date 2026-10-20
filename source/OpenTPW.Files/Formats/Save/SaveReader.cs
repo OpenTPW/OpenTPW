@@ -63,9 +63,11 @@ public class SaveReader : BaseFormat
 			ZLIB stream begins after this point, continues to end of file
 		*/
 
+		// F4 01 00 00 (500), or 90 01 00 00 (400) in the Chinese releases' saves and level start files
+		// (e.g. levels/jungle/Easymode.TPWI)
 		var magicNumber = memoryStream.ReadHex( 4 );
 
-		if ( magicNumber != "F4010000" )
+		if ( magicNumber != "F4010000" && magicNumber != "90010000" )
 			throw new Exception( $"Magic number did not match: {magicNumber}" );
 
 		int copyrightSize = 824; //Character count with spaces adds to 824

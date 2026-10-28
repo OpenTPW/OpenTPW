@@ -113,10 +113,10 @@ public class LobbyConfigTests
 	public void InvalidCommandsAndMissingCameraSlotsAreRejected()
 	{
 		var none = Array.Empty<(string, string)>();
-		Assert.ThrowsException<FormatException>( () => LobbyConfig.Parse( "SPINRADIUS(70,80)", none ) );
-		Assert.ThrowsException<FormatException>( () => LobbyConfig.Parse( "SPINSPEED(NaN)", none ) );
-		Assert.ThrowsException<FormatException>( () => LobbyConfig.Parse( "SPINRADIUS(70", none ) );
-		Assert.ThrowsException<FormatException>( () => LobbyConfig.Parse( "UNKNOWN(1)", none ) );
-		Assert.ThrowsException<FormatException>( () => LobbyConfig.Parse( "", new[] { ("test", "ISLAND(0,\"a\",\"b\",\"c\",\"d\",0,0)") } ) );
+		Assert.ThrowsExactly<FormatException>( () => LobbyConfig.Parse( "SPINRADIUS(70,80)", none ) );
+		Assert.ThrowsExactly<FormatException>( () => LobbyConfig.Parse( "SPINSPEED(NaN)", none ) );
+		Assert.ThrowsExactly<FormatException>( () => LobbyConfig.Parse( "SPINRADIUS(70", none ) );
+		Assert.ThrowsExactly<FormatException>( () => LobbyConfig.Parse( "UNKNOWN(1)", none ) );
+		Assert.ThrowsExactly<FormatException>( () => LobbyConfig.Parse( "", new[] { ("test", "ISLAND(0,\"a\",\"b\",\"c\",\"d\",0,0)") } ) );
 	}
 }

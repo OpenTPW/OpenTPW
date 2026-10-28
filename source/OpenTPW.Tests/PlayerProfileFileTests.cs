@@ -22,8 +22,8 @@ public class PlayerProfileFileTests
 		Assert.AreEqual( 1, bytes[20] );
 		CollectionAssert.AreEqual( bytes, PlayerProfileFile.Read( bytes ).Write() );
 		foreach ( int length in new[] { 0, 4, 21, 25, 63, 67 } )
-			Assert.ThrowsException<InvalidDataException>( () => PlayerProfileFile.Read( bytes[..length] ) );
-		Assert.ThrowsException<InvalidDataException>( () => PlayerProfileFile.Read( bytes.Concat( new byte[1] ).ToArray() ) );
+			Assert.ThrowsExactly<InvalidDataException>( () => PlayerProfileFile.Read( bytes[..length] ) );
+		Assert.ThrowsExactly<InvalidDataException>( () => PlayerProfileFile.Read( bytes.Concat( new byte[1] ).ToArray() ) );
 	}
 
 	[TestMethod]
@@ -49,7 +49,7 @@ public class PlayerProfileFileTests
 		Assert.AreEqual( 3 + BitConverter.ToInt32( profile.Prefix, 10 ), LobbyPlayerProgress.KeyCount( profile, new[] { "JUNGLE" } ) );
 		CollectionAssert.AreEqual( bytes, profile.Write() );
 		BitConverter.GetBytes( uint.MaxValue ).CopyTo( bytes, 21 );
-		Assert.ThrowsException<InvalidDataException>( () => PlayerProfileFile.Read( bytes ) );
+		Assert.ThrowsExactly<InvalidDataException>( () => PlayerProfileFile.Read( bytes ) );
 	}
 
 	[TestMethod]
@@ -66,9 +66,9 @@ public class PlayerProfileFileTests
 			Assert.AreEqual( 1, LobbyPlayerProgress.KeyCount( store.Load( profile ), new[] { "jungle", "fantasy", "hallow", "space" } ) );
 			Assert.IsTrue( File.Exists( Path.Combine( profile.Directory, "jungle", "easymode.TPWI" ) ) );
 			CollectionAssert.AreEqual( FileSystem.ReadAllBytes( "levels/jungle/easymode.TPWI" ), File.ReadAllBytes( Path.Combine( profile.Directory, "jungle", "easymode.TPWI" ) ) );
-			Assert.ThrowsException<IOException>( () => store.Create( 2, "Other", 0 ) );
+			Assert.ThrowsExactly<IOException>( () => store.Create( 2, "Other", 0 ) );
 			Assert.AreEqual( 1, LobbyPlayerProgress.KeyCount( store.Load( profile ), new[] { "jungle" } ), "An occupied-slot retry must not award another introduction key" );
-			Assert.ThrowsException<ArgumentException>( () => store.Create( 1, "../Invalid", 0 ) );
+			Assert.ThrowsExactly<ArgumentException>( () => store.Create( 1, "../Invalid", 0 ) );
 			Assert.AreEqual( 1, Directory.GetDirectories( directory ).Length );
 		}
 		finally { if ( Directory.Exists( directory ) ) Directory.Delete( directory, true ); }

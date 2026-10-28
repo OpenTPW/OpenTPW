@@ -54,7 +54,7 @@ public class LobbyPlayerFlowTests
 		flow.Select( 3 );
 		flow.Name = new string( 'x', 30 );
 		Assert.AreEqual( LobbyPlayerFlow.MaxNameLength, flow.Name.Length );
-		Assert.AreEqual( 16, LobbyPlayerFlow.MaxNameLength );
+		Assert.AreEqual( 16, (int)typeof( LobbyPlayerFlow ).GetField( nameof( LobbyPlayerFlow.MaxNameLength ) )!.GetRawConstantValue()! );
 	}
 
 	[TestMethod]
@@ -184,14 +184,14 @@ public class LobbyPlayerFlowTests
 		Assert.IsFalse( flow.Select( LobbyPlayerFlow.SlotCount ) );
 		Assert.AreEqual( LobbyPlayerFlowState.Browsing, flow.State );
 		Assert.IsNull( flow[4] );
-		Assert.AreEqual( 4, LobbyPlayerFlow.SlotCount );
+		Assert.AreEqual( 4, (int)typeof( LobbyPlayerFlow ).GetField( nameof( LobbyPlayerFlow.SlotCount ) )!.GetRawConstantValue()! );
 	}
 
 	[TestMethod]
 	public void SlotTableMustCoverTheFourSlots()
 	{
-		Assert.ThrowsException<ArgumentException>( () => new LobbyPlayerFlow( Array.Empty<LobbyPlayerProfile?>() ) );
-		Assert.ThrowsException<ArgumentException>( () => new LobbyPlayerFlow( new LobbyPlayerProfile?[5] ) );
+		Assert.ThrowsExactly<ArgumentException>( () => new LobbyPlayerFlow( Array.Empty<LobbyPlayerProfile?>() ) );
+		Assert.ThrowsExactly<ArgumentException>( () => new LobbyPlayerFlow( new LobbyPlayerProfile?[5] ) );
 	}
 
 	[TestMethod]
@@ -248,8 +248,8 @@ public class LobbyPlayerFlowTests
 		flow.Select( 0 );
 		var invalid = Slots( "One", null, null, null );
 		invalid[0] = new LobbyPlayerProfile( 3, "Misplaced", "users/4Misplaced/" );
-		Assert.ThrowsException<ArgumentException>( () => new LobbyPlayerFlow( invalid ) );
-		Assert.ThrowsException<ArgumentException>( () => flow.Reload( invalid ) );
+		Assert.ThrowsExactly<ArgumentException>( () => new LobbyPlayerFlow( invalid ) );
+		Assert.ThrowsExactly<ArgumentException>( () => flow.Reload( invalid ) );
 		Assert.AreEqual( LobbyPlayerFlowState.Committed, flow.State );
 		Assert.AreEqual( "One", flow.Result!.Name );
 		flow.Reload( Slots( null, null, null, null ) );

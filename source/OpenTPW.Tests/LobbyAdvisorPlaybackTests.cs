@@ -32,8 +32,8 @@ public class LobbyAdvisorPlaybackTests
 		lips.Update( 1000, Next );
 		Assert.IsTrue( lips.Finished );
 		Assert.AreEqual( 1, lips.Mouth );
-		Assert.ThrowsException<InvalidDataException>( () => new LobbyAdvisorLips( bytes[..^1] ) );
-		Assert.ThrowsException<InvalidDataException>( () => new LobbyAdvisorLips( BitConverter.GetBytes( 100 ) ) );
+		Assert.ThrowsExactly<InvalidDataException>( () => new LobbyAdvisorLips( bytes[..^1] ) );
+		Assert.ThrowsExactly<InvalidDataException>( () => new LobbyAdvisorLips( BitConverter.GetBytes( 100 ) ) );
 		Assert.IsTrue( new LobbyAdvisorLips( BitConverter.GetBytes( -1 ) ).Finished );
 	}
 
@@ -94,7 +94,7 @@ public class LobbyAdvisorPlaybackTests
 		}
 		else
 		{
-			var error = Assert.ThrowsException<InvalidDataException>( () => advisor.Say( 0x257 ) );
+			var error = Assert.ThrowsExactly<InvalidDataException>( () => advisor.Say( 0x257 ) );
 			StringAssert.Contains( error.Message, "missing speech 638" );
 		}
 	}

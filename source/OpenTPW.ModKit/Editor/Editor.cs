@@ -1,8 +1,6 @@
-﻿using ImGuiNET;
+using ImGuiNET;
 using OpenTPW.ModKit;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing;
+using StbImageWriteSharp;
 using System.Reflection;
 using Veldrid;
 
@@ -135,23 +133,39 @@ public partial class Editor
 			var textureFile = new TextureFile( path );
 			var t = textureFile.Data;
 
-			var pixelData = new Rgba32[t.Width * t.Height];
-
-			for ( int i = 0; i < t.Width * t.Height; ++i )
-			{
-				var tInd = i * 4;
-				pixelData[i] = new Rgba32( t.Data[tInd], t.Data[tInd + 1], t.Data[tInd + 2], t.Data[tInd + 3] );
-			}
-
-			using var img = Image.LoadPixelData<Rgba32>( pixelData, t.Width, t.Height );
+			var pixelData = ResizeThumbnail( t.Data, t.Width, t.Height );
 			using var writeStream = CacheFileSystem.OpenWrite( thumbnailPath );
-			img.Mutate( x => x.Resize( 16, 16 ) );
-			img.SaveAsPng( writeStream );
+			new ImageWriter().WritePng( pixelData, 16, 16, ColorComponents.RedGreenBlueAlpha, writeStream );
 
 			Log.Info( $"Cached to {thumbnailPath}" );
 		} );
 
 		return thumbnailPath;
+	}
+
+	/// <summary>Reduces an RGBA image to a 16 by 16 thumbnail by averaging source pixels.</summary>
+	internal static byte[] ResizeThumbnail( byte[] pixels, int width, int height )
+	{
+		if ( width <= 0 || height <= 0 || (long)width * height * 4 != pixels.Length )
+			throw new ArgumentException( "Invalid RGBA image dimensions or pixel data." );
+
+		var result = new byte[16 * 16 * 4];
+		for ( int y = 0; y < 16; y++ )
+		for ( int x = 0; x < 16; x++ )
+		{
+			int x0 = (int)((long)x * width / 16), x1 = Math.Max( x0 + 1, (int)((long)(x + 1) * width / 16) );
+			int y0 = (int)((long)y * height / 16), y1 = Math.Max( y0 + 1, (int)((long)(y + 1) * height / 16) );
+			long count = (long)(x1 - x0) * (y1 - y0);
+			for ( int channel = 0; channel < 4; channel++ )
+			{
+				long sum = 0;
+				for ( int sy = y0; sy < y1; sy++ )
+				for ( int sx = x0; sx < x1; sx++ )
+					sum += pixels[(sy * width + sx) * 4 + channel];
+				result[(y * 16 + x) * 4 + channel] = (byte)(sum / count);
+			}
+		}
+		return result;
 	}
 
 	public void Render( CommandList commandList ) 

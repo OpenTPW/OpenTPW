@@ -126,11 +126,11 @@ public class LobbySkyTests
 		var offsets = new[] { new[] { 0.1f, 0.2f }, new[] { 0.3f, 0.4f }, new[] { 0.5f, 0.6f }, new[] { 0.25f, 0.5f } };
 		sky.Replay( offsets, greys );
 		// Layer 3 keeps both coefficients positive (0x5863c0), so vertex (0,0) carries the raw offsets.
-		Assert.AreEqual( new Vector2( 0.25f, 0.5f ), sky.CloudVertices( 3 )[0].TexCoords );
+		Assert.AreEqual<object>( new Vector2( 0.25f, 0.5f ), sky.CloudVertices( 3 )[0].TexCoords );
 		Assert.AreEqual( new Vector3( (0x80 | 82) / 255f ), sky.CloudVertices( 2 )[37].Normal );
 		greys[3][5] ^= 1;
-		Assert.ThrowsException<System.IO.InvalidDataException>( () => sky.Replay( offsets, greys ) );
-		Assert.ThrowsException<System.IO.InvalidDataException>( () => sky.Replay( offsets.Take( 3 ).ToArray(), greys ) );
+		Assert.ThrowsExactly<System.IO.InvalidDataException>( () => sky.Replay( offsets, greys ) );
+		Assert.ThrowsExactly<System.IO.InvalidDataException>( () => sky.Replay( offsets.Take( 3 ).ToArray(), greys ) );
 	}
 
 	[TestMethod]

@@ -52,7 +52,7 @@ public class SettingsTests
 			foreach ( var text in new[] { "{ \"Langauge\": \"German\" }", "{ \"GameWindowSize\": [800] }", "{ \"Language\": null }", "{" } )
 			{
 				File.WriteAllText( path, text );
-				Assert.ThrowsException<InvalidDataException>( () => Settings.Load( path ), text );
+				Assert.ThrowsExactly<InvalidDataException>( () => Settings.Load( path ), text );
 			}
 		}
 		finally

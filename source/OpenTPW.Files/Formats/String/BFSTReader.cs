@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 
 namespace OpenTPW;
 
@@ -30,7 +30,7 @@ internal sealed class BFSTReader : BaseFormat
 		var fileLength = (int)tempStreamReader.BaseStream.Length;
 
 		buffer = new byte[fileLength];
-		tempStreamReader.BaseStream.Read( buffer, 0, fileLength );
+		tempStreamReader.BaseStream.ReadExactly( buffer, 0, fileLength );
 		tempStreamReader.Close();
 
 		memoryStream = new ExpandedMemoryStream( buffer );

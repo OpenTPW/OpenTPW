@@ -38,7 +38,7 @@ public class AudioTests
 			Assert.AreEqual( limit, SoundChannelPolicy.Limit( settings, quality ), $"Quality {quality}" );
 		Assert.AreEqual( 12, SoundChannelPolicy.Limit( settings, 100, 12 ) );
 		Assert.AreEqual( 30, SoundChannelPolicy.Limit( settings, 100, 64 ) );
-		Assert.ThrowsException<ArgumentOutOfRangeException>( () => SoundChannelPolicy.Limit( settings, 101 ) );
+		Assert.ThrowsExactly<ArgumentOutOfRangeException>( () => SoundChannelPolicy.Limit( settings, 101 ) );
 	}
 
 	[TestMethod]
@@ -126,7 +126,7 @@ public class AudioTests
 		source.SetException( new InvalidDataException( "bad sample" ) );
 		System.Threading.SpinWait.SpinUntil( () => !mixer.IsPlaying( handle ), 1000 );
 		Assert.IsFalse( mixer.IsPlaying( handle ) );
-		Assert.ThrowsException<InvalidDataException>( mixer.ThrowIfFailed );
+		Assert.ThrowsExactly<InvalidDataException>( mixer.ThrowIfFailed );
 		mixer.ThrowIfFailed();
 	}
 
@@ -204,11 +204,11 @@ public class AudioTests
 		GameData.Require();
 		byte[] bank = FileSystem.ReadAllBytes( "global/sound/cat_globallobbysfxBANK.map" );
 		byte[] sfx = FileSystem.ReadAllBytes( "global/sound/cat_globallobbysfxSFX.map" );
-		Assert.ThrowsException<InvalidDataException>( () => SoundCategoryMap.Parse( bank, sfx[..^1] ) );
+		Assert.ThrowsExactly<InvalidDataException>( () => SoundCategoryMap.Parse( bank, sfx[..^1] ) );
 		var bad = (byte[])sfx.Clone(); bad[0] ^= 0xff;
-		Assert.ThrowsException<InvalidDataException>( () => SoundCategoryMap.Parse( bank, bad ) );
+		Assert.ThrowsExactly<InvalidDataException>( () => SoundCategoryMap.Parse( bank, bad ) );
 		bad = (byte[])sfx.Clone(); Array.Fill( bad, (byte)255, 24, 4 );
-		Assert.ThrowsException<InvalidDataException>( () => SoundCategoryMap.Parse( bank, bad ) );
+		Assert.ThrowsExactly<InvalidDataException>( () => SoundCategoryMap.Parse( bank, bad ) );
 	}
 
 	[TestMethod]

@@ -45,7 +45,7 @@ public class LobbyCameraTests
 	public void NonFiniteTicksAreRejected()
 	{
 		var state = Create(); state.SelectIsland( 0 );
-		Assert.ThrowsException<System.IO.InvalidDataException>( () => state.Update( float.NaN ) );
+		Assert.ThrowsExactly<System.IO.InvalidDataException>( () => state.Update( float.NaN ) );
 	}
 	[TestMethod]
 	public void SwitchingIslandsPreservesPoseAndAngle()

@@ -39,7 +39,7 @@ public class LobbyOptionsTests
 		Assert.AreEqual( 314, UiStringLayout.Index( UIStrings.GameOptions, 473 ) );
 		Assert.AreEqual( 239, UiStringLayout.Index( UIStrings.EnterName, 474 ) );
 		Assert.AreEqual( 242, UiStringLayout.Index( UIStrings.FullSimulation, 474 ) );
-		Assert.ThrowsException<InvalidDataException>( () => UiStringLayout.Index( UIStrings.Options, 475 ) );
+		Assert.ThrowsExactly<InvalidDataException>( () => UiStringLayout.Index( UIStrings.Options, 475 ) );
 	}
 	[TestMethod]
 	public void PreferenceEditsPreservePaddingAndSurviveProfileSerialization()
@@ -73,13 +73,13 @@ public class LobbyOptionsTests
 	{
 		var profile = PlayerProfileFile.Create( 0, new byte[39] );
 		var before = profile.Write();
-		Assert.ThrowsException<ArgumentOutOfRangeException>( () => profile.SetSoundVolume( PlayerProfileFile.SoundChannel.Music, -1 ) );
-		Assert.ThrowsException<ArgumentOutOfRangeException>( () => profile.SetSoundVolume( PlayerProfileFile.SoundChannel.Music, 101 ) );
-		Assert.ThrowsException<ArgumentOutOfRangeException>( () => profile.SetSoundEnabled( (PlayerProfileFile.SoundChannel)4, true ) );
-		Assert.ThrowsException<ArgumentOutOfRangeException>( () => profile.SetEnabled( (PlayerProfileFile.Preference)(-1), true ) );
+		Assert.ThrowsExactly<ArgumentOutOfRangeException>( () => profile.SetSoundVolume( PlayerProfileFile.SoundChannel.Music, -1 ) );
+		Assert.ThrowsExactly<ArgumentOutOfRangeException>( () => profile.SetSoundVolume( PlayerProfileFile.SoundChannel.Music, 101 ) );
+		Assert.ThrowsExactly<ArgumentOutOfRangeException>( () => profile.SetSoundEnabled( (PlayerProfileFile.SoundChannel)4, true ) );
+		Assert.ThrowsExactly<ArgumentOutOfRangeException>( () => profile.SetEnabled( (PlayerProfileFile.Preference)(-1), true ) );
 		CollectionAssert.AreEqual( before, profile.Write() );
 		profile.Preferences[4] = 101;
-		Assert.ThrowsException<InvalidDataException>( () => profile.SoundVolume( PlayerProfileFile.SoundChannel.Effects ) );
+		Assert.ThrowsExactly<InvalidDataException>( () => profile.SoundVolume( PlayerProfileFile.SoundChannel.Effects ) );
 	}
 	[TestMethod]
 	public void GlobalAndPlayerOptionsRoundTripWithoutChangingProgress()
@@ -125,7 +125,7 @@ public class LobbyOptionsTests
 			byte[] profile = PlayerProfileFile.Create( 0, new byte[39] ).Write(); File.WriteAllBytes( path, profile );
 			// Reading succeeds but replacement is denied while the destination is open without delete sharing.
 			using ( var locked = new FileStream( path, FileMode.Open, FileAccess.Read, FileShare.Read ) )
-				Assert.ThrowsException<UnauthorizedAccessException>( () => LobbyOptionsSettings.Save( root, new(), path, new byte[39], global ) );
+				Assert.ThrowsExactly<UnauthorizedAccessException>( () => LobbyOptionsSettings.Save( root, new(), path, new byte[39], global ) );
 			CollectionAssert.AreEqual( original, File.ReadAllBytes( global ) );
 			CollectionAssert.AreEqual( profile, File.ReadAllBytes( path ) );
 			Assert.IsFalse( Directory.EnumerateFiles( root, "*.tmp", SearchOption.AllDirectories ).Any() );
@@ -139,8 +139,8 @@ public class LobbyOptionsTests
 		Directory.CreateDirectory( root );
 		try
 		{
-			Assert.ThrowsException<InvalidDataException>( () => LobbyOptionsSettings.Save( root, new(), Path.Combine( root, "gms.dat" ), new byte[39], Path.Combine( root, Settings.FileName ) ) );
-			Assert.ThrowsException<InvalidDataException>( () => LobbyOptionsSettings.Save( root, new() { Resolution = 3 }, null, new byte[39], Path.Combine( root, Settings.FileName ) ) );
+			Assert.ThrowsExactly<InvalidDataException>( () => LobbyOptionsSettings.Save( root, new(), Path.Combine( root, "gms.dat" ), new byte[39], Path.Combine( root, Settings.FileName ) ) );
+			Assert.ThrowsExactly<InvalidDataException>( () => LobbyOptionsSettings.Save( root, new() { Resolution = 3 }, null, new byte[39], Path.Combine( root, Settings.FileName ) ) );
 			Assert.IsFalse( Directory.EnumerateFiles( root ).Any() );
 		}
 		finally { Directory.Delete( root, true ); }
@@ -223,7 +223,7 @@ public class LobbyOptionsTests
 		Assert.AreEqual( "English", LobbyOptionsSettings.ChooseLanguage( new[] { "English", "american" }, "ENGLISH" ) );
 		Assert.AreEqual( "TraditionalChinese", LobbyOptionsSettings.ChooseLanguage( new[] { "TraditionalChinese" }, "american" ) );
 		Assert.AreEqual( "French", LobbyOptionsSettings.ChooseLanguage( new[] { "French", "German" }, "american" ) );
-		Assert.ThrowsException<InvalidDataException>( () => LobbyOptionsSettings.ChooseLanguage( Array.Empty<string>(), "american" ) );
+		Assert.ThrowsExactly<InvalidDataException>( () => LobbyOptionsSettings.ChooseLanguage( Array.Empty<string>(), "american" ) );
 	}
 
 	[TestMethod]
@@ -237,7 +237,7 @@ public class LobbyOptionsTests
 		profile.Preferences[12] = 99;
 		CollectionAssert.AreEqual( expected, audio.SnapshotPreferences() );
 		var invalid = (byte[])expected.Clone(); invalid[4] = 12; invalid[28] = 101;
-		Assert.ThrowsException<InvalidDataException>( () => audio.ConfigurePreferences( invalid ) );
+		Assert.ThrowsExactly<InvalidDataException>( () => audio.ConfigurePreferences( invalid ) );
 		CollectionAssert.AreEqual( expected, audio.SnapshotPreferences() );
 	}
 

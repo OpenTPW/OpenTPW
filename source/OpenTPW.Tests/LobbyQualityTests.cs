@@ -65,6 +65,6 @@ public class LobbyQualityTests
 		Assert.AreEqual( "lobby/terrain/stexture", quality.TextureDirectory( "lobby\\terrain\\textures\\" ) );
 		Assert.AreEqual( "lobby/textures/model", quality.TextureDirectory( "lobby/textures/model" ) );
 		Assert.AreEqual( "stexture", quality.TextureDirectory( "textures" ) );
-		Assert.ThrowsException<ArgumentException>( () => LobbyQuality.Load( "../custom" ) );
+		Assert.ThrowsExactly<ArgumentException>( () => LobbyQuality.Load( "../custom" ) );
 	}
 }

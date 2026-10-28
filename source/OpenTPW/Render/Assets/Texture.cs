@@ -1,4 +1,4 @@
-﻿using StbImageSharp;
+using StbImageSharp;
 using System.Runtime.InteropServices;
 using Veldrid;
 
@@ -38,7 +38,7 @@ public partial class Texture : Asset
 	public Texture( Stream stream, TextureFlags flags = TextureFlags.None )
 	{
 		var fileData = new byte[stream.Length];
-		stream.Read( fileData, 0, fileData.Length );
+		stream.ReadExactly( fileData, 0, fileData.Length );
 
 		var image = ImageResult.FromMemory( fileData, ColorComponents.RedGreenBlueAlpha );
 

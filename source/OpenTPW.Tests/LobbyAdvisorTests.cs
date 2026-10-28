@@ -59,14 +59,14 @@ public class LobbyAdvisorTests
 		geometry.Model.Nodes[node].Id = 65535;
 		animation.HiddenNodes[0] = 65535;
 		Assert.IsTrue( geometry.Pose( animation, animation.StartFrame ).Hidden[node] );
-		Assert.ThrowsException<InvalidDataException>( () => animation.Evaluate( geometry.Model, animation.StartFrame, ModelAnimation.SegmentHiding.NodeIndex ) );
+		Assert.ThrowsExactly<InvalidDataException>( () => animation.Evaluate( geometry.Model, animation.StartFrame, ModelAnimation.SegmentHiding.NodeIndex ) );
 		geometry.Model.Nodes[node].Flags |= 0x80000000;
 		Assert.IsFalse( geometry.Pose( animation, animation.StartFrame ).Hidden[node] );
 		// The shared evaluator only enables the instance hiding mode when explicitly requested.
 		animation.Evaluate( geometry.Model, animation.StartFrame );
 		int block = (int)BitConverter.ToUInt32( data, 0x98 );
 		BitConverter.GetBytes( (uint)(data.Length - 1) ).CopyTo( data, block + 0x38 );
-		Assert.ThrowsException<InvalidDataException>( () => new ModelAnimation( new MemoryStream( data ) ) );
+		Assert.ThrowsExactly<InvalidDataException>( () => new ModelAnimation( new MemoryStream( data ) ) );
 	}
 
 }

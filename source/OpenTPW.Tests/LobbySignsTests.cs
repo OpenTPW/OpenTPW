@@ -25,7 +25,7 @@ public class LobbySignsTests
 	[TestMethod]
 	public void InvalidSignIsRejected()
 	{
-		Assert.ThrowsException<InvalidDataException>( () => LobbySigns.DecodeBackground( new byte[64] ) );
+		Assert.ThrowsExactly<InvalidDataException>( () => LobbySigns.DecodeBackground( new byte[64] ) );
 	}
 	[TestMethod]
 	public void RetailSignLayoutAndLocalizedLines()
@@ -61,7 +61,7 @@ public class LobbySignsTests
 		byte[] data = FileSystem.ReadAllBytes( "lobby/terrain/Jun_isle.sgn" );
 		System.Array.Clear( data, 17, 64 );
 		System.Text.Encoding.ASCII.GetBytes( "NoSuchSignFace" ).CopyTo( data, 17 );
-		var thrown = Assert.ThrowsException<InvalidDataException>( () => LobbySigns.Compose( data, "A", "" ) );
+		var thrown = Assert.ThrowsExactly<InvalidDataException>( () => LobbySigns.Compose( data, "A", "" ) );
 		StringAssert.Contains( thrown.Message, "NoSuchSignFace" );
 	}
 
@@ -144,10 +144,10 @@ public class LobbySignsTests
 		var faces = LobbySigns.FontNames.Read( FontFixture( new byte[] { 0x80 }, 1, 0 ) );
 		Assert.IsTrue( faces[0].Contains( "Ä" ) );
 		Assert.AreEqual( 0, LobbySigns.FontNames.Read( FontFixture( new byte[] { 0x80 }, 1, 1 ) ).Count );
-		Assert.ThrowsException<InvalidDataException>( () => LobbySigns.FontNames.Read( FontFixture( new byte[] { 0x41 } ) ) );
+		Assert.ThrowsExactly<InvalidDataException>( () => LobbySigns.FontNames.Read( FontFixture( new byte[] { 0x41 } ) ) );
 		var truncated = new byte[16]; System.Text.Encoding.ASCII.GetBytes( "ttcf" ).CopyTo( truncated, 0 );
 		truncated[8] = 0x40; truncated[11] = 1;
-		Assert.ThrowsException<InvalidDataException>( () => LobbySigns.FontNames.Read( truncated ) );
+		Assert.ThrowsExactly<InvalidDataException>( () => LobbySigns.FontNames.Read( truncated ) );
 		Assert.IsTrue( LobbySigns.NativeFont.FaceMatches( "Exact", "Exact", LobbySigns.FontNames.Read( new byte[0] ) ) );
 		Assert.IsFalse( LobbySigns.NativeFont.FaceMatches( "Other", "Exact", LobbySigns.FontNames.Read( new byte[0] ) ) );
 	}

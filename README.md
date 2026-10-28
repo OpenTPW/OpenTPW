@@ -49,7 +49,7 @@ File format information is available at the [OpenTPW formats](https://opentpw.gu
 
 ## Running
 
-Build `source/OpenTPW.sln` (.NET 8) and start `OpenTPW` from its output folder. The game folder (the one containing `data/`) is found by searching the current folder and each folder above it, including their direct subfolders; set `GamePath` to use a specific installation.
+Build `source/OpenTPW.sln` (.NET 10) and start `OpenTPW` from its output folder. The game folder (the one containing `data/`) is found by searching the current folder and each folder above it, including their direct subfolders; set `GamePath` to use a specific installation.
 
 ### Settings
 

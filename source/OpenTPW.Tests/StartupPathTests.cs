@@ -21,7 +21,7 @@ public class StartupPathTests
 				Directory.CreateDirectory( Path.Join( directory, "content", "shaders" ) );
 				File.WriteAllText( Path.Join( directory, "content", "shaders", "ui.shader" ), "fixture" );
 			}
-			Assert.ThrowsException<DirectoryNotFoundException>( () => EngineContent.Find( launcher, executable ) );
+			Assert.ThrowsExactly<DirectoryNotFoundException>( () => EngineContent.Find( launcher, executable ) );
 			Content( project );
 			Assert.AreEqual( project, EngineContent.Find( launcher, executable ) );
 			Content( executable );

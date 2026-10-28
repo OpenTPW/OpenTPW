@@ -43,7 +43,7 @@ public class LobbyKeyParticleTests
 			for ( int i = 0; i < 100; i++ ) state.Tick();
 			Assert.IsFalse( state.Particles.Any() );
 		}
-		Assert.ThrowsException<ArgumentOutOfRangeException>( () => Create().Start( 1, 0, 0 ) );
+		Assert.ThrowsExactly<ArgumentOutOfRangeException>( () => Create().Start( 1, 0, 0 ) );
 	}
 	[TestMethod]
 	public void AffordableKeySparklePersistsAndDrainsAfterPageDeparture()
@@ -66,6 +66,6 @@ public class LobbyKeyParticleTests
 		for ( int i = 0; i < 4; i++ ) b.Advance( 0.125f );
 		CollectionAssert.AreEqual( a.Particles.Select( p => (p.X, p.Y, p.Z, p.Life, p.Colour, p.Angle) ).ToArray(),
 			b.Particles.Select( p => (p.X, p.Y, p.Z, p.Life, p.Colour, p.Angle) ).ToArray() );
-		Assert.ThrowsException<ArgumentOutOfRangeException>( () => a.Advance( float.NaN ) );
+		Assert.ThrowsExactly<ArgumentOutOfRangeException>( () => a.Advance( float.NaN ) );
 	}
 }

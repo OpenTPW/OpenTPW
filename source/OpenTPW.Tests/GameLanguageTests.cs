@@ -25,7 +25,7 @@ public class GameLanguageTests
 		Assert.AreEqual( "american", GameLanguage.Resolve( new[] { "English", "american" }, null ) );
 		Assert.AreEqual( "German", GameLanguage.Resolve( new[] { "English", "american", "German" }, null, new[] { "German" } ) );
 		Assert.AreEqual( "english", GameLanguage.Resolve( new[] { "english", "American" }, "English", new[] { "German" } ) );
-		Assert.ThrowsException<DirectoryNotFoundException>( () => GameLanguage.Resolve( new[] { "French", "German" }, null, new[] { "French", "German" } ) );
+		Assert.ThrowsExactly<DirectoryNotFoundException>( () => GameLanguage.Resolve( new[] { "French", "German" }, null, new[] { "French", "German" } ) );
 	}
 
 	[TestMethod]
@@ -39,8 +39,8 @@ public class GameLanguageTests
 	[TestMethod]
 	public void MissingOrAmbiguousLanguageFails()
 	{
-		Assert.ThrowsException<DirectoryNotFoundException>( () => GameLanguage.Resolve( new[] { "English" }, "French" ) );
-		Assert.ThrowsException<DirectoryNotFoundException>( () => GameLanguage.Resolve( new[] { "French", "German" }, null ) );
-		Assert.ThrowsException<DirectoryNotFoundException>( () => GameLanguage.Resolve( new string[0], null ) );
+		Assert.ThrowsExactly<DirectoryNotFoundException>( () => GameLanguage.Resolve( new[] { "English" }, "French" ) );
+		Assert.ThrowsExactly<DirectoryNotFoundException>( () => GameLanguage.Resolve( new[] { "French", "German" }, null ) );
+		Assert.ThrowsExactly<DirectoryNotFoundException>( () => GameLanguage.Resolve( new string[0], null ) );
 	}
 }

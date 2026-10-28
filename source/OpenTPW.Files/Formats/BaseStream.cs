@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 
 namespace OpenTPW;
 
@@ -8,7 +8,8 @@ internal class BaseStream : MemoryStream
 	public byte[] ReadBytes( int length, bool bigEndian = false )
 	{
 		var bytes = new byte[length];
-		Read( bytes, 0, length );
+		int count = Read( bytes, 0, length );
+		Array.Clear( bytes, count, length - count );
 
 		if ( bigEndian )
 			Array.Reverse( bytes );

@@ -1,4 +1,4 @@
-﻿namespace OpenTPW;
+namespace OpenTPW;
 
 public class SdtArchive : IArchive
 {
@@ -33,7 +33,7 @@ public class SdtArchive : IArchive
 		var fileLength = (int)tempStreamReader.BaseStream.Length;
 
 		buffer = new byte[fileLength];
-		tempStreamReader.BaseStream.Read( buffer, 0, fileLength );
+		tempStreamReader.BaseStream.ReadExactly( buffer, 0, fileLength );
 		tempStreamReader.Close();
 		memoryStream = new ExpandedMemoryStream( buffer );
 		mp2Reader = new SoundFile( new MemoryStream(buffer) );

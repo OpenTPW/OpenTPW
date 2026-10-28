@@ -1,4 +1,4 @@
-﻿namespace OpenTPW;
+namespace OpenTPW;
 
 // BIG SHOUT TO Toksisitee - https://github.com/Toksisitee/PopSoundEditor
 
@@ -29,7 +29,7 @@ public class SoundFile : BaseFormat
 		var fileLength = (int)tempStreamReader.BaseStream.Length;
 
 		buffer = new byte[fileLength];
-		tempStreamReader.BaseStream.Read( buffer, 0, fileLength );
+		tempStreamReader.BaseStream.ReadExactly( buffer, 0, fileLength );
 		tempStreamReader.Close();
 
 		memoryStream = new ExpandedMemoryStream( buffer );

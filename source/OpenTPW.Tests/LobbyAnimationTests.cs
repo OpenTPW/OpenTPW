@@ -144,11 +144,11 @@ public class LobbyAnimationTests
 		GameData.Require();
 		var island = LobbyConfig.Load().Islands[0];
 		var count = AnimationFiles.Segments( island.ModelPath, AnimationSlot.M ).Count;
-		var missingSegment = Assert.ThrowsException<FileNotFoundException>(
+		var missingSegment = Assert.ThrowsExactly<FileNotFoundException>(
 			() => AnimationFiles.Resolve( island.ModelPath, AnimationSlot.M, count ) );
 		StringAssert.Contains( missingSegment.Message, FileSystem.GetAbsolutePath( "lobby" ) );
 		Assert.AreEqual( 0, AnimationFiles.Segments( island.ModelPath, AnimationSlot.O ).Count );
-		var missingModel = Assert.ThrowsException<FileNotFoundException>(
+		var missingModel = Assert.ThrowsExactly<FileNotFoundException>(
 			() => AnimationFiles.ResolveModel( $"{island.ResourceDirectory}/no_such_model.md2" ) );
 		StringAssert.Contains( missingModel.Message, "no_such_model.md2" );
 	}
@@ -160,7 +160,7 @@ public class LobbyAnimationTests
 		{
 			CollectionAssert.AreEqual( new[] { "actorM1.md2", "actorM2.md2" },
 				AnimationFiles.Segments( "actor.md2", AnimationSlot.M ).ToArray() );
-			Assert.ThrowsException<FileNotFoundException>( () => AnimationFiles.Resolve( "actor.md2", AnimationSlot.M, 2 ) );
+			Assert.ThrowsExactly<FileNotFoundException>( () => AnimationFiles.Resolve( "actor.md2", AnimationSlot.M, 2 ) );
 		} );
 	}
 
@@ -171,9 +171,9 @@ public class LobbyAnimationTests
 		{
 			Assert.AreEqual( "actorM.md2", AnimationFiles.Resolve( "actor.md2", AnimationSlot.M, 0 ) );
 			Assert.AreEqual( 1, AnimationFiles.Segments( "actor.md2", AnimationSlot.M ).Count );
-			Assert.ThrowsException<ArgumentOutOfRangeException>( () => AnimationFiles.Resolve( "actor.md2", AnimationSlot.M, -1 ) );
-			Assert.ThrowsException<ArgumentOutOfRangeException>( () => AnimationFiles.Letter( (AnimationSlot)12 ) );
-			Assert.ThrowsException<FileNotFoundException>( () => AnimationFiles.Segments( "missing.md2", AnimationSlot.M ) );
+			Assert.ThrowsExactly<ArgumentOutOfRangeException>( () => AnimationFiles.Resolve( "actor.md2", AnimationSlot.M, -1 ) );
+			Assert.ThrowsExactly<ArgumentOutOfRangeException>( () => AnimationFiles.Letter( (AnimationSlot)12 ) );
+			Assert.ThrowsExactly<FileNotFoundException>( () => AnimationFiles.Segments( "missing.md2", AnimationSlot.M ) );
 		} );
 	}
 

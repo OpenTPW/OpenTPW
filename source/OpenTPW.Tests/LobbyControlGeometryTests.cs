@@ -61,10 +61,10 @@ public class LobbyControlGeometryTests
 				Assert.AreEqual( 100f / 320 - 1, bottomLeft.X, 0.000001 );
 				Assert.AreEqual( 1 - 150f / 240, bottomLeft.Y, 0.000001 );
 			}
-			Assert.ThrowsException<ArgumentOutOfRangeException>( () => new LobbyButtonGeometry( data, 6 ) );
+			Assert.ThrowsExactly<ArgumentOutOfRangeException>( () => new LobbyButtonGeometry( data, 6 ) );
 			int root = (int)BitConverter.ToUInt32( data, 0x78 );
 			BitConverter.GetBytes( root ).CopyTo( data, root + 12 );
-			Assert.ThrowsException<InvalidDataException>( () => new LobbyButtonGeometry( data ) );
+			Assert.ThrowsExactly<InvalidDataException>( () => new LobbyButtonGeometry( data ) );
 		}
 	}
 }

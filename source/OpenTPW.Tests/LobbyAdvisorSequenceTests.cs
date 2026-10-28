@@ -30,6 +30,6 @@ public class LobbyAdvisorSequenceTests
 		Assert.AreEqual( 20, longSpeech.Segments.Length );
 		Assert.AreEqual( 13, longSpeech.Segments[0] );
 		Assert.AreEqual( 14, longSpeech.Segments[^1] );
-		Assert.ThrowsException<ArgumentException>( () => LobbyAdvisorSequence.Create( 0, new int[15], () => 0 ) );
+		Assert.ThrowsExactly<ArgumentException>( () => LobbyAdvisorSequence.Create( 0, new int[15], () => 0 ) );
 	}
 }

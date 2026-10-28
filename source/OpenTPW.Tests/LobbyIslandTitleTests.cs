@@ -24,7 +24,7 @@ public class LobbyIslandTitleTests
 			Assert.AreEqual( LobbyObjectNames.Title( lines.First, lines.Second ), navigation.IslandTitle );
 			navigation.Navigate( 1 );
 		}
-		Assert.ThrowsException<InvalidDataException>( () => LobbyObjectNames.Lines( 123 ) );
+		Assert.ThrowsExactly<InvalidDataException>( () => LobbyObjectNames.Lines( 123 ) );
 	}
 
 	[TestMethod]

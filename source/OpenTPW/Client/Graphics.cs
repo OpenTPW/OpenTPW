@@ -6,25 +6,13 @@ namespace OpenTPW;
 
 internal static partial class Graphics
 {
-	private const int MaxVertexCount = ushort.MaxValue;
-	private const int MaxIndexCount = ushort.MaxValue;
-
-	private static DeviceBuffer vertexBuffer;
-	private static DeviceBuffer indexBuffer;
+	private static readonly uint[] QuadIndices = { 3, 2, 1, 0, 1, 2 };
+	private static readonly DeviceBuffer indexBuffer;
 
 	static Graphics()
 	{
-		var vertexStructSize = (uint)Marshal.SizeOf( typeof( Vertex ) );
-
-		vertexBuffer = Device.ResourceFactory.CreateBuffer(
-			new BufferDescription( MaxVertexCount * vertexStructSize, BufferUsage.VertexBuffer | BufferUsage.Dynamic )
-		);
-
-		var uintSize = (uint)sizeof( uint );
-
-		indexBuffer = Device.ResourceFactory.CreateBuffer(
-			new BufferDescription( MaxIndexCount * uintSize, BufferUsage.IndexBuffer | BufferUsage.Dynamic )
-		);
+		indexBuffer = Device.ResourceFactory.CreateBuffer( new BufferDescription( (uint)(QuadIndices.Length * sizeof( uint )), BufferUsage.IndexBuffer ) );
+		Device.UpdateBuffer( indexBuffer, 0, QuadIndices );
 	}
 
 	private static Matrix4x4 CreateScreenMatrix( Point2 screenSize )
@@ -60,22 +48,23 @@ internal static partial class Graphics
 		var t2 = uvs.BottomLeft;
 		var t3 = uvs.BottomRight;
 
-		var vertices = new List<Vertex>() { new( v0, t0 ), new( v1, t1 ), new( v2, t2 ), new( v3, t3 ) };
-		var indices = new List<uint>() { 3, 2, 1, 0, 1, 2 };
+		Vertex[] vertices = [new( v0, t0 ), new( v1, t1 ), new( v2, t2 ), new( v3, t3 )];
 
+		// A buffer per quad and frame: updating one shared buffer inside the render pass would end and
+		// restart the pass for every quad.
+		var vertexBuffer = Render.RentFrameBuffer( BufferUsage.VertexBuffer, (uint)(vertices.Length * Marshal.SizeOf<Vertex>()) );
+		Renderer.Write<Vertex>( vertexBuffer, vertices );
 		var cmd = Render.CommandList;
-		cmd.UpdateBuffer( vertexBuffer, 0, vertices.ToArray() );
-		cmd.UpdateBuffer( indexBuffer, 0, indices.ToArray() );
 
 		cmd.SetIndexBuffer( indexBuffer, IndexFormat.UInt32 );
 		cmd.SetVertexBuffer( 0, vertexBuffer );
 		cmd.SetPipeline( material.Pipeline );
 
-		material.CreateEphemeralResourceSet( out var resourceSets );
+		var resourceSets = material.GetResourceSets();
 
 		for ( uint i = 0; i < resourceSets.Length; ++i )
 			cmd.SetGraphicsResourceSet( i, resourceSets[i] );
 
-		cmd.DrawIndexed( (uint)indices.Count );
+		cmd.DrawIndexed( (uint)QuadIndices.Length );
 	}
 }

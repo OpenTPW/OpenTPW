@@ -58,6 +58,8 @@ internal static class ShaderCompiler
 
 		var vertexSourceBytes = GetBytes( vertexSource );
 		var fragmentSourceBytes = GetBytes( fragmentSource );
+		// Reflect the same preprocessed stages that produce the GPU programs so resource
+		// bindings and vertex layouts cannot drift from the shader being sampled.
 		var compilationResult = SpirvCompilation.CompileVertexFragment( vertexSourceBytes, fragmentSourceBytes, target );
 
 		if ( Device.ResourceFactory.BackendType != GraphicsBackend.Vulkan )

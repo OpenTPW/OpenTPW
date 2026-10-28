@@ -22,7 +22,7 @@ public class SoundFile : BaseFormat
 		memoryStream.Dispose();
 	}
 
-	protected void ReadFromStream( Stream stream )
+	protected override void ReadFromStream( Stream stream )
 	{
 		// Set up read buffer
 		var tempStreamReader = new StreamReader( stream );
@@ -70,9 +70,22 @@ public class SoundFile : BaseFormat
 			}
 		}
 
-		var sampleRate = memoryStream.ReadInt16();
-		var bitsPerSample = memoryStream.ReadInt32();
-		var soundType = memoryStream.ReadInt32();
+		// The 40-byte retail header packs rate, resolution and type into four bytes.
+		// Reading resolution/type as Int32 shifts both the PCM size and MPEG payload.
+		int sampleRate, bitsPerSample, soundType;
+		if ( headerSize == 40 )
+		{
+			sampleRate = BitConverter.ToUInt16( memoryStream.ReadBytes( 2 ) );
+			bitsPerSample = memoryStream.ReadByte();
+			soundType = memoryStream.ReadByte();
+		}
+		else if ( headerSize >= 48 )
+		{
+			sampleRate = memoryStream.ReadInt32();
+			bitsPerSample = memoryStream.ReadInt32();
+			soundType = memoryStream.ReadInt32();
+		}
+		else throw new InvalidDataException( $"Unsupported SDT sound header size {headerSize}" );
 
 		// Unknown
 		_ = memoryStream.ReadInt32();
@@ -83,6 +96,7 @@ public class SoundFile : BaseFormat
 		_ = memoryStream.ReadInt32();
 
 		// Rest of Data
+		memoryStream.Seek( offset + headerSize, SeekOrigin.Begin );
 		var soundData = memoryStream.ReadBytes( soundDataSize );
 
 		// Gather full byte data of file

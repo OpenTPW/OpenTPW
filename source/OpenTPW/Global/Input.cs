@@ -7,6 +7,15 @@ public static partial class Input
 {
 	public static MouseInfo Mouse { get; internal set; } = new();
 	public static KeyboardInfo Keyboard { get; internal set; } = new();
+	/// <summary>Characters typed since the last frame, separate from key events.</summary>
+	public static string Text { get; private set; } = "";
+	/// <summary>Left button went down since the last frame, including a press released within the same frame.</summary>
+	public static bool LeftPressed { get; private set; }
+	/// <summary>Input frame counter; pages use it to ignore the click that opened them.</summary>
+	public static ulong FrameNumber { get; private set; }
+	private static HashSet<Key> pressedKeys = new();
+	/// <summary>Key went down since the last frame (key-down events, not polled state).</summary>
+	public static bool Pressed( Key key ) => pressedKeys.Contains( key );
 
 	public static float Forward { get; set; }
 	public static float Right { get; set; }
@@ -83,11 +92,22 @@ public static partial class Input
 		}
 	}
 
+#if DEBUG
+	/// <summary>Window position the acceptance run hovers over instead of the system mouse; the OS cursor is never moved.</summary>
+	internal static Vector2? PointerOverride { get; set; }
+	/// <summary>One simulated left click for the acceptance run, consumed by the next input update.</summary>
+	internal static bool ClickOverride { get; set; }
+#endif
+
 	public static void UpdateFrom( InputSnapshot inputSnapshot )
 	{
+		FrameNumber++;
 		IsSystemCursorVisible = true;
 
 		var mousePos = new Vector2( inputSnapshot.MousePosition.X, inputSnapshot.MousePosition.Y );
+#if DEBUG
+		if ( PointerOverride is { } pointer ) mousePos = pointer;
+#endif
 		var mouseInfo = new MouseInfo
 		{
 			Delta = Mouse.Position - mousePos,
@@ -97,7 +117,16 @@ public static partial class Input
 			Wheel = inputSnapshot.WheelDelta
 		};
 
+		// A press and release may both arrive between frames; retain the event even when polling is up.
+		LeftPressed = inputSnapshot.MouseEvents.Any( mouse => mouse.MouseButton == MouseButton.Left && mouse.Down ) || mouseInfo.Left && !Mouse.Left;
+#if DEBUG
+		if ( ClickOverride ) { LeftPressed = true; ClickOverride = false; }
+#endif
 		Mouse = mouseInfo;
+		Text = new string( inputSnapshot.KeyCharPresses.ToArray() );
+		// Retain key-down events even when a short press is released in the same snapshot.
+		// Text entry and command keys are separate SDL streams; neither should consume the other.
+		pressedKeys = inputSnapshot.KeyEvents.Where( key => key.Down ).Select( key => key.Key ).ToHashSet();
 
 		Right = 0;
 		Forward = 0;

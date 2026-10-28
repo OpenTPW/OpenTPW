@@ -2,9 +2,16 @@
 
 namespace OpenTPW;
 
+/// <summary>
+/// Game files under a root folder, with registered archive types (WAD, SDT) readable as folders.
+/// Overlay roots added with <see cref="AddOverlay"/> are searched first, file by file, which is how a
+/// retail language pack works: its data folder is copied over the installed game's data.
+/// </summary>
 public class BaseFileSystem
 {
 	private readonly string basePath;
+	// Highest priority first; the base path is searched last.
+	private readonly List<string> overlays = new();
 	private readonly Dictionary<string, Type> archiveHandlers = new();
 	private readonly Dictionary<string, IArchive> archiveCache = new();
 
@@ -14,6 +21,14 @@ public class BaseFileSystem
 			Directory.CreateDirectory( relativePath );
 
 		basePath = Path.GetFullPath( relativePath, Directory.GetCurrentDirectory() );
+	}
+
+	/// <summary>Searches <paramref name="path"/> before the earlier roots. An archive in an overlay replaces the whole archive.</summary>
+	public void AddOverlay( string path )
+	{
+		var full = Path.GetFullPath( path );
+		if ( !Directory.Exists( full ) ) throw new DirectoryNotFoundException( $"Overlay folder not found: {full}" );
+		overlays.Insert( 0, full );
 	}
 
 	public void RegisterArchiveHandler<T>( string extension ) where T : IArchive
@@ -119,7 +134,21 @@ public class BaseFileSystem
 
 	private string[] GetFileSystemEntries( string relativePath, bool directories )
 	{
-		var absolutePath = GetAbsolutePath( relativePath );
+		if ( overlays.Count == 0 ) return ListEntries( GetAbsolutePath( relativePath ), relativePath, directories );
+		// Merge the listings of every root that has this folder; an overlay entry hides a base entry of the same name.
+		var merged = new Dictionary<string, string>( StringComparer.OrdinalIgnoreCase );
+		foreach ( var root in Roots() )
+		{
+			var candidate = Combine( root, relativePath );
+			if ( !Directory.Exists( candidate ) && string.IsNullOrEmpty( FindArchivePath( candidate ).ArchivePath ) ) continue;
+			foreach ( var entry in ListEntries( candidate, relativePath, directories ) )
+				merged.TryAdd( Path.GetFileName( entry.TrimEnd( '/', '\\' ) ), entry );
+		}
+		return merged.Values.ToArray();
+	}
+
+	private string[] ListEntries( string absolutePath, string relativePath, bool directories )
+	{
 		var (archivePath, internalPath) = FindArchivePath( absolutePath );
 
 		if ( !string.IsNullOrEmpty( archivePath ) )
@@ -195,16 +224,28 @@ public class BaseFileSystem
 		return (string.Empty, path);
 	}
 
+	/// <summary>The file or folder in the first root that has it (directly or inside an archive), else under the base path.</summary>
 	public string GetAbsolutePath( string relativePath )
 	{
-		return Path.Combine( basePath, relativePath.TrimStart( '/' ) ).Replace( "/", "\\" );
+		foreach ( var root in overlays )
+		{
+			var candidate = Combine( root, relativePath );
+			if ( File.Exists( candidate ) || Directory.Exists( candidate ) || !string.IsNullOrEmpty( FindArchivePath( candidate ).ArchivePath ) )
+				return candidate;
+		}
+		return Combine( basePath, relativePath );
 	}
 
 	public string GetRelativePath( string absolutePath )
 	{
-		var path = Path.GetRelativePath( basePath, absolutePath ).Replace( "\\", "/" );
+		var root = overlays.FirstOrDefault( overlay => absolutePath.StartsWith( overlay, StringComparison.OrdinalIgnoreCase ) ) ?? basePath;
+		var path = Path.GetRelativePath( root, absolutePath ).Replace( "\\", "/" );
 		return $"/{path}";
 	}
+
+	private IEnumerable<string> Roots() => overlays.Append( basePath );
+
+	private static string Combine( string root, string relativePath ) => Path.Combine( root, relativePath.TrimStart( '/' ) ).Replace( "/", "\\" );
 
 	public bool IsArchive( string path )
 	{

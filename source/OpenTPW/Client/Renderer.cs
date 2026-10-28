@@ -137,7 +137,7 @@ public partial class Renderer
 		CommandList.Begin();
 	}
 
-	private void PostRender()
+	private void PostRender( double frameBegin )
 	{
 		CommandList.SetFramebuffer( MultisampledFramebuffer ); // Use MSAA framebuffer
 		CommandList.SetViewport( 0, new Viewport( 0, 0, MultisampledFramebuffer.Width, MultisampledFramebuffer.Height, 0, 1 ) );
@@ -148,7 +148,9 @@ public partial class Renderer
 
 		// Render level to MSAA buffer
 		CommandList.PushDebugGroup( "Main Render" );
+		double renderBegin = Mark();
 		OnRender?.Invoke();
+		AddRender( Mark() - renderBegin );
 		CommandList.PopDebugGroup();
 
 		// Resolve MSAA to non-MSAA texture
@@ -166,16 +168,22 @@ public partial class Renderer
 
 		CommandList.End();
 
-		Device.SubmitCommands( CommandList );
+		Submissions++;
+		FrameEnd( frameBegin );
+		double presentBegin = Mark();
+		SubmitFrame( CommandList );
 		Device.SwapBuffers();
+		AddPresent( Mark() - presentBegin );
 	}
 
 	private void Update()
 	{
+		double frameBegin = FrameBegin();
 		float deltaTime = (float)(DateTime.Now - _lastFrame).TotalSeconds;
 		_lastFrame = DateTime.Now;
 
 		InputSnapshot inputSnapshot = Window.SdlWindow.PumpEvents();
+		if ( !Window.SdlWindow.Exists ) return;
 
 		Time.Update( deltaTime );
 		Input.UpdateFrom( inputSnapshot );
@@ -184,16 +192,22 @@ public partial class Renderer
 			Editor.Instance.shouldRender = !Editor.Instance.shouldRender;
 		if ( Editor.Instance.shouldRender )
 			Editor.Instance.UpdateFrom( inputSnapshot );
+		else
+			imGuiRenderer.Update( Math.Max( deltaTime, 0.001f ), inputSnapshot );
 
-		PreRender();
+		// Updates may rewrite vertex buffers and textures the previous frame was drawing with.
+		BeginFrame();
 		PreUpdate?.Invoke();
 
+		double updateBegin = Mark();
 		OnUpdate?.Invoke();
+		AddUpdate( Mark() - updateBegin );
+		// A HUD callback can close the native window during this update.
+		if ( !Window.SdlWindow.Exists ) return;
 
-		PostRender();
+		PreRender();
+		PostRender( frameBegin );
 		PostUpdate?.Invoke();
-
-		ProcessDeletionQueue();
 	}
 
 	private void CreateGraphicsDevice()
@@ -243,6 +257,7 @@ public partial class Renderer
 		action( commandList );
 
 		commandList.End();
+		Submissions++;
 		Device.SubmitCommands( commandList );
 
 		ScheduleDelete( commandList.Dispose );

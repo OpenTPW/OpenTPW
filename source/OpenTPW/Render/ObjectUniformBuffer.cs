@@ -24,5 +24,5 @@ struct ObjectUniformBuffer
 	public Vector3 g_vCameraPos; // 12
 	public float g_flTime; // 4
 
-	public float _padding2; // 4
+	public Vector4 g_vFogColor; // 16
 }

@@ -26,10 +26,10 @@ fragment {
   layout( location = 0 ) out vec4 out_color;
 
   void main() {
+    // UI pixels are uploaded top row first; authored screen UVs increase upwards.
     out_color = texture( sampler2D( Color, s_Color ), vec2( vs_out.texCoords.x, 1 - vs_out.texCoords.y ) );
 
-    // Veldrid has no support for native alpha-testing, so we have to pull this shit
-    // If it causes too many performance issues I guess we'll have to sort on CPU
+    // Preserve the cutout edge instead of writing fully transparent UI texels.
     if ( out_color.a == 0 )
         discard;
   }

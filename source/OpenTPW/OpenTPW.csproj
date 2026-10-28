@@ -19,6 +19,12 @@
 
 	<ItemGroup>
 		<Content Include="icon.ico" />
+		<!-- Keep the executable directory runnable after every build and publish.
+		     Manual content copies can retain old shaders when new lobby effects are added. -->
+		<Content Include="..\..\content\**\*"
+			Link="content\%(RecursiveDir)%(Filename)%(Extension)"
+			CopyToOutputDirectory="PreserveNewest"
+			CopyToPublishDirectory="PreserveNewest" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -27,7 +33,6 @@
 		<PackageReference Include="SharpText.Veldrid" Version="0.3.1" />
 		<PackageReference Include="SharpZipLib" Version="1.4.2" />
 		<PackageReference Include="StbImageSharp" Version="2.27.8" />
-		<PackageReference Include="System.Configuration.ConfigurationManager" Version="6.0.0" />
 		<PackageReference Include="Veldrid" Version="4.9.0" />
 		<PackageReference Include="Veldrid.ImGui" Version="5.72.0" />
 		<PackageReference Include="Veldrid.SDL2" Version="4.8.0" />
@@ -39,21 +44,6 @@
 	  <ProjectReference Include="..\OpenTPW.Common\OpenTPW.Common.csproj" />
 	  <ProjectReference Include="..\OpenTPW.Files\OpenTPW.Files.csproj" />
 	  <ProjectReference Include="..\OpenTPW.ModKit\OpenTPW.ModKit.csproj" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<Compile Update="Settings.Designer.cs">
-			<DesignTimeSharedInput>True</DesignTimeSharedInput>
-			<AutoGen>True</AutoGen>
-			<DependentUpon>Settings.settings</DependentUpon>
-		</Compile>
-	</ItemGroup>
-
-	<ItemGroup>
-		<None Update="Settings.settings">
-			<Generator>SettingsSingleFileGenerator</Generator>
-			<LastGenOutput>Settings.Designer.cs</LastGenOutput>
-		</None>
 	</ItemGroup>
 
 </Project>

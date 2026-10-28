@@ -1,63 +1,53 @@
-﻿using System.Numerics;
+using System.Numerics;
 
 namespace OpenTPW;
 
+/// <summary>An island and its gate share the ISLAND placement and model rotation.</summary>
 public sealed class LobbyIsland : Entity
 {
-	public LobbyIsland( Vector3 _position, string themeName )
+	private readonly LobbyModel island;
+	public LobbyGate Gate { get; }
+	private readonly string[] islandAnimations;
+	private bool islandAnimationStarted;
+
+	public LobbyIsland( Vector3 position, LobbyIslandConfig config, LobbyQuality? quality = null )
+		: this( position, config, quality, new LobbyRandom( unchecked((uint)DateTimeOffset.UtcNow.ToUnixTimeSeconds()) ) ) { }
+
+	internal LobbyIsland( Vector3 position, LobbyIslandConfig config, LobbyQuality? quality, LobbyRandom random )
 	{
-		Position = _position;
+		quality ??= LobbyQuality.Load();
+		var placement = GetPlacement( position, config );
+		Position = placement.Position;
+		Rotation = placement.Rotation;
+		var textures = $"{config.ResourceDirectory}/textures";
+		// 0x5dc1aa may request either segment, so both are required.
+		islandAnimations = Enumerable.Range( 0, 2 ).Select( segment =>
+			AnimationFiles.Resolve( config.ModelPath, AnimationSlot.M, segment ) ).ToArray();
+		island = new LobbyModel( Position, config.ModelPath, textures, textureResolver:
+			name => LobbySigns.Resolve( config.ModelPath, name, config.Name ), quality: quality ) { Rotation = Rotation };
+		Gate = new LobbyGate( Position, Rotation, config, quality );
+		foreach ( var mesh in config.FlyingMeshes )
+			_ = new LobbyFlock( mesh, placement.Target, quality.ObjectsPercent, random, quality );
+	}
 
-		var modelPrefix = themeName[0..3];
-		var modelFile = new ModelFile( $"lobby/terrain/{modelPrefix}_isle.md2" );
+	internal static (Vector3 Position, Vector3 Target, Quaternion Rotation) GetPlacement( Vector3 position, LobbyIslandConfig config )
+	{
+		// 0x5daa20 retains the ISLAND height as the orbit/flock anchor, but sets both model roots to Y=0.
+		var modelPosition = new Vector3( position.X, position.Y, 0 );
+		var target = new Vector3( position.X, position.Y, config.Height );
+		// Retail +Y rotation becomes -Z after swapping retail Y/Z (0x5d33c0 -> 0x46ddf0).
+		var rotation = Quaternion.CreateFromAxisAngle( System.Numerics.Vector3.UnitZ, -config.RotationDegrees.DegreesToRadians() );
+		return (modelPosition, target, rotation);
+	}
 
-		foreach ( var mesh in modelFile.Meshes )
+	protected override void OnUpdate()
+	{
+		if ( !islandAnimationStarted || island.AnimationFinished )
 		{
-			var material = new Material<ObjectUniformBuffer>( "content/shaders/test.shader" );
-			var textures = new List<Texture>();
-
-			for ( int i = 0; i < 16; ++i )
-			{
-				if ( mesh.Materials.Length <= i )
-				{
-					textures.Add( Texture.Missing );
-				}
-				else
-				{
-					var j = mesh.Materials[i];
-					textures.Add( new Texture( $"lobby/terrain/textures/{j.Name}.wct", TextureFlags.Repeat ) );
-				}
-			}
-
-			material.Set( $"Color", [.. textures] );
-
-			var vertices = new List<Vertex>();
-			for ( int i = 0; i < mesh.Vertices.Length; ++i )
-			{
-				vertices.Add( new Vertex()
-				{
-					Position = new Vector3( mesh.Vertices[i].Position.X, mesh.Vertices[i].Position.Z, mesh.Vertices[i].Position.Y ),
-					Normal = mesh.Normals[i],
-					TexCoords = mesh.TexCoords[i],
-					TexIndex = (int)mesh.Vertices[i].TextureIndex,
-					MatFlags = mesh.Materials[(int)mesh.Vertices[i].TextureIndex].Flags
-				} );
-			}
-
-			var model = new Model( [.. vertices], mesh.Indices, material );
-			Matrix4x4.Decompose( mesh.TransformMatrix, out var scl, out var rot, out var pos );
-
-			var position = new Vector3( pos.X, pos.Z, pos.Y - 2.5f );
-			var rotation = new Quaternion( rot.X, rot.Z, rot.Y, -rot.W );
-			var scale = new Vector3( scl.X, scl.Z, scl.Y );
-
-			_ = new ModelEntity()
-			{
-				Model = model,
-				Scale = scale,
-				Rotation = rotation,
-				Position = position + Position,
-			};
+			// 0x5dc197 selects M1 or M2 with the CRT stream, independently of the lobby LCG.
+			int segment = RetailRandom.Next() & 1;
+			island.Play( islandAnimations[segment], false );
+			islandAnimationStarted = true;
 		}
 	}
 }

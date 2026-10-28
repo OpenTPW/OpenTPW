@@ -10,7 +10,7 @@ public class ShaderTests
 	{
 		Log = new();
 
-		var result = ShaderPreprocessor.PreprocessShader( "E:\\OpenTPW\\content\\shaders\\test.shader" );
+		var result = ShaderPreprocessor.PreprocessShader( Content.GetPath( "shaders/test.shader" ) );
 		Assert.IsTrue( result.VertexShader.Length > 0 && result.FragmentShader.Length > 0 );
 	}
 }

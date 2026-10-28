@@ -38,7 +38,7 @@ OpenTPW is currently in a very early stage of development, and is not yet playab
 | Map Data ([.MAP](https://opentpw.gu3.me/formats/map.html))                    | ⚠️     |
 | Ride Scripts ([.RSE](https://opentpw.gu3.me/formats/rsse.html))                | ⚠️     |
 | Save Files ([.TPWS](https://opentpw.gu3.me/formats/tpws-ints-lays.html))                | ⚠️     |
-| Fonts ([.BF4](https://opentpw.gu3.me/formats/bf4.html))                      | ❌     |
+| Fonts ([.BF4](https://opentpw.gu3.me/formats/bf4.html))                      | ✅     |
 | Lip Sync ([.LIPS](https://opentpw.gu3.me/formats/lips.html))                  | ❌     |
 | Materials ([.MTR](https://opentpw.gu3.me/formats/mtr.html))                   | ❌     |
 | Video ([.TQI](https://opentpw.gu3.me/formats/tqi.html))                       | ❌     |
@@ -46,6 +46,39 @@ OpenTPW is currently in a very early stage of development, and is not yet playab
 ### Documentation
 
 File format information is available at the [OpenTPW formats](https://opentpw.gu3.me/formats/) website. Keep in mind that this information is a work-in-progress, and therefore might not be of incredible detail - however, upon completion, it still aims to be as useful, detailed, and as in-depth as possible.
+
+## Running
+
+Build `source/OpenTPW.sln` (.NET 8) and start `OpenTPW` from its output folder. The game folder (the one containing `data/`) is found by searching the current folder and each folder above it, including their direct subfolders; set `GamePath` to use a specific installation.
+
+### Settings
+
+Settings are kept in `OpenTPW.settings.json` beside the executable; OpenTPW does not read or write the registry. The file is optional, and the options page creates it when settings are saved.
+
+| Setting | Meaning |
+|---------|---------|
+| `GamePath` | Theme Park World folder; empty to search for it |
+| `Language` | Folder name under `data/Language` (for example `american`, `English`); empty to choose automatically |
+| `LanguagePack` | Folder of another release's language files, used before the game's own data; empty for none |
+| `GameWindowSize` | Window size in pixels |
+| `PreferredBackend` | Graphics backend, `Vulkan` by default |
+| `LobbyQuality` | Lobby detail: `low`, `med` or `high` |
+| `AudioQuality` | Sound quality percentage; empty for the game's default |
+
+Language and language pack changes take effect after a restart.
+
+### Tests and debug options
+
+`dotnet test source/OpenTPW.sln` runs the tests; tests that need the game data use the same folder search, starting from the working directory.
+
+Debug builds accept these options:
+
+| Option | Effect |
+|--------|--------|
+| `--verify-lobby <folder>` | Drives the lobby pages and saves frames and a log to the folder, then exits |
+| `--verify-options <folder>` | Checks the options page the same way |
+| `--lobby-view <file>` | Fixes the lobby camera at a recorded view for comparison with the original game |
+| `--capture-frames <folder>` | Saves 30 consecutive frames after a 20 second warm-up |
 
 ## Contributing
 

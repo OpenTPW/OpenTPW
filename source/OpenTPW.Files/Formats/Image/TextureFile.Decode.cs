@@ -66,7 +66,7 @@ partial class TextureFile
 		}
 	}
 
-	private bool DecodeChannel( ref ImageDecodeState state, int size, ref byte[] pSrc, ref List<float> outputBuffer, float dequantizationScale, bool isHalfScale, bool isAlpha = false )
+	private bool DecodeChannel( ref ImageDecodeState state, int size, ref byte[] pSrc, ref List<float> outputBuffer, float dequantizationScale, bool packed )
 	{
 		int count = size * (size / 2);
 		int index = 0;
@@ -102,9 +102,6 @@ partial class TextureFile
 		//
 		// Step 2: decode rows
 		//
-		if ( isHalfScale )
-			dequantizationScale *= MathF.PI * 1/6f;
-
 		D4Coefficients coefs = new( dequantizationScale );
 		for ( int i = 0; i < size; i++ )
 		{
@@ -113,16 +110,12 @@ partial class TextureFile
 			// Index lookup
 			( index, component ) =>
 			{
-				int baseIndex;
-				if ( isHalfScale )
-					baseIndex = index / 2;
-				else
-					baseIndex = index * 2;
+				int baseIndex = packed ? index : index * 2;
 
 				return component switch
 				{
 					D4Component.Scale => baseIndex + 0,
-					D4Component.Wavelet => baseIndex + 1,
+					D4Component.Wavelet => baseIndex + (packed ? size / 2 : 1),
 					_ => throw new NotImplementedException(),
 				};
 			},
@@ -130,11 +123,7 @@ partial class TextureFile
 			// Output index lookup
 			( index, component ) =>
 			{
-				int baseIndex;
-				if ( isHalfScale )
-					baseIndex = index;
-				else
-					baseIndex = index * 2;
+				int baseIndex = index * 2;
 
 				return component switch
 				{
@@ -143,7 +132,7 @@ partial class TextureFile
 					_ => throw new NotImplementedException(),
 				};
 			},
-			ref state.DequantizationBuffer, ref state.RowDecodeBuffer, i * size, (isHalfScale) ? size : size / 2, coefs );
+			ref state.DequantizationBuffer, ref state.RowDecodeBuffer, i * size, size / 2, coefs );
 		}
 
 		//
@@ -153,7 +142,7 @@ partial class TextureFile
 		for ( int i = 0; i < size; ++i )
 		{
 			int sOffset = 0;
-			int wOffset = isAlpha && isHalfScale ? (size * size) : size * (size / 2);
+			int wOffset = size * (size / 2);
 			int colOffset = i;
 			D4InverseTransform(
 

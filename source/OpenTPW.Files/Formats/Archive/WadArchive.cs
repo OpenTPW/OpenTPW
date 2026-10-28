@@ -1,4 +1,4 @@
-namespace OpenTPW;
+﻿namespace OpenTPW;
 
 /*
  * Special thanks to Fatbag: http://wiki.niotso.org/RefPack, 

@@ -1,4 +1,4 @@
-using StbImageSharp;
+﻿using StbImageSharp;
 using System.Runtime.InteropServices;
 using Veldrid;
 

@@ -1,4 +1,4 @@
-namespace OpenTPW;
+﻿namespace OpenTPW;
 
 public class SdtArchive : IArchive
 {

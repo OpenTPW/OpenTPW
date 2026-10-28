@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 
 namespace OpenTPW;
 
@@ -8,7 +8,7 @@ public sealed class ExpandedMemoryStream : MemoryStream
 	public byte[] ReadBytes( int length, bool bigEndian = false )
 	{
 		var bytes = new byte[length];
-		// Refpack decoding relies on zero padding when a read reaches the end.
+		// Unread bytes remain zero when the stream ends; Refpack relies on this.
 		int count = Read( bytes, 0, length );
 		Array.Clear( bytes, count, length - count );
 

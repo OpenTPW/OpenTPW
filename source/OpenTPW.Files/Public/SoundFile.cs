@@ -1,4 +1,4 @@
-namespace OpenTPW;
+﻿namespace OpenTPW;
 
 // BIG SHOUT TO Toksisitee - https://github.com/Toksisitee/PopSoundEditor
 

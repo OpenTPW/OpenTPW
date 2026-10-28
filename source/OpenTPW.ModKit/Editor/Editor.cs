@@ -1,4 +1,4 @@
-using ImGuiNET;
+﻿using ImGuiNET;
 using OpenTPW.ModKit;
 using StbImageWriteSharp;
 using System.Reflection;

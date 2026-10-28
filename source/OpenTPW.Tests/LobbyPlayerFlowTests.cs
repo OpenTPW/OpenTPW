@@ -54,7 +54,9 @@ public class LobbyPlayerFlowTests
 		flow.Select( 3 );
 		flow.Name = new string( 'x', 30 );
 		Assert.AreEqual( LobbyPlayerFlow.MaxNameLength, flow.Name.Length );
-		Assert.AreEqual( 16, (int)typeof( LobbyPlayerFlow ).GetField( nameof( LobbyPlayerFlow.MaxNameLength ) )!.GetRawConstantValue()! );
+#pragma warning disable MSTEST0032
+		Assert.AreEqual( 16, LobbyPlayerFlow.MaxNameLength );
+#pragma warning restore MSTEST0032
 	}
 
 	[TestMethod]
@@ -184,7 +186,9 @@ public class LobbyPlayerFlowTests
 		Assert.IsFalse( flow.Select( LobbyPlayerFlow.SlotCount ) );
 		Assert.AreEqual( LobbyPlayerFlowState.Browsing, flow.State );
 		Assert.IsNull( flow[4] );
-		Assert.AreEqual( 4, (int)typeof( LobbyPlayerFlow ).GetField( nameof( LobbyPlayerFlow.SlotCount ) )!.GetRawConstantValue()! );
+#pragma warning disable MSTEST0032
+		Assert.AreEqual( 4, LobbyPlayerFlow.SlotCount );
+#pragma warning restore MSTEST0032
 	}
 
 	[TestMethod]

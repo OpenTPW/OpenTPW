@@ -29,7 +29,9 @@ public class RetailTimeTests
 		// FUN_005d4c20: translation length = speed * dt for a normalized direction.
 		Assert.AreEqual( 15f, 1.5f * elapsed, 1e-3f );
 		Assert.AreEqual( 25f, 2.5f * elapsed, 1e-3f );
-		Assert.AreEqual( 31, (int)typeof( RetailTime ).GetField( nameof( RetailTime.ParkStepMilliseconds ) )!.GetRawConstantValue()! );
+#pragma warning disable MSTEST0032
+		Assert.AreEqual( 31, RetailTime.ParkStepMilliseconds );
+#pragma warning restore MSTEST0032
 	}
 
 	[TestMethod]

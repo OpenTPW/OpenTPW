@@ -1,5 +1,3 @@
-using NAudio.Wave;
-
 namespace OpenTPW;
 
 /// <summary>Shared audio output for scene sounds, music and speech.</summary>
@@ -16,7 +14,7 @@ public sealed class AudioSystem : IDisposable
 	private sealed record ChannelGain( string Category, float Gain );
 	private readonly Dictionary<long, ChannelGain> gains = new();
 	private readonly SettingsFile settings = new( "sound.sam" );
-	private readonly WaveOutEvent? output;
+	private readonly SdlAudioOutput? output;
 	private bool disposed;
 	public bool Available { get; }
 	public string? Failure { get; }
@@ -34,16 +32,15 @@ public sealed class AudioSystem : IDisposable
 		if ( !openDevice ) { Available = true; return; }
 		try
 		{
-			output = new WaveOutEvent();
-			output.Init( Mixer );
-			output.Play();
+			output = new SdlAudioOutput( Mixer );
 			Available = true;
 		}
-		catch ( Exception error ) when ( error is NAudio.MmException or PlatformNotSupportedException or System.Runtime.InteropServices.COMException )
+		catch ( Exception error ) when ( error is InvalidOperationException or PlatformNotSupportedException or DllNotFoundException or EntryPointNotFoundException )
 		{
 			output?.Dispose();
 			output = null;
 			Failure = error.Message;
+			Log?.Warning( $"Audio output unavailable: {Failure}" );
 		}
 	}
 
@@ -80,6 +77,7 @@ public sealed class AudioSystem : IDisposable
 	}
 	public void Update()
 	{
+		output?.ThrowIfFailed();
 		Mixer.ThrowIfFailed();
 		foreach ( long handle in gains.Keys.ToArray() ) if ( !Mixer.IsPlaying( handle ) ) gains.Remove( handle );
 		foreach ( var (handle, entry) in repeating.ToArray() )
@@ -138,7 +136,7 @@ public sealed class AudioSystem : IDisposable
 		ObjectDisposedException.ThrowIf( disposed, this );
 		if ( !Available ) return 0;
 		var file = new SoundFile( path );
-		try { return Mixer.Play( Assets.Pcm( file.GetFile( new MemoryStream() ) ), volume ); }
+		try { return Mixer.Play( Assets.PcmAsync( file.GetFile( new MemoryStream() ) ), volume ); }
 		finally { file.Dispose(); }
 	}
 	public void Dispose()
@@ -147,7 +145,6 @@ public sealed class AudioSystem : IDisposable
 		disposed = true;
 		repeating.Clear();
 		gains.Clear();
-		output?.Stop();
 		output?.Dispose();
 		Mixer.StopAll();
 	}

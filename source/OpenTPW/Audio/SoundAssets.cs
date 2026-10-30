@@ -1,9 +1,10 @@
 using NAudio.Wave;
-using NAudio.Wave.SampleProviders;
+using SDL;
+using static SDL.SDL3;
 
 namespace OpenTPW;
 
-/// <summary>Lazy SDT/category loading and MPEG decoding. Paths are relative to the game data filesystem.</summary>
+/// <summary>Lazy SDT/category loading, decoding and cached SDL3 PCM conversion. Paths are relative to the game data filesystem.</summary>
 public sealed class SoundAssets
 {
 	private readonly Dictionary<string, SoundCategoryMap> categories = new( StringComparer.OrdinalIgnoreCase );
@@ -52,7 +53,7 @@ public sealed class SoundAssets
 		decodedFiles.AddOrUpdate( file, entry );
 		return entry;
 	}
-	public static float[] Decode( MP2File file )
+	public static unsafe float[] Decode( MP2File file )
 	{
 		if ( file.SoundType == MP2File.SoundTypes.NONE ) return new float[2];
 		if ( file.SoundData.Length == 0 || file.SampleRate <= 0 ) throw new InvalidDataException( $"Invalid sound data: {file.Name}" );
@@ -61,18 +62,50 @@ public sealed class SoundAssets
 		if ( Convert.ToHexString( System.Security.Cryptography.SHA256.HashData( file.SoundData ) ) ==
 			"8A8E99FAFAC281C339F64963E3E40535DB201AB6C84460C99A3EBB248EC21F21" )
 			return new float[checked((int)((long)file.Samples / 2 * 44100 / file.SampleRate) * 2)];
-		using var bytes = new MemoryStream( file.SoundData, false );
-		using WaveStream reader = file.SoundType == MP2File.SoundTypes.WAV ? new WaveFileReader( bytes ) :
-			file.SoundType is MP2File.SoundTypes.MP2_MONO or MP2File.SoundTypes.MP2_STEREO ? new StreamMediaFoundationReader( bytes ) :
+		if ( file.SoundType == MP2File.SoundTypes.WAV )
+		{
+			fixed ( byte* source = file.SoundData )
+			{
+				var io = SDL_IOFromConstMem( (IntPtr)source, (nuint)file.SoundData.Length );
+				if ( io == null ) throw new InvalidDataException( $"WAV input failed: {SDL_GetError()}" );
+				SDL_AudioSpec spec;
+				byte* data = null; uint length = 0;
+				if ( !SDL_LoadWAV_IO( io, true, &spec, &data, &length ) ) throw new InvalidDataException( $"WAV decode failed for {file.Name}: {SDL_GetError()}" );
+				try { return ConvertPcm( spec, data, checked((int)length), file.Name ); }
+				finally { SDL_free( data ); }
+			}
+		}
+		if ( file.SoundType is not (MP2File.SoundTypes.MP2_MONO or MP2File.SoundTypes.MP2_STEREO) )
 			throw new InvalidDataException( $"Unsupported sound encoding {file.SoundType}: {file.Name}" );
-		ISampleProvider samples = reader.ToSampleProvider();
-		if ( samples.WaveFormat.SampleRate != 44100 ) samples = new WdlResamplingSampleProvider( samples, 44100 );
-		if ( samples.WaveFormat.Channels == 1 ) samples = new MonoToStereoSampleProvider( samples );
-		if ( samples.WaveFormat.Channels != 2 ) throw new InvalidDataException( $"Unsupported channel count in {file.Name}" );
-		var result = new List<float>();
-		var block = new float[8192];
-		for ( int count; (count = samples.Read( block, 0, block.Length )) > 0; ) result.AddRange( block.AsSpan( 0, count ) );
-		if ( result.Count == 0 ) throw new InvalidDataException( $"Decoded sound is empty: {file.Name}" );
-		return result.ToArray();
+		// The only NAudio use: Windows Media Foundation still decodes MPEG Layer II.
+		// Replace this decoder for cross-platform playback; SDL3 owns all PCM conversion and output.
+		using var bytes = new MemoryStream( file.SoundData, false );
+		using var reader = new StreamMediaFoundationReader( bytes );
+		var format = reader.WaveFormat;
+		if ( format.Encoding != WaveFormatEncoding.Pcm || format.BitsPerSample != 16 )
+			throw new InvalidDataException( $"Unexpected Media Foundation PCM format in {file.Name}: {format}" );
+		using var pcm = new MemoryStream();
+		reader.CopyTo( pcm );
+		byte[] decoded = pcm.ToArray();
+		var input = new SDL_AudioSpec { freq = format.SampleRate, channels = format.Channels, format = SDL_AudioFormat.SDL_AUDIO_S16LE };
+		fixed ( byte* data = decoded ) return ConvertPcm( input, data, decoded.Length, file.Name );
+	}
+
+	/// <summary>Converts a complete decoded clip once, before the PCM cache, never at render time or per playback.</summary>
+	private static unsafe float[] ConvertPcm( SDL_AudioSpec source, byte* data, int length, string name )
+	{
+		if ( source.freq <= 0 || source.channels is not (1 or 2) || length <= 0 )
+			throw new InvalidDataException( $"Invalid PCM format or empty sound: {name}" );
+		var destination = new SDL_AudioSpec { freq = 44100, channels = 2, format = SDL_AUDIO_F32 };
+		byte* converted = null; int convertedLength = 0;
+		if ( !SDL_ConvertAudioSamples( &source, data, length, &destination, &converted, &convertedLength ) )
+			throw new InvalidDataException( $"Sound conversion failed for {name}: {SDL_GetError()}" );
+		try
+		{
+			if ( convertedLength <= 0 || convertedLength % (2 * sizeof(float)) != 0 )
+				throw new InvalidDataException( $"Converted sound has no complete stereo frames: {name}" );
+			return new ReadOnlySpan<float>( converted, convertedLength / sizeof(float) ).ToArray();
+		}
+		finally { SDL_free( converted ); }
 	}
 }

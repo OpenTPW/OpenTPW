@@ -1,0 +1,64 @@
+shader	stage	glsl_set	glsl_binding	glsl_type	glsl_name	members	hlsl_register	sdl_slot	spirv_set	spirv_binding	note
+3d	vertex	0	0	ObjectUniformBuffer	g_oUbo	mat4 g_mModel; mat4 g_mView; mat4 g_mProj; vec3 g_vLightPos; vec3 g_vLightColor; vec3 g_vCameraPos;	b0,space1	uniform 0	1	0	Uniform buffer slot 0; preserves std140 member offsets
+3d	fragment	0	0	ObjectUniformBuffer	g_oUbo	mat4 g_mModel; mat4 g_mView; mat4 g_mProj; vec3 g_vLightPos; vec3 g_vLightColor; vec3 g_vCameraPos;	b0,space3	uniform 0	3	0	Uniform buffer slot 0; preserves std140 member offsets
+3d	fragment	1	0	texture2D	Color		t0,space2	sampler 0 (texture)	2	0	Combined with the sampler at the same SDL slot / SPIR-V binding
+3d	fragment	1	1	sampler	s_Color		s0,space2	sampler 0 (sampler)	2	0	Bind the same original sampler at every listed slot; SPIR-V combines it with each texture
+blit	fragment	0	0	texture2D	g_tInput		t0,space2	sampler 0 (texture)	2	0	Combined with the sampler at the same SDL slot / SPIR-V binding
+blit	fragment	0	1	sampler	g_sSampler		s0,space2	sampler 0 (sampler)	2	0	Bind the same original sampler at every listed slot; SPIR-V combines it with each texture
+lobby-model	vertex	0	0	ObjectUniformBuffer	g_oUbo	mat4 g_mModel; mat4 g_mView; mat4 g_mProj; vec3 g_vLightPos; vec3 g_vLightColor; vec3 g_vCameraPos; float g_flTime; vec4 g_vFogColor;	b0,space1	uniform 0	1	0	Uniform buffer slot 0; preserves std140 member offsets
+lobby-model	fragment	0	0	ObjectUniformBuffer	g_oUbo	mat4 g_mModel; mat4 g_mView; mat4 g_mProj; vec3 g_vLightPos; vec3 g_vLightColor; vec3 g_vCameraPos; float g_flTime; vec4 g_vFogColor;	b0,space3	uniform 0	3	0	Uniform buffer slot 0; preserves std140 member offsets
+lobby-model	fragment	1	0	texture2D	Color0		t0,space2	sampler 0 (texture)	2	0	Combined with the sampler at the same SDL slot / SPIR-V binding
+lobby-model	fragment	1	1	texture2D	Color1		t1,space2	sampler 1 (texture)	2	1	Combined with the sampler at the same SDL slot / SPIR-V binding
+lobby-model	fragment	1	2	texture2D	Color2		t2,space2	sampler 2 (texture)	2	2	Combined with the sampler at the same SDL slot / SPIR-V binding
+lobby-model	fragment	1	3	texture2D	Color3		t3,space2	sampler 3 (texture)	2	3	Combined with the sampler at the same SDL slot / SPIR-V binding
+lobby-model	fragment	1	4	texture2D	Color4		t4,space2	sampler 4 (texture)	2	4	Combined with the sampler at the same SDL slot / SPIR-V binding
+lobby-model	fragment	1	5	texture2D	Color5		t5,space2	sampler 5 (texture)	2	5	Combined with the sampler at the same SDL slot / SPIR-V binding
+lobby-model	fragment	1	6	texture2D	Color6		t6,space2	sampler 6 (texture)	2	6	Combined with the sampler at the same SDL slot / SPIR-V binding
+lobby-model	fragment	1	7	texture2D	Color7		t7,space2	sampler 7 (texture)	2	7	Combined with the sampler at the same SDL slot / SPIR-V binding
+lobby-model	fragment	1	8	texture2D	Color8		t8,space2	sampler 8 (texture)	2	8	Combined with the sampler at the same SDL slot / SPIR-V binding
+lobby-model	fragment	1	9	texture2D	Color9		t9,space2	sampler 9 (texture)	2	9	Combined with the sampler at the same SDL slot / SPIR-V binding
+lobby-model	fragment	1	10	texture2D	Color10		t10,space2	sampler 10 (texture)	2	10	Combined with the sampler at the same SDL slot / SPIR-V binding
+lobby-model	fragment	1	11	texture2D	Color11		t11,space2	sampler 11 (texture)	2	11	Combined with the sampler at the same SDL slot / SPIR-V binding
+lobby-model	fragment	1	12	texture2D	Color12		t12,space2	sampler 12 (texture)	2	12	Combined with the sampler at the same SDL slot / SPIR-V binding
+lobby-model	fragment	1	13	texture2D	Color13		t13,space2	sampler 13 (texture)	2	13	Combined with the sampler at the same SDL slot / SPIR-V binding
+lobby-model	fragment	1	14	texture2D	Color14		t14,space2	sampler 14 (texture)	2	14	Combined with the sampler at the same SDL slot / SPIR-V binding
+lobby-model	fragment	1	15	texture2D	Color15		t15,space2	sampler 15 (texture)	2	15	Combined with the sampler at the same SDL slot / SPIR-V binding
+lobby-model	fragment	1	16	sampler	s_Color		s0,space2; s1,space2; s2,space2; s3,space2; s4,space2; s5,space2; s6,space2; s7,space2; s8,space2; s9,space2; s10,space2; s11,space2; s12,space2; s13,space2; s14,space2; s15,space2	sampler 0 (sampler); sampler 1 (sampler); sampler 2 (sampler); sampler 3 (sampler); sampler 4 (sampler); sampler 5 (sampler); sampler 6 (sampler); sampler 7 (sampler); sampler 8 (sampler); sampler 9 (sampler); sampler 10 (sampler); sampler 11 (sampler); sampler 12 (sampler); sampler 13 (sampler); sampler 14 (sampler); sampler 15 (sampler)	2	0; 1; 2; 3; 4; 5; 6; 7; 8; 9; 10; 11; 12; 13; 14; 15	Bind the same original sampler at every listed slot; SPIR-V combines it with each texture
+lobby-particles	fragment	0	0	texture2D	Color		t0,space2	sampler 0 (texture)	2	0	Combined with the sampler at the same SDL slot / SPIR-V binding
+lobby-particles	fragment	0	1	sampler	s_Color		s0,space2	sampler 0 (sampler)	2	0	Bind the same original sampler at every listed slot; SPIR-V combines it with each texture
+lobby-sky	vertex	0	0	ObjectUniformBuffer	g_oUbo	mat4 g_mModel; mat4 g_mView; mat4 g_mProj; vec3 g_vLightPos; float _padding0; vec3 g_vLightColor; float _padding1; vec3 g_vCameraPos; float g_flTime; vec4 g_vFogColor;	b0,space1	uniform 0	1	0	Uniform buffer slot 0; preserves std140 member offsets
+lobby-sky	fragment	1	0	texture2D	Color		t0,space2	sampler 0 (texture)	2	0	Combined with the sampler at the same SDL slot / SPIR-V binding
+lobby-sky	fragment	1	1	sampler	s_Color		s0,space2	sampler 0 (sampler)	2	0	Bind the same original sampler at every listed slot; SPIR-V combines it with each texture
+lobby-weather	fragment	0	0	texture2D	Color		t0,space2	sampler 0 (texture)	2	0	Combined with the sampler at the same SDL slot / SPIR-V binding
+lobby-weather	fragment	0	1	sampler	s_Color		s0,space2	sampler 0 (sampler)	2	0	Bind the same original sampler at every listed slot; SPIR-V combines it with each texture
+test	vertex	0	0	ObjectUniformBuffer	g_oUbo	mat4 g_mModel; mat4 g_mView; mat4 g_mProj; vec3 g_vLightPos; vec3 g_vLightColor; vec3 g_vCameraPos; float g_flTime; vec4 g_vFogColor;	b0,space1	uniform 0	1	0	Uniform buffer slot 0; preserves std140 member offsets
+test	fragment	0	0	ObjectUniformBuffer	g_oUbo	mat4 g_mModel; mat4 g_mView; mat4 g_mProj; vec3 g_vLightPos; vec3 g_vLightColor; vec3 g_vCameraPos; float g_flTime; vec4 g_vFogColor;	b0,space3	uniform 0	3	0	Uniform buffer slot 0; preserves std140 member offsets
+test	fragment	1	0	texture2D	Color0		t0,space2	sampler 0 (texture)	2	0	Combined with the sampler at the same SDL slot / SPIR-V binding
+test	fragment	1	1	texture2D	Color1		t1,space2	sampler 1 (texture)	2	1	Combined with the sampler at the same SDL slot / SPIR-V binding
+test	fragment	1	2	texture2D	Color2		t2,space2	sampler 2 (texture)	2	2	Combined with the sampler at the same SDL slot / SPIR-V binding
+test	fragment	1	3	texture2D	Color3		t3,space2	sampler 3 (texture)	2	3	Combined with the sampler at the same SDL slot / SPIR-V binding
+test	fragment	1	4	texture2D	Color4		t4,space2	sampler 4 (texture)	2	4	Combined with the sampler at the same SDL slot / SPIR-V binding
+test	fragment	1	5	texture2D	Color5		t5,space2	sampler 5 (texture)	2	5	Combined with the sampler at the same SDL slot / SPIR-V binding
+test	fragment	1	6	texture2D	Color6		t6,space2	sampler 6 (texture)	2	6	Combined with the sampler at the same SDL slot / SPIR-V binding
+test	fragment	1	7	texture2D	Color7		t7,space2	sampler 7 (texture)	2	7	Combined with the sampler at the same SDL slot / SPIR-V binding
+test	fragment	1	8	texture2D	Color8		t8,space2	sampler 8 (texture)	2	8	Combined with the sampler at the same SDL slot / SPIR-V binding
+test	fragment	1	9	texture2D	Color9		t9,space2	sampler 9 (texture)	2	9	Combined with the sampler at the same SDL slot / SPIR-V binding
+test	fragment	1	10	texture2D	Color10		t10,space2	sampler 10 (texture)	2	10	Combined with the sampler at the same SDL slot / SPIR-V binding
+test	fragment	1	11	texture2D	Color11		t11,space2	sampler 11 (texture)	2	11	Combined with the sampler at the same SDL slot / SPIR-V binding
+test	fragment	1	12	texture2D	Color12		t12,space2	sampler 12 (texture)	2	12	Combined with the sampler at the same SDL slot / SPIR-V binding
+test	fragment	1	13	texture2D	Color13		t13,space2	sampler 13 (texture)	2	13	Combined with the sampler at the same SDL slot / SPIR-V binding
+test	fragment	1	14	texture2D	Color14		t14,space2	sampler 14 (texture)	2	14	Combined with the sampler at the same SDL slot / SPIR-V binding
+test	fragment	1	15	texture2D	Color15		t15,space2	sampler 15 (texture)	2	15	Combined with the sampler at the same SDL slot / SPIR-V binding
+test	fragment	1	16	sampler	s_Color		s0,space2; s1,space2; s2,space2; s3,space2; s4,space2; s5,space2; s6,space2; s7,space2; s8,space2; s9,space2; s10,space2; s11,space2; s12,space2; s13,space2; s14,space2; s15,space2	sampler 0 (sampler); sampler 1 (sampler); sampler 2 (sampler); sampler 3 (sampler); sampler 4 (sampler); sampler 5 (sampler); sampler 6 (sampler); sampler 7 (sampler); sampler 8 (sampler); sampler 9 (sampler); sampler 10 (sampler); sampler 11 (sampler); sampler 12 (sampler); sampler 13 (sampler); sampler 14 (sampler); sampler 15 (sampler)	2	0; 1; 2; 3; 4; 5; 6; 7; 8; 9; 10; 11; 12; 13; 14; 15	Bind the same original sampler at every listed slot; SPIR-V combines it with each texture
+ui	fragment	0	0	texture2D	Color		t0,space2	sampler 0 (texture)	2	0	Combined with the sampler at the same SDL slot / SPIR-V binding
+ui	fragment	0	1	sampler	s_Color		s0,space2	sampler 0 (sampler)	2	0	Bind the same original sampler at every listed slot; SPIR-V combines it with each texture
+ui-lit	fragment	0	0	texture2D	Color		t0,space2	sampler 0 (texture)	2	0	Combined with the sampler at the same SDL slot / SPIR-V binding
+ui-lit	fragment	0	1	sampler	s_Color		s0,space2	sampler 0 (sampler)	2	0	Bind the same original sampler at every listed slot; SPIR-V combines it with each texture
+unlit	vertex	0	0	ObjectUniformBuffer	g_oUbo	mat4 g_mModel; mat4 g_mView; mat4 g_mProj; vec3 g_vLightPos; vec3 g_vLightColor; vec3 g_vCameraPos;	b0,space1	uniform 0	1	0	Uniform buffer slot 0; preserves std140 member offsets
+unlit	fragment	0	0	ObjectUniformBuffer	g_oUbo	mat4 g_mModel; mat4 g_mView; mat4 g_mProj; vec3 g_vLightPos; vec3 g_vLightColor; vec3 g_vCameraPos;	b0,space3	uniform 0	3	0	Declared in HLSL; unused and optimized out in both formats
+unlit	fragment	1	0	texture2D	Color		t0,space2	sampler 0 (texture)	2	0	Combined with the sampler at the same SDL slot / SPIR-V binding
+unlit	fragment	1	1	sampler	s_Color		s0,space2	sampler 0 (sampler)	2	0	Bind the same original sampler at every listed slot; SPIR-V combines it with each texture
+water	vertex	0	0	ObjectUniformBuffer	g_oUbo	mat4 g_mModel; mat4 g_mView; mat4 g_mProj; vec3 g_vLightPos; vec3 g_vLightColor; vec3 g_vCameraPos; float g_fTime; vec4 g_vFogColor;	b0,space1	uniform 0	1	0	Uniform buffer slot 0; preserves std140 member offsets
+water	fragment	0	0	ObjectUniformBuffer	g_oUbo	mat4 g_mModel; mat4 g_mView; mat4 g_mProj; vec3 g_vLightPos; vec3 g_vLightColor; vec3 g_vCameraPos; float g_fTime; vec4 g_vFogColor;	b0,space3	uniform 0	3	0	Uniform buffer slot 0; preserves std140 member offsets
+water	fragment	1	0	texture2D	Color		t0,space2	sampler 0 (texture)	2	0	Combined with the sampler at the same SDL slot / SPIR-V binding
+water	fragment	1	1	sampler	s_Color		s0,space2	sampler 0 (sampler)	2	0	Bind the same original sampler at every listed slot; SPIR-V combines it with each texture

@@ -1,6 +1,6 @@
 using OpenTPW.UI;
 using Veldrid;
-using Veldrid.Sdl2;
+using static SDL.SDL3;
 
 namespace OpenTPW;
 
@@ -119,7 +119,7 @@ internal sealed class LobbyNamingPanel : Panel
 		if ( nameFocused )
 		{
 			if ( control && Input.Pressed( Key.A ) ) edit.SelectAll();
-			else if ( control && Input.Pressed( Key.V ) ) edit.Insert( Sdl2Native.SDL_GetClipboardText() );
+			else if ( control && Input.Pressed( Key.V ) ) edit.Insert( SDL_GetClipboardText() ?? throw new InvalidOperationException( SDL_GetError() ) );
 			else if ( Input.Text.Length > 0 && !control ) edit.Insert( Input.Text );
 			if ( Input.Pressed( Key.BackSpace ) ) edit.Delete( true );
 			if ( Input.Pressed( Key.Delete ) ) edit.Delete( false );

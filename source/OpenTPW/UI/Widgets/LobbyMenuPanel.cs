@@ -75,7 +75,7 @@ internal sealed class LobbyMenuPanel : Panel
 		{
 			Close();
 			if ( action == UIStrings.SelectNewPlayer ) level.ReturnToPlayers();
-			else Window.Current.SdlWindow.Close();
+			else Window.Current.Close();
 		} );
 	}
 	protected override void OnUpdate()

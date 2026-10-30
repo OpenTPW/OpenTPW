@@ -34,7 +34,7 @@ internal sealed class FrameCapture
 		SaveBmp( Path.Join( output, $"frame-{captured:D3}.bmp" ) );
 		if ( ++captured < count ) return;
 		Log.Info( $"Captured {count} consecutive frames to {output}" );
-		Window.Current.SdlWindow.Close();
+		Window.Current.Close();
 	}
 
 	/// <summary>Writes the resolved render target as a top-down 32-bit BMP. Reads only the game's own target.</summary>

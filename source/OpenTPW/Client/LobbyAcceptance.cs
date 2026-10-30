@@ -163,7 +163,7 @@ internal sealed class LobbyAcceptance
 	}
 	internal void VerifyCompleted()
 	{
-		Check( stage == 14 && !Window.Current.SdlWindow.Exists, "confirmed quit closes without rendering another frame" );
+		Check( stage == 14 && !Window.Current.Exists, "confirmed quit closes without rendering another frame" );
 		File.WriteAllText( Path.Join( output, "acceptance.json" ), JsonSerializer.Serialize( new { passed = true,
 			assembly = typeof(LobbyAcceptance).Assembly.ManifestModule.ModuleVersionId,
 			width = Render.ResolveColorTexture.Width, height = Render.ResolveColorTexture.Height, checks },

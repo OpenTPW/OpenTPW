@@ -101,7 +101,7 @@ public class Level
 		};
 		var confirmation = new LobbyConfirmPanel( Hud );
 		Menu = new LobbyMenuPanel( this, confirmation );
-		PlayerMenu.QuitRequested += () => confirmation.Show( Localization.Parse( "#ConfirmQuit" ), () => Window.Current.SdlWindow.Close() );
+		PlayerMenu.QuitRequested += () => confirmation.Show( Localization.Parse( "#ConfirmQuit" ), () => Window.Current.Close() );
 		LobbyCameraMode.IslandEntered += id =>
 		{
 			if ( ParkEntryRequested != null ) ParkEntryRequested( selectedPlayer!, Lobby!.Islands.First( island => island.Id == id ) );

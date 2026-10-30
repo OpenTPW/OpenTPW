@@ -1,5 +1,4 @@
 ﻿using Veldrid;
-using Veldrid.StartupUtilities;
 
 namespace OpenTPW;
 
@@ -121,7 +120,7 @@ public partial class Renderer
 
 		OnWindowResized( Window.Size );
 
-		while ( Window.SdlWindow.Exists )
+		while ( Window.Exists )
 		{
 			Update();
 		}
@@ -182,8 +181,10 @@ public partial class Renderer
 		float deltaTime = (float)(DateTime.Now - _lastFrame).TotalSeconds;
 		_lastFrame = DateTime.Now;
 
-		InputSnapshot inputSnapshot = Window.SdlWindow.PumpEvents();
-		if ( !Window.SdlWindow.Exists ) return;
+		// Complete the previous submission before events can resize GPU resources.
+		BeginFrame();
+		InputSnapshot inputSnapshot = Window.PumpEvents();
+		if ( !Window.Exists ) return;
 
 		Time.Update( deltaTime );
 		Input.UpdateFrom( inputSnapshot );
@@ -195,15 +196,13 @@ public partial class Renderer
 		else
 			imGuiRenderer.Update( Math.Max( deltaTime, 0.001f ), inputSnapshot );
 
-		// Updates may rewrite vertex buffers and textures the previous frame was drawing with.
-		BeginFrame();
 		PreUpdate?.Invoke();
 
 		double updateBegin = Mark();
 		OnUpdate?.Invoke();
 		AddUpdate( Mark() - updateBegin );
 		// A HUD callback can close the native window during this update.
-		if ( !Window.SdlWindow.Exists ) return;
+		if ( !Window.Exists ) return;
 
 		PreRender();
 		PostRender( frameBegin );
@@ -222,12 +221,13 @@ public partial class Renderer
 			HasMainSwapchain = true
 		};
 
-		var swapchainSource = VeldridStartup.GetSwapchainSource( Window.SdlWindow );
+		var swapchainSource = Window.CreateSwapchainSource();
 		Device = GraphicsDevice.CreateVulkan( swapchainDescription: new SwapchainDescription( swapchainSource, (uint)(Window.Size.X), (uint)(Window.Size.Y), options.SwapchainDepthFormat, options.SyncToVerticalBlank, options.SwapchainSrgbFormat ), options: options );
 	}
 
 	public void OnWindowResized( Point2 newSize )
 	{
+		Device.WaitForIdle();
 		var dpiScale = 1.0f;
 		Device.MainSwapchain.Resize( (uint)(newSize.X * dpiScale), (uint)(newSize.Y * dpiScale) );
 

@@ -55,6 +55,7 @@ internal static class Game
 		// Init renderer
 		//
 		Render = new();
+		using var window = Render.Window;
 
 		//
 		// Create level
@@ -87,7 +88,8 @@ internal static class Game
 		if ( frames != null ) Render.OnUpdate += frames.Update;
 #endif
 		Render.OnRender += level.Render;
-		Render.Run();
+		try { Render.Run(); }
+		finally { Device.WaitForIdle(); }
 		Log.Info( "Render loop stopped" );
 		// A closed SDL window does not stop the audio callback. Drain it before reporting completion.
 		audio.Dispose();

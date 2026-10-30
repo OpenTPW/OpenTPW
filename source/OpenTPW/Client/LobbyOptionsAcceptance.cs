@@ -69,7 +69,7 @@ internal sealed class LobbyOptionsAcceptance
 				}, new JsonSerializerOptions { WriteIndented = true } ) );
 				SaveFileSystem = originalSaves; LobbyOptionsSettings.Accept( original );
 				LobbyQuality.Apply( new[] { "low", "med", "high" }[original.Graphics] );
-				Window.Current.SdlWindow.Close(); stage++; break;
+				Window.Current.Close(); stage++; break;
 		}
 	}
 	private static void Require( bool condition, string message )

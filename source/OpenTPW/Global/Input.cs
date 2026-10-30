@@ -1,5 +1,5 @@
 ﻿using Veldrid;
-using Veldrid.Sdl2;
+using static SDL.SDL3;
 
 namespace OpenTPW;
 
@@ -32,8 +32,8 @@ public static partial class Input
 
 	public static bool IsSystemCursorVisible
 	{
-		get => Sdl2Native.SDL_ShowCursor( -1 ) == 1;
-		set => Sdl2Native.SDL_ShowCursor( value ? 1 : 0 );
+		get => SDL_CursorVisible();
+		set => Window.Check( value ? SDL_ShowCursor() : SDL_HideCursor() );
 	}
 
 	public static bool Pressed( InputButton button )
@@ -131,16 +131,12 @@ public static partial class Input
 		Right = 0;
 		Forward = 0;
 
-		var newKeysDown = inputSnapshot.KeyEvents.Where( x => x.Down ).Select( x => x.Key );
-		var newKeysUp = inputSnapshot.KeyEvents.Where( x => !x.Down ).Select( x => x.Key );
-
-		Keyboard = new KeyboardInfo(
-			Keyboard.KeysDown.Concat( newKeysDown )
-				.Distinct()
-				.Where( x => !newKeysUp.Contains( x ) )
-				.ToList()
-		);
-
+		// Apply transitions in order: down/up/down in one frame must leave the key held.
+		foreach ( var ev in inputSnapshot.KeyEvents )
+		{
+			if ( ev.Down ) { if ( !Keyboard.KeysDown.Contains( ev.Key ) ) Keyboard.KeysDown.Add( ev.Key ); }
+			else Keyboard.KeysDown.Remove( ev.Key );
+		}
 		bool IsKeyPressed( Key k ) => Keyboard.KeysDown.Contains( k );
 
 		if ( IsKeyPressed( Key.A ) )

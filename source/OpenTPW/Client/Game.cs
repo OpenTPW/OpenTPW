@@ -70,7 +70,6 @@ internal static class Game
 		using var audio = new AudioSystem( unchecked((uint)DateTimeOffset.UtcNow.ToUnixTimeSeconds()) );
 		audio.ConfigureQuality( LobbyOptionsSettings.Current.AudioQuality );
 		if ( LobbyOptionsSettings.Current.Preferences is { } preferences ) audio.ConfigurePreferences( preferences );
-		if ( !audio.Available ) Log.Warning( $"Audio output unavailable: {audio.Failure}" );
 		long previewVoice = 0;
 		ModKit.GlobalNamespace.PreviewSound = path => { audio.Stop( previewVoice ); previewVoice = audio.PlayFile( path ); };
 		var level = new Level( "jungle", audio );

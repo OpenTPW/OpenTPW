@@ -162,7 +162,7 @@ internal sealed class LobbyUiText : Panel
 		if ( right <= left ) return;
 		var material = Material.UI;
 		material.Set( "Color", texture );
-		Graphics.Quad( new Rectangle( left * 2, 720 - (y + texture.Height) * 1.5f, (right - left) * 2, texture.Height * 1.5f ),
+		Graphics2D.Quad( new Rectangle( left * 2, 720 - (y + texture.Height) * 1.5f, (right - left) * 2, texture.Height * 1.5f ),
 			new Rectangle( (left - x) / texture.Width, 0, (right - left) / texture.Width, 1 ), material );
 	}
 }

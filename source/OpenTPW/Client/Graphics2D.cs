@@ -4,12 +4,13 @@ using Veldrid;
 
 namespace OpenTPW;
 
-internal static partial class Graphics
+/// <summary>Immediate screen-space quads for the HUD and lobby overlays. Named apart from the OpenTPW.Graphics library namespace.</summary>
+internal static partial class Graphics2D
 {
 	private static readonly uint[] QuadIndices = { 3, 2, 1, 0, 1, 2 };
 	private static readonly DeviceBuffer indexBuffer;
 
-	static Graphics()
+	static Graphics2D()
 	{
 		indexBuffer = Device.ResourceFactory.CreateBuffer( new BufferDescription( (uint)(QuadIndices.Length * sizeof( uint )), BufferUsage.IndexBuffer ) );
 		Device.UpdateBuffer( indexBuffer, 0, QuadIndices );

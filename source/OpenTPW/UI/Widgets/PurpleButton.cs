@@ -106,6 +106,6 @@ internal class PurpleButton : Panel
 		foreach ( var bar in bars ) bar.Draw();
 
 		material.Set( "Color", Label );
-		Graphics.Quad( LabelRect, new Rectangle( 0, 0, 1, 1 ), material );
+		Graphics2D.Quad( LabelRect, new Rectangle( 0, 0, 1, 1 ), material );
 	}
 }

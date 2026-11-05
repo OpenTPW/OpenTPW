@@ -116,7 +116,7 @@ public sealed class LobbyWeather : ModelEntity
 		{
 			var material = flashMaterial;
 			material.Set( "Color", white );
-			using ( new Graphics.Scope( new Point2( 1, 1 ) ) ) Graphics.Quad( new Rectangle( 0, 0, 1, 1 ), material );
+			using ( new Graphics2D.Scope( new Point2( 1, 1 ) ) ) Graphics2D.Quad( new Rectangle( 0, 0, 1, 1 ), material );
 		}
 		Array.Clear( boltVertices );
 		int boltOffset = 0;

@@ -19,7 +19,7 @@ internal sealed class LobbyFadePanel : Panel
 	{
 		if ( fade.Alpha == 0 ) return;
 		material.Set( "Color", ramp );
-		using ( new Graphics.Scope( new Point2( 1, 1 ) ) )
-			Graphics.Quad( new Rectangle( 0, 0, 1, 1 ), new Rectangle( (fade.Alpha + 0.5f) / 256, 0.5f, 0, 0 ), material );
+		using ( new Graphics2D.Scope( new Point2( 1, 1 ) ) )
+			Graphics2D.Quad( new Rectangle( 0, 0, 1, 1 ), new Rectangle( (fade.Alpha + 0.5f) / 256, 0.5f, 0, 0 ), material );
 	}
 }

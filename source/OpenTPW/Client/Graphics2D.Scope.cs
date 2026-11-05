@@ -1,6 +1,6 @@
 ﻿namespace OpenTPW;
 
-partial class Graphics
+partial class Graphics2D
 {
 	private static Point2 BaseScreenSize = new Point2( 1280, 720 );
 

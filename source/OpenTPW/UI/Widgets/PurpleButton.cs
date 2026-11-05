@@ -9,18 +9,18 @@ namespace OpenTPW;
 /// </summary>
 internal class PurpleButton : Panel
 {
-	// TP.exe 0x474f10 maps each axis independently from its 2048x1536 control space.
+	// TP.exe UiModel_ApplyScreenTransform (US 0x476c50) maps each axis independently from its 2048x1536 control space.
 	// Expressed in 640x480 pixels, the current 1280x720 HUD uses scales 2 and 1.5.
 	private static readonly Vector2 Scale = new( 2, 1.5f );
 
-	// Label style, set for every lobby label by the lobby setup (TP.exe 0x4a4010):
-	// font slot 5 (0x483d20), which is TITLEMED.bf4 at 640x480 (the font loader 0x419390 fills
+	// Label style, set for every lobby label by the lobby setup (TP.exe Lobby_CreateUi (US 0x4a6580)):
+	// font slot 5 (Font_GetSlot (US 0x485a70)), which is TITLEMED.bf4 at 640x480 (the font loader Text_LoadStartupResources (US 0x419710) fills
 	// set 1, the set the game uses at that resolution, with resource 0x40d = TITLEMED.bf4 in
-	// residx.dat), and the colour at 0x74fbc8..0x74fbd0 (0xEC, 0xA2, 0x04, alpha 0xFF).
+	// residx.dat), and the colour at TitleLabel_ColorComponents (US 待核)..TitleLabel_ColorComponents (US 待核) 内，位置待核 (0xEC, 0xA2, 0x04, alpha 0xFF).
 	private static string FontPath => GameLanguage.Path( "TITLEMED.bf4" );
 	private const uint LabelColor = 0xECA204FF;
 
-	// Labels are UI-table text elements: drawn with their shadow (LobbyUiText.RenderElement, 0x48f950).
+	// Labels are UI-table text elements: drawn with their shadow (LobbyUiText.RenderElement, TextElement_Draw (US 待核)).
 	private const int ShadowOffset = LobbyUiText.ShadowOffset;
 
 	private readonly List<Model> bars = new();
@@ -91,8 +91,8 @@ internal class PurpleButton : Panel
 					?? throw new InvalidDataException( "Lobby button material has no texture" );
 				if ( !barTextures.TryGetValue( name, out var texture ) )
 					barTextures[name] = texture = new Texture( AnimationFiles.ResolveFile( $"ui/textures/{name}.wct", "Lobby button texture" ), TextureFlags.PointFilter );
-				// Retail never culls in hardware (US 0x5668e1 sets CULLMODE 1) but drops back faces in software: 0x580530
-				// emits a face only when 0x581320 finds a positive screen-space winding of its three transformed vertices.
+				// Retail never culls in hardware (Render_InitializeD3dState+0xa1 (US 0x5668e1) sets CULLMODE 1) but drops back faces in software: FUN_00580530 (US 0x580530)
+				// emits a face only when Render_CullBackfaces (US 0x581320) finds a positive screen-space winding of its three transformed vertices.
 				var material = new Material<ObjectUniformBuffer>( barShader, MaterialFlags.DisableDepth );
 				material.Set( "Color", texture );
 				bars.Add( new Model( vertices, indices.ToArray(), material ) );

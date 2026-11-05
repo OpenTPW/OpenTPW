@@ -1,6 +1,6 @@
 namespace OpenTPW;
 
-/// <summary>Lobby HUD entry: the player page is the first page shown (0x4a4010); other lobby pages are created by <see cref="Level"/>.</summary>
+/// <summary>Lobby HUD entry: the player page is the first page shown (Lobby_CreateUi (US 0x4a6580)); other lobby pages are created by <see cref="Level"/>.</summary>
 internal sealed class LobbyLayout : Layout
 {
 	public override void OnInit()

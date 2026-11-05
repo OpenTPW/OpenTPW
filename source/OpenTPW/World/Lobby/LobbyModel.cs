@@ -83,8 +83,8 @@ public sealed class LobbyModel : Entity
 								}
 								catch ( FileNotFoundException ) when ( name.Equals( "signgrab", StringComparison.OrdinalIgnoreCase ) )
 								{
-									// 0x572440 -> 0x571ea0 falls back to the cache's default texture.
-									// 0x571060 initializes it from this shipped TGA, not a white pixel.
+									// FUN_00575e10 (US 0x575e10) -> FUN_00575870 (US 0x575870) falls back to the cache's default texture.
+									// Texture_InitializeFallback (US 0x574a20) initializes it from this shipped TGA, not a white pixel.
 									Log.Warning( $"Missing lobby material {name} in {modelPath}: {texturePath}; using retail default" );
 									texturePath = AnimationFiles.ResolveFile( "generic/defaulttexture/NotFound.tga", "Retail default texture" );
 								}
@@ -234,8 +234,8 @@ public sealed class LobbyModel : Entity
 					changed = true;
 				}
 			}
-			// 0x577000 relights a mesh whenever the light version changes, which every camera update does
-			// (0x5d3eb0 re-aims the light); node motion and the model's rotation also move it in node space.
+			// Lighting_UpdateMesh (US 待核) relights a mesh whenever the light version changes, which every camera update does
+			// (Lobby_UpdateCameraLight (US 0x5d8de0) re-aims the light); node motion and the model's rotation also move it in node space.
 			if ( part.LitEnabled != LightingEnabled || part.LitWith != lighting || part.LitDirection != LobbyLighting.WorldDirection
 				|| part.LitRotation != Rotation || part.LitWorld != part.World )
 			{

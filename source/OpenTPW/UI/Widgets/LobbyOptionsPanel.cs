@@ -3,7 +3,7 @@ using Veldrid;
 
 namespace OpenTPW;
 
-/// <summary>US options table 0x752f30: fixed control bounds, live audio preview, OK commit and Cancel rollback.</summary>
+/// <summary>US options table OptionsPage_Table (US 0x752f30): fixed control bounds, live audio preview, OK commit and Cancel rollback.</summary>
 internal sealed class LobbyOptionsPanel : Panel
 {
 	/// <summary>A preloaded native model control and its finite set of pre-rasterized labels.</summary>
@@ -49,13 +49,13 @@ internal sealed class LobbyOptionsPanel : Panel
 		}
 		LobbyUiText Text( Rectangle bounds, IEnumerable<string> values )
 		{
-			// US 0x4a43b0 reads font slot 6 from 0x7537b4 and sets left alignment and opaque black.
+			// FUN_004a43b0 (US 0x4a43b0) reads font slot 6 from OptionsPage_TitleFontSlot (US 0x7537b4) and sets left alignment and opaque black.
 			var text = new LobbyUiText( "", bounds, LobbyFonts.Name( 6 ), 0x000000ff );
 			text.HorizontalAlignment = 0; text.Preload( values ); return text;
 		}
 		string T( UIStrings key ) => Localization.Text( key );
 		background = Model( 0xc8a6dfaf, Box( 0, 0, 2048, 1536 ) );
-		// US 0x485d20 selects font slot 5 (record 0x78b5c4); 0x492d20 sets RGBA ea/ef/66/ff.
+		// Options_SelectTitleFont (US 0x485d20) selects font slot 5 (record Font_SlotTable (US 0x78b54c) 内，位置待核); UiText_ApplyLabelStyle (US 0x492d20) sets RGBA ea/ef/66/ff.
 		title = new LobbyUiText( T( UIStrings.GameOptions ), Box( 788, 46, 1260, 126 ), LobbyFonts.Name( 5 ), 0xeaef66ff ) { Shadow = true };
 		title.Preload( new[] { title.Text } );
 		status = Text( Box( 57, 1465, 1964, 1530 ), new[] { "", "Saving...", "Save failed. Retry OK or Cancel.",
@@ -172,13 +172,13 @@ internal sealed class LobbyOptionsPanel : Panel
 		0xd5 => Math.Max( 0, draft.Resolution * 50 ), 0xd6 => draft.Graphics * 50, 0xe0 => draft.AudioQuality,
 		_ => preferences.SoundVolume( (PlayerProfileFile.SoundChannel)((id - 0xd8) / 2) )
 	};
-	/// <summary>US 0x4a2e90 quantizes resolution/detail by truncation; volume and quality remain 0..100.</summary>
+	/// <summary>FUN_004a2e90 (US 0x4a2e90) quantizes resolution/detail by truncation; volume and quality remain 0..100.</summary>
 	internal void SetPercent( int id, int percent )
 	{
 		percent = Math.Clamp( percent, 0, 100 );
 		if ( id == 0xd5 ) { draft.Resolution = percent * 2 / 100; status.Text = "Resolution changes require a restart."; }
 		else if ( id == 0xd6 ) draft.Graphics = percent * 2 / 100;
-		// US 0x4a2e90 updates the quality field only; 0x4237f0 changes the voice budget on OK.
+		// FUN_004a2e90 (US 0x4a2e90) updates the quality field only; FUN_004237f0 (US 0x4237f0) changes the voice budget on OK.
 		else if ( id == 0xe0 ) draft.AudioQuality = percent;
 		else
 		{
@@ -240,7 +240,7 @@ internal sealed class LobbyOptionsPanel : Panel
 				if ( c.Id == 0xd1 ) c.Label.Text = T( UIStrings.Scroll ) + T( preferences.Enabled( PlayerProfileFile.Preference.RightMouseScroll ) ? UIStrings.RightButton : UIStrings.Pushscroll );
 			}
 			if ( c.Handle == null ) continue;
-			// Table 0x752f30 gives a 258-unit track and a 67-unit handle: 191 units of travel.
+			// Table OptionsPage_Table (US 0x752f30) gives a 258-unit track and a 67-unit handle: 191 units of travel.
 			int percent = Percent( c.Id ); c.Handle.Bounds = Box( 990 + percent * 191 / 100f, c.HandleY, 1057 + percent * 191 / 100f, c.HandleY + 68 );
 			UIStrings name; string value;
 			if ( c.Id == 0xd5 ) { name = UIStrings.ScreenResolution; value = draft.Resolution < 0 ? T( UIStrings.Custom ) : T( new[] { UIStrings.Resolution512x384, UIStrings.Resolution640x480, UIStrings.Resolution800x600 }[draft.Resolution] ); }
@@ -258,7 +258,7 @@ internal sealed class LobbyOptionsPanel : Panel
 	private bool ToggleEnabled( int id ) => id <= 0xc5 ? preferences.Enabled( Preference( id ) ) :
 		preferences.SoundEnabled( (PlayerProfileFile.SoundChannel)((id - 0xd7) / 2) );
 	/// <summary>
-	/// US 0x4a3a30 passes !enabled to 0x668bec (+0x138). 0x668820 maps that OFF bit to
+	/// FUN_004a3a30 (US 0x4a3a30) passes !enabled to FUN_00668bec (US 0x668bec) (+0x138). UiModel_GetControlState (US 0x668820) maps that OFF bit to
 	/// roots 0/5 at rest and 2/3 while hovered. It is not the naming radio button's selected state.
 	/// </summary>
 	private static int ToggleState( bool enabled, bool hovered ) => hovered ? enabled ? 2 : 3 : enabled ? 0 : 5;
@@ -270,7 +270,7 @@ internal sealed class LobbyOptionsPanel : Panel
 			if ( !saving.IsCompleted ) return;
 			if ( saving.IsFaulted ) { Log.Warning( saving.Exception!.ToString() ); saving = null; status.Text = "Save failed. Retry OK or Cancel."; return; }
 			saving = null; LobbyOptionsSettings.Accept( draft );
-			// US 0x423740/0x4237f0 apply the selected detail preset on OK. Resolution/backend changes
+			// FUN_00423740 (US 0x423740)/FUN_004237f0 (US 0x4237f0) apply the selected detail preset on OK. Resolution/backend changes
 			// instead display UITEXT 0x193 (RestartGame); they are not a timed display confirmation.
 			LobbyQuality.Apply( new[] { "low", "med", "high" }[draft.Graphics] );
 			level.Audio?.ConfigureQuality( draft.AudioQuality );

@@ -10,7 +10,7 @@ public class LobbyWeatherTests
 	[TestMethod]
 	public void RainUsesFourthPowerOfMeanSquaredHorizontalDistance()
 	{
-		// TP.exe 0x5dbe7f..0x5dbed1: float arithmetic, threshold, cap, then truncation.
+		// TP.exe Lobby_UpdateCameraAndWeather (US 0x5e0470) 内，位置待核..Lobby_UpdateCameraAndWeather: float arithmetic, threshold, cap, then truncation.
 		Assert.AreEqual( 160, LobbyWeather.CalculateRainAmount( 5000, 1 ) );
 		Assert.AreEqual( 400, LobbyWeather.CalculateRainAmount( 1000, 1 ) );
 		Assert.AreEqual( 0, LobbyWeather.CalculateRainAmount( 10000, 1 ) );
@@ -100,7 +100,7 @@ public class LobbyWeatherTests
 		Assert.AreEqual( 3072, draws );
 		Assert.AreEqual( new Vector3( 0, 2, 1 ), rain.Point( 0, Vector3.Zero ) );
 		rain.Advance( 0.2f );
-		// 0x579f30's last stores, not its first normalization: layer-3 residual wind.
+		// Weather_SetWindDirection (US 0x57d920)'s last stores, not its first normalization: layer-3 residual wind.
 		var moved = rain.Point( 0, Vector3.Zero );
 		Assert.AreEqual( -0.00010195f, moved.X, 0.00000001f );
 		Assert.AreEqual( 2.0000052f, moved.Y, 0.0000003f );

@@ -172,6 +172,6 @@ public sealed record LobbyIslandConfig( int Id, string ThemeName, string Resourc
 public sealed record LobbyFlyingMeshConfig( string ResourceDirectory, string ModelName, int Count, N.Vector3 Extents, float Speed )
 {
 	public string ModelPath => $"{ResourceDirectory}/{ModelName}.md2";
-	/// <summary>0x5d4e80: count × LOBBYOBJECTS percent / 100 with integer division, keeping at least one actor.</summary>
+	/// <summary>Flock_Create (US 0x5d9db0): count × LOBBYOBJECTS percent / 100 with integer division, keeping at least one actor.</summary>
 	public int CountAtQuality( int percent ) => Math.Max( 1, Count * Math.Clamp( percent, 0, 100 ) / 100 );
 }

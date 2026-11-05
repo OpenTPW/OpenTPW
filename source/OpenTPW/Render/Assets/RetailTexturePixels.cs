@@ -2,7 +2,7 @@ using StbImageSharp;
 
 namespace OpenTPW;
 
-/// <summary>Pixel storage for native procedural UVs, as produced by 0x571210/0x5717a0.</summary>
+/// <summary>Pixel storage for native procedural UVs, as produced by FUN_00574bd0 (US 0x574bd0)/FUN_00575160 (US 0x575160).</summary>
 internal static class RetailTexturePixels
 {
 	internal static ImageResult DecodeTga( byte[] bytes )
@@ -23,8 +23,8 @@ internal static class RetailTexturePixels
 	}
 
 	/// <summary>
-	/// Retail loads every texture in one global format (TW 0x8c5c4c, US 0x8bd554: 0 RGB565, 1 ARGB1555,
-	/// 2 ARGB4444, 3 32-bit), and the US D3D build runs with 2. 0x55f5a0 keeps the top four bits of each 8-bit
+	/// Retail loads every texture in one global format (gTextureFormat (US 0x8bd554), gTextureFormat: 0 RGB565, 1 ARGB1555,
+	/// 2 ARGB4444, 3 32-bit), and the US D3D build runs with 2. Texture_ConvertPixels (US 0x562f70) keeps the top four bits of each 8-bit
 	/// channel; the device expands nibble n to n × 17. The art depends on it: sky_cyl.tga's (75,211,255)
 	/// becomes the background colour 0x44ddff.
 	/// </summary>

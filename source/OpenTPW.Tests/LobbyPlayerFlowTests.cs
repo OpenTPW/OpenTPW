@@ -33,7 +33,7 @@ public class LobbyPlayerFlowTests
 		Assert.AreEqual( LobbyPlayerFlowState.Naming, flow.State );
 		Assert.AreEqual( 1, flow.ActiveSlot );
 		Assert.IsNull( flow.Result );
-		Assert.IsFalse( flow.CanConfirm, "The name box starts empty, as 0x7e3bc0 does." );
+		Assert.IsFalse( flow.CanConfirm, "The name box starts empty, as gPlayerNameBuffer (US 待核) does." );
 	}
 
 	[TestMethod]
@@ -66,7 +66,7 @@ public class LobbyPlayerFlowTests
 		flow.Select( 1 );
 		flow.Name = "  two words   ";
 		Assert.AreEqual( "  two words   ", flow.Name, "The box keeps what was typed." );
-		Assert.AreEqual( "  two words", flow.ResolveName(), "0x4a4600 only strips trailing 0x20." );
+		Assert.AreEqual( "  two words", flow.ResolveName(), "FUN_004a6b80 (US 0x4a6b80) only strips trailing 0x20." );
 	}
 
 	[TestMethod]
@@ -78,7 +78,7 @@ public class LobbyPlayerFlowTests
 		{
 			flow.Name = blank;
 			Assert.IsFalse( flow.CanConfirm );
-			Assert.IsFalse( flow.Confirm(), "0x4a4600 returns 0 for an empty name." );
+			Assert.IsFalse( flow.Confirm(), "FUN_004a6b80 (US 0x4a6b80) returns 0 for an empty name." );
 			Assert.AreEqual( LobbyPlayerFlowState.Naming, flow.State );
 			Assert.IsNull( flow.Result );
 		}
@@ -107,7 +107,7 @@ public class LobbyPlayerFlowTests
 		Assert.IsTrue( flow.Cancel() );
 		Assert.AreEqual( LobbyPlayerFlowState.Browsing, flow.State );
 		Assert.IsNull( flow.Result );
-		Assert.AreEqual( "Draft", flow.Name, "Retail never clears 0x7e3bc0, so reopening shows the old text." );
+		Assert.AreEqual( "Draft", flow.Name, "Retail never clears gPlayerNameBuffer (US 待核), so reopening shows the old text." );
 
 		flow.Select( 1 );
 		Assert.AreEqual( "Draft", flow.Name );

@@ -1,6 +1,6 @@
 namespace OpenTPW;
 
-/// <summary>Lobby weather requests (0x5db430) and the renderer's bolt queue (0x57b440/0x57c920).</summary>
+/// <summary>Lobby weather requests (Lobby_UpdateCameraAndWeather (US 0x5e0470)) and the renderer's bolt queue (Lightning_UpdateQueue (US 0x57ee30)/Weather_CreateLightning (US 0x580320)).</summary>
 internal sealed class LobbyWeatherSimulation
 {
 	internal sealed class Bolt
@@ -27,7 +27,7 @@ internal sealed class LobbyWeatherSimulation
 	internal LobbyWeatherSimulation( LobbyRandom random, Func<uint>? seed = null )
 	{
 		this.random = random;
-		// Retail seeds each bolt from the low timestamp-counter bits (0x58d6b0).
+		// Retail seeds each bolt from the low timestamp-counter bits (Weather_ReadTimestamp (US 待核)).
 		this.seed = seed ?? (() => unchecked((uint)System.Diagnostics.Stopwatch.GetTimestamp()));
 	}
 

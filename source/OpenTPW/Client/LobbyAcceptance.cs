@@ -44,7 +44,7 @@ internal sealed class LobbyAcceptance
 				Check( navigation.Active && level.IslandMenu!.Active, "existing profile opens island page" );
 				Next( navigation.InstantAction ? 40 : 1 ); break;
 			case 40 when elapsed > 3:
-				// US 0x4b9340: GameType 2 (Instant Action) fixes the island, hides keys and allows entry without them.
+				// IslandPage_Update (US 0x4b9340): GameType 2 (Instant Action) fixes the island, hides keys and allows entry without them.
 				int island = navigation.Island.Id;
 				navigation.Navigate( 1 ); navigation.Navigate( -1 );
 				Check( navigation.Island.Id == island && navigation.CanEnter, "Instant Action keeps the island fixed and enterable" );
@@ -80,7 +80,7 @@ internal sealed class LobbyAcceptance
 					LobbyCameraMode.Movement == LobbyCameraState.Movement.Orbiting, "alignment cancellation leaves the gate closed" );
 				Next( 3 ); break;
 			case 3 when elapsed > 1:
-				// Retail also enters when a left press lands on the scene rather than a page element (0x5e2310).
+				// Retail also enters when a left press lands on the scene rather than a page element (Lobby_HandlePageInput (US 0x5e2310)).
 				// The title text element (0x1e0ef) takes the press, so it must not start entry.
 				Hover( 1024, 1370 ); Input.ClickOverride = true; Next( 36 ); break;
 			case 36 when elapsed > 0.3:
@@ -112,14 +112,14 @@ internal sealed class LobbyAcceptance
 				Check( level.Menu!.Active && level.Hud.Modal == level.Menu, "orbit Escape opens the shared local menu" );
 				Next( 9 ); break;
 			case 9 when elapsed > 0.5:
-				// The Escape menu items are created at run time and never set element help (US 0x48c600, 0x492f60).
+				// The Escape menu items are created at run time and never set element help (LobbyMenu_Create (US 0x48c600), LobbyMenu_AddTextItem (US 0x492f60)).
 				Capture( "lobby-menu" ); Hover( 1024, 30 ); Next( 32 ); break;
 			case 32 when elapsed > 0.3:
 				Capture( "lobby-menu-hover" );
 				Check( level.Help?.Shown == -1, "hovering an Escape menu item shows no help" );
 				Input.PointerOverride = null; level.Menu!.Choose( UIStrings.QuitGame ); Next( 15 ); break;
 			case 15 when elapsed > 0.5:
-				// Confirmation table US 0x74f920: every element has help -1.
+				// Confirmation table ConfirmPage_Table (US 0x74f920): every element has help -1.
 				Check( Confirmation.MessageFits, "quit confirmation text wraps inside its box" );
 				Capture( "lobby-quit-cancel" ); Hover( (1379 + 1462) / 2f, (522 + 605) / 2f ); Next( 33 ); break;
 			case 33 when elapsed > 0.3:
@@ -134,7 +134,7 @@ internal sealed class LobbyAcceptance
 					level.Hud.Modal == null, "confirmed new-player selection returns to profiles" );
 				Next( 10 ); break;
 			case 10 when elapsed > 0.5:
-				// Player page table US 0x753c60: slot and Quit elements have help -1.
+				// Player page table PlayerPage_Table (US 0x753c68): slot and Quit elements have help -1.
 				Capture( "lobby-player" ); Hover( (884 + 2048) / 2f, (46 + 193) / 2f ); Next( 31 ); break;
 			case 31 when elapsed > 0.3:
 				Capture( "lobby-player-hover" );
@@ -146,7 +146,7 @@ internal sealed class LobbyAcceptance
 				level.PlayerMenu!.Select( empty ); Next( 11 ); break;
 			case 11 when elapsed > 0.5:
 				Capture( "lobby-naming" );
-				// Hover OK through the input snapshot: help 360 and its MessageTag1 (0x48b9f0).
+				// Hover OK through the input snapshot: help 360 and its MessageTag1 (US 待核).
 				Input.PointerOverride = new Vector2( (1376 + 1460) / 2f * Screen.Size.X / 2048, (524 + 608) / 2f * Screen.Size.Y / 1536 );
 				Next( 30 ); break;
 			case 30 when elapsed > 0.3:

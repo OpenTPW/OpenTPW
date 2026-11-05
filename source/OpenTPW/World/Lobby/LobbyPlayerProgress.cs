@@ -2,11 +2,11 @@ using System.Buffers.Binary;
 
 namespace OpenTPW;
 
-/// <summary>Lobby key accounting at 0x5abaa0 and the new-player grant at 0x4a44e0/0x5ac050.</summary>
+/// <summary>Lobby key accounting at PlayerProfile_CountKeys (US 0x5af680) and the new-player grant at PlayerSelection_Commit (US 0x4a6a50)/PlayerProfile_GrantInitialKey (US 待核).</summary>
 public static class LobbyPlayerProgress
 {
 	/// <summary>
-	/// US 0x5b12e0 uses the saved sign lines only when mNameChanged is set. US 0x5b0d70 serializes
+	/// Lobby_ResolveIslandTitle (US 0x5b12e0) uses the saved sign lines only when mNameChanged is set. PlayerGlobals_Serialize (US 0x5b0d70) serializes
 	/// two interleaved arrays of 33 UTF-16 code units at segment byte 26, then mNameChanged at byte 158.
 	/// </summary>
 	public static string IslandTitle( PlayerProfileFile profile, string theme, string defaultTitle )
@@ -24,7 +24,7 @@ public static class LobbyPlayerProgress
 			return new string( characters, 0, end );
 		}
 		string first = Line( 26 ), second = Line( 28 );
-		// US 0x5b12e0 handles an empty first line before the shared hyphen/space rule.
+		// Lobby_ResolveIslandTitle (US 0x5b12e0) handles an empty first line before the shared hyphen/space rule.
 		return first.Length == 0 ? second : LobbyObjectNames.Title( first, second );
 	}
 

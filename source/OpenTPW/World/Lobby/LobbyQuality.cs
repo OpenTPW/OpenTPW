@@ -14,7 +14,7 @@ public sealed class LobbyQuality
 	public int TextureQuality { get; private set; }
 	public int SkyLayers { get; private set; }
 	public bool WeatherEnabled { get; private set; }
-	/// <summary>GraphicalOptions.LIGHTING; 0 makes 0x44ce66 set 0x8c52c0 bits 0x1800, and 0x570ca0 then leaves vertices white.</summary>
+	/// <summary>GraphicalOptions.LIGHTING; 0 makes Graphics_ApplyOptions (US 待核) 内，位置待核 set gRenderFlags (US 待核) bits 0x1800, and Lighting_ComputeVertexColors (US 待核) then leaves vertices white.</summary>
 	public bool LightingEnabled { get; private set; }
 	public bool UseSmallTextures => TextureQuality <= 1;
 
@@ -30,7 +30,7 @@ public sealed class LobbyQuality
 		LightingEnabled = Read( settings, "GraphicalOptions.LIGHTING", 0, 1 ) != 0;
 	}
 
-	/// <summary>Reads the selected preset; the retail initial detail level is medium (0x423170).</summary>
+	/// <summary>Reads the selected preset; the retail initial detail level is medium (PlayerPreferences_Initialize (US 0x423690)).</summary>
 	public static LobbyQuality Load( string? preset = null )
 	{
 		if ( source != FileSystem || presets == null )
@@ -66,7 +66,7 @@ public sealed class LobbyQuality
 
 	public string TextureDirectory( string directory )
 	{
-		// 0x54a300 -> 0x467430 switches the directory, not individual missing textures.
+		// Texture_SelectQualityDirectory (US 0x54dcf0) -> Textures_SelectQualityDirectory (US 0x4688b0) switches the directory, not individual missing textures.
 		directory = directory.Replace( '\\', '/' ).TrimEnd( '/' );
 		if ( !UseSmallTextures ) return directory;
 		int slash = directory.LastIndexOf( '/' );

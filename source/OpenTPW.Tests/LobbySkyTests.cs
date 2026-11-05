@@ -125,7 +125,7 @@ public class LobbySkyTests
 		var greys = Enumerable.Range( 0, 4 ).Select( _ => Enumerable.Range( 0, 256 ).Select( i => 0x80 | (i & 0x7f) ).ToArray() ).ToArray();
 		var offsets = new[] { new[] { 0.1f, 0.2f }, new[] { 0.3f, 0.4f }, new[] { 0.5f, 0.6f }, new[] { 0.25f, 0.5f } };
 		sky.Replay( offsets, greys );
-		// Layer 3 keeps both coefficients positive (0x5863c0), so vertex (0,0) carries the raw offsets.
+		// Layer 3 keeps both coefficients positive (Sky_DrawCloudsAndHorizon (US 0x5863c0)), so vertex (0,0) carries the raw offsets.
 		Assert.AreEqual<object>( new Vector2( 0.25f, 0.5f ), sky.CloudVertices( 3 )[0].TexCoords );
 		Assert.AreEqual( new Vector3( (0x80 | 82) / 255f ), sky.CloudVertices( 2 )[37].Normal );
 		greys[3][5] ^= 1;
@@ -140,7 +140,7 @@ public class LobbySkyTests
 		var sky = LobbySkyGeometry.Load();
 		var greys = Enumerable.Range( 0, 4 ).Select( _ => Enumerable.Range( 0, 256 ).ToArray() ).ToArray();
 		sky.Replay( new[] { new[] { 0.1f, 0.2f }, new[] { 0.3f, 0.4f }, new[] { 0.5f, 0.6f }, new[] { 0.25f, 0.5f } }, greys );
-		// US 0x5863c0 at grid position X=2,Z=5: U uses 5, V uses 2, colour reads table entry 5*16+2.
+		// Sky_DrawCloudsAndHorizon (US 0x5863c0) at grid position X=2,Z=5: U uses 5, V uses 2, colour reads table entry 5*16+2.
 		var expected = new[] { new Vector2( -1.0817477f, 0.5926991f ), new Vector2( -1.1414981f, -0.7365992f ),
 			new Vector2( 1.2012484f, -0.8804994f ), new Vector2( 0.8109987f, 0.7243995f ) };
 		for ( int layer = 0; layer < 4; layer++ )

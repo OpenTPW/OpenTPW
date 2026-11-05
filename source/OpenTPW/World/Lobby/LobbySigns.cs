@@ -88,7 +88,7 @@ public static class LobbySigns
 	public sealed record SignDefinition( int Order, int[] Modes, SignLine[] Lines, byte[][] Styles,
 		TextureData[] Patterns, TextureData Background );
 
-	/// <summary>The 101 header and two records are read in the order used by 0x5e6f40.</summary>
+	/// <summary>The 101 header and two records are read in the order used by Signs_ReadLayout (US 待核).</summary>
 	public static SignDefinition Decode( byte[] data )
 	{
 		using var reader = new BinaryReader( new MemoryStream( data ), Encoding.ASCII );
@@ -150,7 +150,7 @@ public static class LobbySigns
 			throw new InvalidDataException( "Invalid lobby sign atlas" );
 		var rgba = new byte[128 * 128 * 4];
 		for ( int y = 0; y < 128; y++ )
-			// Retail 0x5e7620 reverses rows for its native texture storage. Our MD2 shader
+			// Retail Sign_ComposeTextures (US 0x5ecb40) reverses rows for its native texture storage. Our MD2 shader
 			// already converts bottom-up model V to top-first pixels; do not reverse twice.
 			Array.Copy( image.Data, (y * image.Width + half * 128) * 4, rgba, y * 128 * 4, 128 * 4 );
 		return new( 128, 128, rgba );
@@ -177,7 +177,7 @@ public static class LobbySigns
 			Blend( image, combined, sign.Styles[0] );
 		}
 		else for ( int i = 0; i < 2; i++ ) if ( sign.Modes[i] == 2 ) Blend( image, styled[i], sign.Styles[i] );
-		// Mode-1 shadows follow the selected text order (0x5e7620).
+		// Mode-1 shadows follow the selected text order (Sign_ComposeTextures (US 0x5ecb40)).
 		for ( int pass = 0; pass < 2; pass++ )
 		{
 			int i = sign.Order == 0 ? pass : 1 - pass;
@@ -347,7 +347,7 @@ public static class LobbySigns
 	}
 
 	/// <summary>
-	/// Retail sign text path 0x5e56f0: GDI font from the SGN LOGFONT, Uniscribe layout, white on black at twice the size in
+	/// Retail sign text path Sign_RenderText (US 0x5eab70): GDI font from the SGN LOGFONT, Uniscribe layout, white on black at twice the size in
 	/// an 8-bit DIB, then 2x2 averaged to coverage. A line that does not fit is retried with a bisected width.
 	/// </summary>
 	internal static class NativeFont

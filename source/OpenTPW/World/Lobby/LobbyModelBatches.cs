@@ -15,7 +15,7 @@ internal static class LobbyModelBatches
 			if ( material >= mesh.Materials.Length || mesh.Vertices[b].TextureIndex != material || mesh.Vertices[c].TextureIndex != material )
 				throw new InvalidDataException( "Model triangle has inconsistent material indices" );
 			int start = (int)material / 16 * 16;
-			// 0x572440 -> 0x57dd90 -> 0x563c50/0x5640a0: repeat flags select WRAP, otherwise CLAMP.
+			// FUN_00575e10 (US 0x575e10) -> Render_ConvertMaterialFlags (US 0x581790) -> Render_SetD3dState (US 0x567620)/Render_SelectTextureAddressMode (US 0x567a70): repeat flags select WRAP, otherwise CLAMP.
 			var key = (start, (mesh.Materials[material].Flags & 0x30) != 0);
 			if ( !batches.TryGetValue( key, out var indices ) ) batches.Add( key, indices = new() );
 			indices.Add( a ); indices.Add( b ); indices.Add( c );

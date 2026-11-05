@@ -3,7 +3,7 @@ using Veldrid;
 
 namespace OpenTPW;
 
-/// <summary>Island controls from 0x753a60, initialized by 0x4b6700.</summary>
+/// <summary>Island controls from IslandPage_Table (US 0x757f60), initialized by IslandPage_Initialize (US 0x4b8ca0).</summary>
 internal sealed class LobbyIslandPanel : Panel
 {
 	private readonly LobbyNavigation navigation;
@@ -22,7 +22,7 @@ internal sealed class LobbyIslandPanel : Panel
 	private static readonly Rectangle EnterBox = Box( 68, 1114, 221, 1267 ), GlobeBox = Box( 68, 946, 221, 1099 ),
 		NextBox = Box( 97, 1299, 250, 1453 ), PreviousBox = Box( 260, 1299, 413, 1453 );
 	/// <summary>
-	/// UIHELPTEXT numbers from the island table's key 0x11 (US 0x757f60): enter 0x1e0e8 → 345, globe 0x1e0e9 → 346,
+	/// UIHELPTEXT numbers from the island table's key 0x11 (IslandPage_Table (US 0x757f60)): enter 0x1e0e8 → 345, globe 0x1e0e9 → 346,
 	/// left arrow 0x1e0f0 → 343, right arrow 0x1e0f1 → 344.
 	/// </summary>
 	private static readonly (Rectangle Bounds, int Help, bool Arrow)[] helpElements =
@@ -44,7 +44,7 @@ internal sealed class LobbyIslandPanel : Panel
 		previous = Model( 0xf1d0542a, PreviousBox );
 		key = Model( 0x2f575715, Box( 554, 170, 990, 437 ) );
 		cost = Model( 0x21aea625, Box( 1045, 191, 1405, 416 ) );
-		// US 0x4b8ca0: element 0x1e0ed (gkey.MD2) in group 0x1e0ec is set to state 3 and drawn beside the count.
+		// IslandPage_Initialize (US 0x4b8ca0): element 0x1e0ed (gkey.MD2) in group 0x1e0ec is set to state 3 and drawn beside the count.
 		goldKey = Model( 0x1d50cb14, Box( 1853, 76, 1955, 178 ) );
 		goldKey.State = 3;
 		count = new LobbyUiText( "", Box( 1688, 82, 1829, 172 ), LobbyFonts.Name( 2 ) ) { HorizontalAlignment = 2 };
@@ -60,25 +60,25 @@ internal sealed class LobbyIslandPanel : Panel
 				navigation.CancelEntry();
 			return;
 		}
-		// US 0x4b9340/0x4b9840 disable both arrows in GameType 2; a disabled model control draws state 1 (see LobbyNamingPanel).
+		// IslandPage_Update (US 0x4b9340)/FUN_004b9840 (US 0x4b9840) disable both arrows in GameType 2; a disabled model control draws state 1 (see LobbyNamingPanel).
 		bool arrows = !navigation.InstantAction;
 		int State( Rectangle bounds, bool enabled = true ) => !enabled ? 1 : LobbyNamingPanel.Hit( bounds ) ? Input.Mouse.Left ? 3 : 2 : 0;
 		enter.State = State( EnterBox ); globe.State = State( GlobeBox );
 		next.State = State( NextBox, arrows ); previous.State = State( PreviousBox, arrows );
 		UpdateHelp( arrows );
 		bool Click( Rectangle bounds ) => Input.LeftPressed && LobbyNamingPanel.Hit( bounds );
-		// 0x4b65d0 and 0x5dc310 both route left to vtable +0x34 (previous)
+		// FUN_004b8b70 (US 0x4b8b70) and Lobby_HandlePageInput (US 0x5e2310) both route left to vtable +0x34 (previous)
 		// and right to +0x30 (next); the model resource names do not define direction.
 		if ( Input.Pressed( Key.Left ) || arrows && Click( NextBox ) ) { Failure = ""; navigation.Navigate( -1 ); }
 		else if ( Input.Pressed( Key.Right ) || arrows && Click( PreviousBox ) ) { Failure = ""; navigation.Navigate( 1 ); }
 		else if ( Input.Pressed( Key.Enter ) || Click( EnterBox ) ) { Failure = ""; navigation.Enter(); }
 		else if ( Click( GlobeBox ) ) GlobeRequested?.Invoke();
-		// US 0x658af1 posts a left press as message 0x10005 (button 0); when no page element takes it, the lobby
-		// controller's handler 0x5e2310 calls its enter method 0x5e1cc0, the same key/GameType check as the gate.
+		// Ui_DispatchPointerButton (US 0x658af1) posts a left press as message 0x10005 (button 0); when no page element takes it, the lobby
+		// controller's handler Lobby_HandlePageInput (US 0x5e2310) calls its enter method Lobby_EnterIsland (US 0x5e1cc0), the same key/GameType check as the gate.
 		else if ( Input.LeftPressed && !PageTakesPointer() ) { Failure = ""; navigation.Enter(); }
 	}
 	/// <summary>
-	/// L-shaped hit polygon of the island panel 0x1e0e7 (table 0x757f60, opcode 4 subtype 4 after the title's end).
+	/// L-shaped hit polygon of the island panel 0x1e0e7 (table IslandPage_Table (US 0x757f60), opcode 4 subtype 4 after the title's end).
 	/// </summary>
 	private static readonly System.Numerics.Vector2[] panelOutline =
 	[
@@ -90,11 +90,11 @@ internal sealed class LobbyIslandPanel : Panel
 	private static readonly Rectangle TitleBox = Box( 477, 1303, 1571, 1437 ), KeyBox = Box( 554, 170, 990, 437 ),
 		CostBox = Box( 1045, 191, 1405, 416 ), CountGroupBox = Box( 1688, 68, 1963, 186 );
 	/// <summary>
-	/// Whether a page element would receive the pointer instead of the lobby view. The UI hit test US 0x65db25
-	/// skips elements that are hidden (+0x48 bit 0), disabled (+0x48 bit 1, set by 0x65da8d) or detached (+4), and
+	/// Whether a page element would receive the pointer instead of the lobby view. The UI hit test Ui_HitTest (US 0x65db25)
+	/// skips elements that are hidden (+0x48 bit 0), disabled (+0x48 bit 1, set by Ui_SetEnabled (US 0x65da8d)) or detached (+4), and
 	/// otherwise takes any element whose shape (+0x44) contains the point. The panel's shape is its outline polygon and
 	/// its children (buttons, key, cost, count group, title text) use their rectangles; the buttons lie inside the
-	/// outline. The advisor is an engine model, not a UI element, and the help strip is created disabled (US 0x4922a6
+	/// outline. The advisor is an engine model, not a UI element, and the help strip is created disabled (HelpBar_Create (US 0x492180) 内，位置待核
 	/// calls element +0x14 with 0), so neither blocks.
 	/// </summary>
 	private bool PageTakesPointer()
@@ -118,8 +118,8 @@ internal sealed class LobbyIslandPanel : Panel
 	}
 	/// <summary>
 	/// Shows the hovered element's help and, on its first help since activation, places MessageTag1 at its centre
-	/// (0x48b9f0 event 0x11). Mouse-enter 0x10001 (US 0x6589b4), which the default handler 0x65f9fb turns into help,
-	/// only goes to the element the hit test 0x65db25 returns; that test skips disabled elements, so a disabled arrow
+	/// (US 待核 event 0x11). Mouse-enter 0x10001 (Ui_UpdatePointerHover+0xc5 (US 0x6589b4)), which the default handler FUN_0065f6d1 (US 0x65f6d1) 内，位置待核 turns into help,
+	/// only goes to the element the hit test Ui_HitTest (US 0x65db25) returns; that test skips disabled elements, so a disabled arrow
 	/// leaves the pointer on the panel behind it, whose help is −1.
 	/// </summary>
 	private void UpdateHelp( bool arrows )
@@ -140,14 +140,14 @@ internal sealed class LobbyIslandPanel : Panel
 	{
 		if ( !Active || !navigation.Active || navigation.Entering ) return;
 		background.Draw(); enter.Draw(); globe.Draw(); next.Draw(); previous.Draw();
-		// US 0x4b9340: GameType 2 hides the key 0x1e0ea (with its cost 0x1e0eb) and the count group 0x1e0ec.
+		// IslandPage_Update (US 0x4b9340): GameType 2 hides the key 0x1e0ea (with its cost 0x1e0eb) and the count group 0x1e0ec.
 		if ( !navigation.InstantAction )
 		{
-			// 0x4b6da0 selects separate authored frames for affordable and locked key costs.
+			// IslandPage_Update (US 0x4b9340) selects separate authored frames for affordable and locked key costs.
 			key.State = navigation.CanEnter ? 0 : 1;
 			cost.State = navigation.RequiredKeys + (navigation.CanEnter ? -1 : 4);
 			key.Draw(); cost.Draw();
-			// US 0x4b9340 shows group 0x1e0ec only while the player holds keys; 0x758194 formats L"%d x".
+			// IslandPage_Update (US 0x4b9340) shows group 0x1e0ec only while the player holds keys; IslandPage_KeyCountFormat (US 0x758194) formats L"%d x".
 			if ( navigation.Keys > 0 )
 			{
 				count.Text = $"{navigation.Keys} x";

@@ -3,9 +3,9 @@ using StbImageSharp;
 namespace OpenTPW;
 
 /// <summary>
-/// Lobby sky. 0x5d3c20 -> 0x581820 always loads the fantasy sky.tga/sky_rgb.tga/sky_cyl.tga, for every island
+/// Lobby sky. Lobby_InitializeSkyFog (US 0x5d8b50) -> Sky_LoadTextures (US 0x5852b0) always loads the fantasy sky.tga/sky_rgb.tga/sky_cyl.tga, for every island
 /// (sky_rgb only feeds a colour table that the grid builder overwrites, see LobbySkyGeometry).
-/// SKYQUALITY 0/1/2/4 is the cloud layer count (0x44cc60 -> 0x581c80); 0 draws neither clouds nor horizon.
+/// SKYQUALITY 0/1/2/4 is the cloud layer count (Graphics_ApplyOptions (US 待核) 内，位置待核 -> Sky_SetLayerCount (US 待核)); 0 draws neither clouds nor horizon.
 /// </summary>
 public class Sky : ModelEntity
 {
@@ -16,7 +16,7 @@ public class Sky : ModelEntity
 		public SkyPart() => Layer = RenderLayer.Background;
 		protected override void OnRender() { if ( Enabled() ) base.OnRender(); }
 	}
-	// 0x5d3c20 sets the global background/fog colour 0x8c5b74 to 0xff44ddff. Island changes never alter it;
+	// Lobby_InitializeSkyFog (US 0x5d8b50) sets the global background/fog colour gFogColour (US 待核) to 0xff44ddff. Island changes never alter it;
 	// SKYCOLOUR only recolours the first cloud layer.
 	private static readonly Vector3 Background = new( 68 / 255f, 221 / 255f, 1 );
 	private Texture? colorTexture;
@@ -61,8 +61,8 @@ public class Sky : ModelEntity
 		geometry = LobbySkyGeometry.Load();
 		var cloudImage = LobbySkyGeometry.ReadTexture( "sky.tga" );
 		var cloudTexture = new Texture( cloudImage.Data, cloudImage.Width, cloudImage.Height, TextureFlags.Wrap );
-		// US 0x5863c0 submits layers 0..n-1. Their flags include 0x1000, which matches the D3D
-		// renderer's immediate mask 0x3000 (0x5667d0). 0x565590 draws them immediately and marks the batches
+		// Sky_DrawCloudsAndHorizon (US 0x5863c0) submits layers 0..n-1. Their flags include 0x1000, which matches the D3D
+		// renderer's immediate mask 0x3000 (Render_InitializeImmediateMask (US 0x5667d0)). Render_EndPrimitiveBatch (US 0x565590) draws them immediately and marks the batches
 		// already drawn, so the later depth sort never reverses these layers. Entities keep creation order.
 		var parts = new SkyPart[4];
 		for ( int layer = 0; layer < 4; layer++ )
@@ -99,7 +99,7 @@ public class Sky : ModelEntity
 	protected override void OnRender()
 	{
 		layerCount = quality.SkyLayers;
-		// 0x5d4790 fills 0x8cae80 = sky object 0x8c9f20 + 0xf60: layer zero's colours.
+		// Sky_UpdateIslandColors (US 0x5d96c0) fills gSkyObject (US 0x8c1828) 内，位置待核 = sky object gSkyObject (US 0x8c1828) + 0xf60: layer zero's colours.
 		colourState.Step( layerCount > 1 );
 		SetColor( Background * (1 - flashStrength) + Vector3.One * flashStrength );
 		Position = Camera.Position;
@@ -135,23 +135,23 @@ internal sealed class LobbySkyColour
 	internal void Step( bool enabled )
 	{
 		if ( !enabled || (Red == targetRed && Green == targetGreen && Blue == targetBlue) ) return;
-		// The retail instruction at 0x5d47cf really reads +0x58 for red as well as blue.
+		// The retail instruction at Sky_UpdateIslandColors (US 0x5d96c0) 内，位置待核 really reads +0x58 for red as well as blue.
 		Red += (targetBlue - Red) >> 4;
 		Green += (targetGreen - Green) >> 4;
 		Blue += (targetBlue - Blue) >> 4;
 	}
 }
 
-/// <summary>Geometry and UV rules from US 0x584ef0 / 0x585720 / 0x5863c0.</summary>
+/// <summary>Geometry and UV rules from FUN_00584ef0 (US 0x584ef0) / Sky_BuildCloudGrid (US 0x585720) / Sky_DrawCloudsAndHorizon (US 0x5863c0).</summary>
 internal sealed class LobbySkyGeometry
 {
 	internal const string Root = "levels/fantasy/sky/";
 	private const float Span = 2400, Height = 180, Radius = 720, RimHeight = 36;
 	/// <summary>
-	/// Per-vertex grey of every cloud layer. US 0x585720, which builds the cloud grid, writes
+	/// Per-vertex grey of every cloud layer. Sky_BuildCloudGrid (US 0x585720), which builds the cloud grid, writes
 	/// (rand() &amp; 0x7f) | 0x80 to all channels of the same vertex in all four layer tables (+0xf60/+0x1360/+0x1760/
-	/// +0x1b60), after 0x585ce0 filled them from sky_rgb.tga, so sky_rgb never reaches the screen. Layer zero is
-	/// then replaced by the island colour (0x5d96c0). A new set is drawn each time the sky is built.
+	/// +0x1b60), after Sky_FillCloudColors (US 0x585ce0) filled them from sky_rgb.tga, so sky_rgb never reaches the screen. Layer zero is
+	/// then replaced by the island colour (Sky_UpdateIslandColors (US 0x5d96c0)). A new set is drawn each time the sky is built.
 	/// </summary>
 	private readonly byte[] greys = new byte[256];
 	private readonly Vector2[] offsets = new Vector2[4];
@@ -209,8 +209,8 @@ internal sealed class LobbySkyGeometry
 		for ( int i = 0; i < greys.Length; i++ ) greys[i] = (byte)retailGreys[1][i];
 	}
 	/// <summary>
-	/// US 0x585720 stores positions at x*16+z. US 0x5863c0 walks that array linearly, but computes U
-	/// from the inner Z index and V from the outer X index, reading colours at z*16+x (0x58670f).
+	/// Sky_BuildCloudGrid (US 0x585720) stores positions at x*16+z. Sky_DrawCloudsAndHorizon (US 0x5863c0) walks that array linearly, but computes U
+	/// from the inner Z index and V from the outer X index, reading colours at z*16+x (Sky_DrawCloudsAndHorizon (US 0x5863c0) 内，位置待核).
 	/// </summary>
 	internal Vertex[] CloudVertices( int layer, float flash = 0, Vector3? layerZeroColour = null )
 	{
@@ -223,7 +223,7 @@ internal sealed class LobbySkyGeometry
 				var tint = new Vector3( greys[z * 16 + x] / 255f );
 				if ( layer == 0 && layerZeroColour.HasValue ) tint = layerZeroColour.Value;
 				float u = z * step + offsets[layer].X, v = x * step + offsets[layer].Y;
-				// US 0x5863c0 negates and cycles the U/V scale coefficients between layers.
+				// Sky_DrawCloudsAndHorizon (US 0x5863c0) negates and cycles the U/V scale coefficients between layers.
 				if ( layer is 0 or 1 ) u = -u;
 				if ( layer is 1 or 2 ) v = -v;
 				vertices[x * 16 + z] = new Vertex( new Vector3( px, pz, Height - MathF.Sqrt( px * px + pz * pz ) * 0.2f ),

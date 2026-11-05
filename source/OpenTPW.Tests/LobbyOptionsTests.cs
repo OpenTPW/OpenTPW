@@ -13,7 +13,7 @@ public class LobbyOptionsTests
 	public void NativeOptionsModelsAndTheirMaterialsExist()
 	{
 		GameData.Require();
-		// Hashes come from US table 0x752f30, not model filenames inferred from the screenshot.
+		// Hashes come from US table OptionsPage_Table (US 0x752f30), not model filenames inferred from the screenshot.
 		foreach ( uint hash in new uint[] { 0x3aec1, 0x211ef0a0, 0xcea38960, 0x86cb3e31,
 			0xcea389be, 0xcea389ed, 0x16ac3f4f, 0x14a7e48b, 0xbafbd0f8, 0xc8a6dfaf } )
 		{

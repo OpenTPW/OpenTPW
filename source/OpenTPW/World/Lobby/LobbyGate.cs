@@ -19,19 +19,19 @@ public sealed class LobbyGate : Entity
 		model = new LobbyModel( position, config.GateModelPath, $"{config.ResourceDirectory}/textures", textureResolver:
 			name => LobbySigns.Resolve( config.GateModelPath, name, config.Name ), quality: quality ) { Rotation = rotation };
 		playback = new LobbyGatePlayback( segment => model.Play( segment == 0 ? enteringAnimation : leavingAnimation, false ) );
-		// 0x5d38b0 creates an instance without starting slot M.
+		// Lobby_CreateModel (US 0x5d8870) creates an instance without starting slot M.
 	}
 
-	/// <summary>Plays M1 once when the camera has aligned with the entrance (0x5db699).</summary>
+	/// <summary>Plays M1 once when the camera has aligned with the entrance (Lobby_UpdateCameraAndWeather (US 0x5e0470) 内，位置待核).</summary>
 	public void StartEntering() => playback.Request( 0, model.AnimationFinished );
 
-	/// <summary>Plays M2 once when an entrance transition is cancelled (0x5dc360).</summary>
+	/// <summary>Plays M2 once when an entrance transition is cancelled (LobbyCamera_CancelEntry (US 0x5e1350)).</summary>
 	public void StartLeaving() => playback.Request( 1, model.AnimationFinished );
 
 	protected override void OnUpdate() => playback.Update( model.AnimationFinished );
 }
 
-/// <summary>0x471580 defers the latest request until the current non-looping segment finishes.</summary>
+/// <summary>ModelAnimation_QueueSegment (US 0x4732a0) defers the latest request until the current non-looping segment finishes.</summary>
 internal sealed class LobbyGatePlayback
 {
 	private readonly Action<int> play;

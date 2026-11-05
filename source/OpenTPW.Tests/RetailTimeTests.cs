@@ -26,7 +26,7 @@ public class RetailTimeTests
 		for ( int frame = 0; frame < 60; frame++ ) elapsed += RetailTime.TicksFromSeconds( 1f / 60 );
 		Assert.AreEqual( 10f, elapsed, 1e-4f );
 		Assert.AreEqual( 1f, RetailTime.SecondsFromTicks( elapsed ), 1e-5f );
-		// FUN_005d4c20: translation length = speed * dt for a normalized direction.
+		// Flock_UpdateMember (US 0x5d9b50): translation length = speed * dt for a normalized direction.
 		Assert.AreEqual( 15f, 1.5f * elapsed, 1e-3f );
 		Assert.AreEqual( 25f, 2.5f * elapsed, 1e-3f );
 #pragma warning disable MSTEST0032

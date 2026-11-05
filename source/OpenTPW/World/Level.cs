@@ -22,14 +22,14 @@ public class Level
 	internal LobbyOptionsPanel? Options { get; private set; }
 	internal LobbyPlayerProfile? SelectedPlayer => selectedPlayer;
 	public bool FogEnabled => GlobeMenu?.Active != true;
-	/// <summary>Scene lighting: the globe page has its own ambient and light (0x5d8060), every other page the islands' (0x5dc390).</summary>
+	/// <summary>Scene lighting: the globe page has its own ambient and light (GlobePage_ActivateCommon (US 0x5dcfe0)), every other page the islands' (IslandPage_ConfigureLighting (US 待核)).</summary>
 	internal LobbyLighting Lighting => GlobeMenu?.Active == true ? LobbyLighting.Globe : LobbyLighting.Islands;
 	/// <summary>Raised when the entry flight completes. No park loader consumes it yet; without a handler the island page is restored.</summary>
 	public event Action<LobbyPlayerProfile, LobbyIslandConfig>? ParkEntryRequested;
 	private LobbyPlayerProfile? selectedPlayer;
 	private LobbyKeyParticlePanel? keyEffects;
 	internal LobbyKeyParticlePanel? KeyEffects => keyEffects;
-	/// <summary>Hover help strip shared by the lobby pages and dialogs (0x7ca0c0).</summary>
+	/// <summary>Hover help strip shared by the lobby pages and dialogs (gHelpBar (US 0x7ca0c0)).</summary>
 	internal LobbyHelpBar? Help { get; private set; }
 
 	public SettingsFile Global { get; private init; }
@@ -49,12 +49,12 @@ public class Level
 	{
 		SunLight = new Sun() { Position = new( 0, 100, 100 ) };
 
-		// 0x5d34e0 -> 0x44f710 loads the authored lobby Base, including both sea meshes and their UVs.
+		// Lobby_LoadWorld (US 0x5d84a0) -> Terrain_LoadBase (US 待核) loads the authored lobby Base, including both sea meshes and their UVs.
 		_ = new LobbyModel( Vector3.Zero, "lobby/terrain/Base.md2", "lobby/terrain/textures" );
 		var sky = new Sky();
 		EnvironmentSky = sky;
 		Lobby = LobbyConfig.Load();
-		// 0x5d07a0 seeds the lobby stream (lobby +0x34) from the clock in seconds; the camera,
+		// Lobby_SeedRandomStream (US 0x5d5770) seeds the lobby stream (lobby +0x34) from the clock in seconds; the camera,
 		// weather and island flocks all draw from it, so their construction order matters.
 		var lobbyRandom = new LobbyRandom( unchecked((uint)DateTimeOffset.UtcNow.ToUnixTimeSeconds()) );
 		LobbyCameraMode.Configure( Lobby, lobbyRandom );
@@ -84,7 +84,7 @@ public class Level
 		Navigation.IslandSelected += LobbyCameraMode.SelectIsland;
 		Navigation.EntryRequested += () =>
 		{
-			// 0x5dcd00 -> 0x4b6a30 plays global lobby effect 4 when leaving island selection.
+			// Lobby_ExitIslandSelection (US 待核) -> Ui_Function_TW_4b6a30 (US 待核) plays global lobby effect 4 when leaving island selection.
 			Audio?.Play( "global/sound", "cat_globallobbysfx", 4 );
 			keyEffects?.EnterIsland();
 			LobbyCameraMode.BeginEntering();
@@ -120,7 +120,7 @@ public class Level
 			{
 				if ( response == 0x189 )
 				{
-					// 0x595d30 pairs emitter 87 with the separately registered UI sound category.
+					// FUN_00599880 (US 0x599880) pairs emitter 87 with the separately registered UI sound category.
 					LobbySound!.IntroductionKey();
 					keyEffects?.IntroductionKey();
 				}
@@ -141,14 +141,14 @@ public class Level
 
 	internal void ReturnToPlayers()
 	{
-		// 0x489d10 unloads the selected profile (0x5c3740) before reopening 0x4a4010.
+		// Lobby_ConfirmPlayerChange (US 待核) unloads the selected profile (PlayerProfiles_SaveActive (US 0x5c8650)) before reopening Lobby_CreateUi (US 0x4a6580).
 		GlobeMenu?.Hide(); Navigation!.Unbind(); IslandMenu!.Active = false;
 		selectedPlayer = null; PlayerMenu!.Back(); Advisor?.Cancel();
 		LobbyCameraMode.BeginRoaming();
 	}
 	internal void HandleEscape()
 	{
-		// 0x5dee20 first asks the active page to consume Escape. Naming/globe/modals
+		// LobbyPageManager_Input (US 待核) first asks the active page to consume Escape. Naming/globe/modals
 		// keep their own cancellation; an entering island consumes it before the shared menu.
 		if ( Hud.Modal != null || GlobeMenu?.Active == true || !(PlayerMenu!.Browsing || Navigation!.Active) ) return;
 		if ( Navigation!.Entering ) Navigation.CancelEntry();
@@ -158,12 +158,12 @@ public class Level
 	{
 		Audio?.Update();
 		if ( Input.Pressed( Veldrid.Key.Escape ) ) HandleEscape();
-		// 0x54a970 updates 0x595d30 and the particle clock outside UI dispatch.
+		// System_UpdateStateMachine (US 0x54e360) updates FUN_00599880 (US 0x599880) and the particle clock outside UI dispatch.
 		// Modal input routing must not freeze speech/lips or the authored particle chain.
 		Advisor?.Update( Time.Now );
 		keyEffects?.SetAffordable( IslandMenu?.Active == true && Navigation?.CanEnter == true );
 		keyEffects?.Advance( Time.Delta );
-		// 0x5db430 updates the camera before calculating distance-controlled weather.
+		// Lobby_UpdateCameraAndWeather (US 0x5e0470) updates the camera before calculating distance-controlled weather.
 		Camera.Update();
 		if ( GlobeMenu?.Active != true ) LobbySound?.SetIsland( LobbyCameraMode.CurrentIsland.ThemeName );
 		// Flocks can add model entities while replenishing their actor list.
@@ -173,8 +173,8 @@ public class Level
 
 	public void Render()
 	{
-		// Retail registers screen-space UI models separately (TP.exe 0x474eb0 ->
-		// 0x45a960, list mask 0x20; screen transform at 0x474f10).
+		// Retail registers screen-space UI models separately (TP.exe UiModel_SetVisibility (US 0x476bf0) ->
+		// FUN_0045bd30 (US 0x45bd30), list mask 0x20; screen transform at UiModel_ApplyScreenTransform (US 0x476c50)).
 		// Keep the OpenTPW HUD out of world creation order as well.
 		foreach ( var entity in Entity.InRenderOrder( Entity.All ) )
 		{

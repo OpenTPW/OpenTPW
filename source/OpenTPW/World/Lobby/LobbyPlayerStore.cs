@@ -1,6 +1,6 @@
 namespace OpenTPW;
 
-/// <summary>Player directory creation and gms.dat loading (0x5c3030/0x5c3280/0x5c34a0).</summary>
+/// <summary>Player directory creation and gms.dat loading (PlayerProfile_Create (US 0x5c7f40)/PlayerProfile_CreateDirectories (US 0x5c8190)/PlayerProfiles_SelectSlot (US 0x5c83b0)).</summary>
 public sealed class LobbyPlayerStore
 {
 	private readonly string users;
@@ -33,7 +33,7 @@ public sealed class LobbyPlayerStore
 		if ( ReadSlots()[slot] != null ) throw new IOException( "Player slot is already occupied" );
 		// A new player inherits accepted global defaults; existing profiles retain their own preferences.
 		var profileData = PlayerProfileFile.Create( creationMode, preferences ?? PlayerProfileFile.DefaultPreferences( new SettingsFile( data.OpenRead( "sound.sam" ) ) ) );
-		// Normal lobby creation grants one key before saving (0x4a44e0 -> 0x5ac050 -> 0x5c3b00).
+		// Normal lobby creation grants one key before saving (PlayerSelection_Commit (US 0x4a6a50) -> PlayerProfile_GrantInitialKey (US 待核) -> PlayerProfile_Save (US 待核)).
 		// Keep this inside the staged transaction so retries cannot grant another key to an occupied slot.
 		LobbyPlayerProgress.GrantIntroductionKey( profileData );
 		string destination = Path.Combine( users, $"{slot + 1}{name}" );
@@ -46,7 +46,7 @@ public sealed class LobbyPlayerStore
 			{
 				string directory = Path.Combine( staging, theme );
 				Directory.CreateDirectory( directory );
-				// 0x5c3280 copies only templates that actually exist; only jungle ships one in TW.
+				// PlayerProfile_CreateDirectories (US 0x5c8190) copies only templates that actually exist; only jungle ships one in TW.
 				string template = $"levels/{theme}/easymode.TPWI";
 				if ( creationMode == 0 || !data.FileExists( template ) ) continue;
 				File.WriteAllBytes( Path.Combine( directory, "easymode.TPWI" ), data.ReadAllBytes( template ) );

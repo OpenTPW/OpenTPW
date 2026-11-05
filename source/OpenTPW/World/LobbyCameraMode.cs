@@ -28,7 +28,7 @@ public sealed class LobbyCameraMode : CameraMode
 	private sealed record FixedView( int FormatVersion, string CoordinateSystem, int IslandId,
 		float[] Position, float[] Target, float VerticalFieldOfViewDegrees, FixedSky? Sky );
 	/// <summary>
-	/// Optional retail cloud state read from the sky object (US 0x8c1828): layer count +0x2ec8, per-layer U/V
+	/// Optional retail cloud state read from the sky object (gSkyObject (US 0x8c1828)): layer count +0x2ec8, per-layer U/V
 	/// offsets +0x1fa0/+0x1fa8 + layer × 0xc, and the low byte of each per-vertex colour table +0xf60 + layer × 0x400.
 	/// </summary>
 	internal sealed record FixedSky( int Layers, float[][] Offsets, int[][] Greys );
@@ -48,7 +48,7 @@ public sealed class LobbyCameraMode : CameraMode
 		state = new LobbyCameraState( config, random );
 		SelectedIsland = fixedView?.IslandId ?? island;
 		// The login page has no player/theme binding yet. Retail uses its roaming
-		// branch for a player whose theme is -1 (0x5db430), rather than orbiting island 0.
+		// branch for a player whose theme is -1 (Lobby_UpdateCameraAndWeather (US 0x5e0470)), rather than orbiting island 0.
 		if ( fixedView != null ) state.SelectIsland( fixedView.IslandId );
 	}
 
@@ -71,7 +71,7 @@ public sealed class LobbyCameraMode : CameraMode
 	}
 
 	private static bool ValidVector( float[]? vector ) => vector is { Length: 3 } && vector.All( float.IsFinite );
-	// LobbyModel maps retail (x,y,z) to OpenTPW (x,z,y); 0x5d3eb0 uses retail Y as up.
+	// LobbyModel maps retail (x,y,z) to OpenTPW (x,z,y); Lobby_UpdateCameraLight (US 0x5d8de0) uses retail Y as up.
 	private static Vector3 FromRetail( float[] vector ) => new( vector[0], vector[2], vector[1] );
 
 	public static void SelectIsland( int id )
@@ -111,16 +111,16 @@ public sealed class LobbyCameraMode : CameraMode
 		if ( state.GateOpened ) GateAnimationRequested?.Invoke( SelectedIsland, true );
 		if ( state.EntryCompleted ) IslandEntered?.Invoke( SelectedIsland );
 		Rotation = Rotation.LookAt( trackedTarget - Position );
-		// 0x5d3eb0 re-aims the camera's light at the target on every camera update.
+		// Lobby_UpdateCameraLight (US 0x5d8de0) re-aims the camera's light at the target on every camera update.
 		Level.Current?.Lighting.Track( Position.GetSystemVector3(), trackedTarget.GetSystemVector3() );
-		// Retail's viewport/frustum spans +/-0.5, rather than the modern +/-1 convention: 0x5751e0 builds the
-		// projection and 0x5747c0 post-scales Y by -2 (100 degrees becomes 61.579468 vertical).
+		// Retail's viewport/frustum spans +/-0.5, rather than the modern +/-1 convention: Render_BuildProjection (US 0x578be0) builds the
+		// projection and Render_ApplyScreenTransform (US 0x5781d0) post-scales Y by -2 (100 degrees becomes 61.579468 vertical).
 		FieldOfView = (2 * MathF.Atan( 0.5f * MathF.Tan( Config.IslandFovDegrees.DegreesToRadians() * 0.5f ) )).RadiansToDegrees();
 	}
 }
 
 
-/// <summary>TP.exe 0x5dac90, 0x5db430 and 0x5dc1d0, in modern Z-up coordinates.</summary>
+/// <summary>TP.exe LobbyCamera_Construct (US 0x5dfcd0), Lobby_UpdateCameraAndWeather (US 0x5e0470) and LobbyCamera_UpdateIslandOrbit (US 0x5e1210), in modern Z-up coordinates.</summary>
 internal sealed class LobbyCameraState
 {
 	/// <summary>Controller phase: free roam, orbit an island, align with its doorway, fly in, done.</summary>
@@ -132,7 +132,7 @@ internal sealed class LobbyCameraState
 	private float targetSpeed = 2;
 	internal Vector3 Position { get; private set; }
 	internal Vector3 Target { get; private set; }
-	/// <summary>Orbit angle in radians, kept in [0, 2π) as 0x5db430 does.</summary>
+	/// <summary>Orbit angle in radians, kept in [0, 2π) as Lobby_UpdateCameraAndWeather (US 0x5e0470) does.</summary>
 	internal float Angle { get; private set; }
 	internal float Radius { get; private set; }
 	internal float Height { get; private set; }
@@ -224,7 +224,7 @@ internal sealed class LobbyCameraState
 		}
 		else if ( Mode == Movement.Entering )
 		{
-			// 0x5db430 exponentially reduces radius/height in retail dt units (100 ms).
+			// Lobby_UpdateCameraAndWeather (US 0x5e0470) exponentially reduces radius/height in retail dt units (100 ms).
 			Angle = entranceAngle;
 			Radius -= dt * Radius * 0.07f;
 			Height -= dt * Height * 0.6f;

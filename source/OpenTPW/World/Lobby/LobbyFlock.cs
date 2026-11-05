@@ -49,7 +49,7 @@ public sealed class LobbyFlock : Entity
 		}
 	}
 
-	/// <summary>FUN_005d3200: right = normalize(up cross direction), up = direction cross right.</summary>
+	/// <summary>Flock_BuildOrientation (US 0x5d81c0): right = normalize(up cross direction), up = direction cross right.</summary>
 	public static System.Numerics.Quaternion Facing( Vector3 direction )
 	{
 		var forward = direction.Normal;
@@ -84,7 +84,7 @@ internal sealed class LobbyRandom
 	}
 }
 
-/// <summary>0x5d4900 / 0x5d4c20 / 0x5d50f0 without rendering dependencies.</summary>
+/// <summary>Flock_SpawnMember (US 0x5d9830) / Flock_UpdateMember (US 0x5d9b50) / Flock_Update (US 0x5da020) without rendering dependencies.</summary>
 internal sealed class LobbyFlockSimulation
 {
 	internal sealed class Actor

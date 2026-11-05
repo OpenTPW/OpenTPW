@@ -14,7 +14,7 @@ public class LobbyLightingTests
 		// Retail axes: eye at height 20 looking along -Z at a target on the ground.
 		var direction = LobbyLighting.Islands.Aim( new N.Vector3( 0, 20, 100 ), new N.Vector3( 0, 0, 0 ) );
 		Assert.AreEqual( 1, direction.Length(), 1e-5 );
-		// Flattened, then -0.3 in Y before renormalising (0x5d3eb0).
+		// Flattened, then -0.3 in Y before renormalising (Lobby_UpdateCameraLight (US 0x5d8de0)).
 		Assert.AreEqual( -0.3f / MathF.Sqrt( 1.09f ), direction.Y, 1e-4 );
 		Assert.IsTrue( direction.Z < -0.9f, "The light travels with the camera's view" );
 	}

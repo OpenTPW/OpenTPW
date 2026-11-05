@@ -1,6 +1,6 @@
 namespace OpenTPW;
 
-/// <summary>Single-line name selection and editing (0x660839, 0x660e1a, 0x661cae).</summary>
+/// <summary>Single-line name selection and editing (TextEdit_CopyUtf16 (US 0x666308), Naming_EditFunction1 (US 待核), Naming_EditFunction2 (US 待核)).</summary>
 internal sealed class LobbyNameEdit
 {
 	private readonly LobbyPlayerFlow flow;

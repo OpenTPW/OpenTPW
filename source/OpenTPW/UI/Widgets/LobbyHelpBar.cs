@@ -3,9 +3,9 @@ using OpenTPW.UI;
 namespace OpenTPW;
 
 /// <summary>
-/// The hover help strip at the bottom of the screen (US TP.exe 0x492180, global instance 0x7ca0c0): an
+/// The hover help strip at the bottom of the screen (US TP.exe HelpBar_Create (US 0x492180), global instance gHelpBar (US 0x7ca0c0)): an
 /// <c>f_helpbg</c> model behind white font-slot-7 text, x 574–1474 and ending at y 1520 in UI units. Its height
-/// is two text lines plus 10 units ((line height × 3 &lt;&lt; 10) / screen height + 10). 0x4924b0 sets the text;
+/// is two text lines plus 10 units ((line height × 3 &lt;&lt; 10) / screen height + 10). HelpBar_SetText (US 0x4924b0) sets the text;
 /// an empty string hides the strip. Texts come from UIHELPTEXT.str, numbered by each UI-table element's key 0x11.
 /// </summary>
 internal sealed class LobbyHelpBar : Panel

@@ -6,7 +6,7 @@ public sealed class AudioSystem : IDisposable
 	public SoundMixer Mixer { get; } = new();
 	public SoundAssets Assets { get; } = new();
 	private readonly SoundSelection random;
-	/// <summary>A flag-4 sound that picks its next sample when the current voice ends (0x6bdcd0).</summary>
+	/// <summary>A flag-4 sound that picks its next sample when the current voice ends (Audio_SelectLinkedDefinition (US 待核) 内，位置待核).</summary>
 	private sealed record Repeating( string Directory, string Category, SoundCategoryMap Map, SoundCategoryMap.Sound Sound,
 		SoundCategoryMap.Definition Definition, int SampleIndex, long Voice );
 	private readonly Dictionary<long, Repeating> repeating = new();
@@ -44,7 +44,7 @@ public sealed class AudioSystem : IDisposable
 		}
 	}
 
-	/// <summary>Plays a category sound (0x5187a0). Returns 0 when output is unavailable or the draw selects no sample.</summary>
+	/// <summary>Plays a category sound (Audio_PlayCategorySound (US 0x51bfc0)). Returns 0 when output is unavailable or the draw selects no sample.</summary>
 	public long Play( string directory, string category, uint id )
 	{
 		ObjectDisposedException.ThrowIf( disposed, this );
@@ -56,11 +56,11 @@ public sealed class AudioSystem : IDisposable
 		var sample = random.ChooseSample( definition );
 		if ( sample == null || sample.Bank == 0 ) return 0;
 		var asset = Assets.Sample( directory, map, sample );
-		// 0x6ba400 collapses a one-definition, one-sample repeat with no links/delay into a direct loop.
+		// Audio_OptimizeLoop (US 待核) collapses a one-definition, one-sample repeat with no links/delay into a direct loop.
 		bool directLoop = (sound.Flags & 8) != 0 || ((sound.Flags & 6) == 6 && sound.Definitions.Count == 1 &&
 			definition.Samples.Count == 1 && definition.Relations.Count == 0 && definition.DelayMin == 0 && definition.DelayMax == 0);
 		float gain = random.Range( definition.VolumeMin, definition.VolumeMax ) / 100f;
-		// 0x6b5b00 scores a voice as (priority << 16) plus a distance weight; lobby sounds have no position, so 0xffff.
+		// Audio_ComputeVoicePriority (US 待核) scores a voice as (priority << 16) plus a distance weight; lobby sounds have no position, so 0xffff.
 		long handle = Mixer.Play( Assets.PcmAsync( asset ), gain * ChannelVolume( category ),
 			directLoop, random.Range( definition.DelayMin, definition.DelayMax ), unchecked((sound.Priority << 16) + 0xffff) );
 		gains.Add( handle, new( category, gain ) );
@@ -84,7 +84,7 @@ public sealed class AudioSystem : IDisposable
 		{
 			if ( Mixer.IsPlaying( entry.Voice ) ) continue;
 			var definition = entry.Definition;
-			// 0x6bdcd0..0x6bddd7: eligible links select using the destination definition weights.
+			// Audio_SelectLinkedDefinition (US 待核) 内，位置待核..Audio_SelectLinkedDefinition: eligible links select using the destination definition weights.
 			var links = definition.Relations.Where( link => ((link.Parameters >> 16) & 255) == 0 ).ToArray();
 			if ( links.Length != 0 )
 			{
@@ -100,7 +100,7 @@ public sealed class AudioSystem : IDisposable
 					break;
 				}
 			}
-			// 0x6b6780 stores the last numeric index on the instance, even across definition changes.
+			// Audio_SelectSample (US 0x6bc680) stores the last numeric index on the instance, even across definition changes.
 			var sample = random.ChooseSample( definition, entry.SampleIndex, true );
 			if ( sample == null || sample.Bank == 0 ) { repeating.Remove( handle ); continue; }
 			float gain = random.Range( definition.VolumeMin, definition.VolumeMax ) / 100f;
@@ -123,7 +123,7 @@ public sealed class AudioSystem : IDisposable
 			uint volume = BitConverter.ToUInt32( preferences, i * 8 + 4 );
 			channelVolumes[i] = preferences[i * 8] == 0 ? 0 : volume / 100f;
 		}
-		// Category volume changes affect existing output too (0x4238c0 -> 0x518360/380/3a0).
+		// Category volume changes affect existing output too (Audio_ApplyCategoryVolumes (US 待核) -> Audio_ApplyCategoryVolumeA (US 待核)/Audio_ApplyCategoryVolumeB (US 待核)/Audio_ApplyCategoryVolumeC (US 待核)).
 		foreach ( var (handle, gain) in gains ) Mixer.SetVolume( handle, gain.Gain * ChannelVolume( gain.Category ) );
 	}
 	public void ConfigureQuality( int quality ) => Mixer.VoiceLimit = SoundChannelPolicy.Limit( settings, quality );

@@ -90,8 +90,8 @@ public partial class TextureFile : BaseFormat
 		var outputA = Enumerable.Repeat( 255f, size * size ).ToList();
 
 		var state = new ImageDecodeState( size );
-		// 0x58e510 dispatches 0x12 to 0x58ff60 (packed row coefficients),
-		// and 0x13 to 0x591dd0 (interleaved). Both reconstruct the full native size.
+		// Texture_DispatchCompression (US 待核) dispatches 0x12 to Texture_DecodePackedRows (US 待核) (packed row coefficients),
+		// and 0x13 to Texture_DecodeInterleaved (US 0x595920) (interleaved). Both reconstruct the full native size.
 		bool packed = fileData.Type == WctType.ZlibPacked;
 		DecodeChannel( ref state, size, ref colorData, ref outputY, ComputeDequantizationScaleY( fileData.YChannelQuantizationScale ), packed );
 		DecodeChannel( ref state, size / 2, ref colorData, ref outputCb, ComputeDequantizationScaleCbCr( fileData.CbChannelQuantizationScale ), packed );

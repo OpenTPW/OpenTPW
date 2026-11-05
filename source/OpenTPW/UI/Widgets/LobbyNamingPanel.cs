@@ -4,7 +4,7 @@ using static SDL.SDL3;
 
 namespace OpenTPW;
 
-/// <summary>Login name controls from the table at 0x74fa58; coordinates remain in retail UI units.</summary>
+/// <summary>Login name controls from the table at NamingPage_Table (US 0x753f50); coordinates remain in retail UI units.</summary>
 internal sealed class LobbyNamingPanel : Panel
 {
 	private readonly LobbyPlayerFlow flow;
@@ -44,9 +44,9 @@ internal sealed class LobbyNamingPanel : Panel
 		edit = new LobbyNameEdit( flow );
 		selection = new LobbyUiModel( LobbyControlResources.ResolveModel( 0x06b50a59 ), Box( 623, 632, 631, 677 ) );
 		modeIcon = new LobbyUiModel( LobbyControlResources.ResolveModel( 0x79490fde ), Box( 1241, 606, 1343, 708 ) );
-		// 0x47cff0 creates the modal underlay separately from the authored dialog table.
+		// Ui_CreateModalUnderlay (US 待核) creates the modal underlay separately from the authored dialog table.
 		backdrop = new LobbyUiModel( "LOLIGHT", Box( 0, 0, 2047, 1535 ) );
-		// Table 0x74fa58 binds 0xcd93131e; 0x48744c registers w_dialog_wave as "wdialogw".
+		// Table NamingPage_Table (US 0x753f50) binds 0xcd93131e; UiModel_LoadAndRegister (US 0x489060) 内，位置待核 registers w_dialog_wave as "wdialogw".
 		controls.Add( new LobbyUiModel( LobbyControlResources.ResolveModel( 0xcd93131e ), Box( 500, 233, 1516, 830 ) ) );
 		controls.Add( new LobbyUiModel( "!f_plain", Box( 735, 377, 1235, 597 ) ) );
 		controls.Add( new LobbyUiModel( "!frame", Box( 593, 616, 1216, 698 ) ) );
@@ -54,8 +54,8 @@ internal sealed class LobbyNamingPanel : Panel
 		controls.Add( simulation = new LobbyUiModel( "b_ltoggle", Box( 764, 498, 1206, 569 ) ) );
 		controls.Add( exit = new LobbyUiModel( "b_exit", Box( 1387, 613, 1470, 696 ) ) );
 		controls.Add( okay = new LobbyUiModel( "b_okay", Box( 1376, 524, 1460, 608 ) ) );
-		// 0x4a48c0 applies 0x490a90 to element 0x709.
-		// UI-table text elements of the naming window (0x74fa58), drawn with their shadow.
+		// NamingDialog_Open (US 0x4a6e40) applies UiText_ApplyLabelStyle (US 0x492d20) to element 0x709.
+		// UI-table text elements of the naming window (NamingPage_Table (US 0x753f50)), drawn with their shadow.
 		controls.Add( new LobbyUiText( Localization.Parse( "#EnterName" ), Box( 655, 285, 1315, 365 ), "TITLEMED", 0xeaef66ff ) { Shadow = true } );
 		controls.Add( instantText = new LobbyUiText( Localization.Parse( "#InstantAction" ), Box( 764, 405, 1206, 476 ) ) { Shadow = true } );
 		controls.Add( simulationText = new LobbyUiText( Localization.Parse( "#FullSimulation" ), Box( 764, 498, 1206, 569 ) ) { Shadow = true } );
@@ -65,7 +65,7 @@ internal sealed class LobbyNamingPanel : Panel
 	}
 	public void Open()
 	{
-		// 0x4a48c0 sets UITEXT 0xf2 through 0x660839 and then selects the whole buffer.
+		// NamingDialog_Open (US 0x4a6e40) sets UITEXT 0xf2 through TextEdit_CopyUtf16 (US 0x666308) and then selects the whole buffer.
 		edit.Open( Localization.Parse( "#TypeYourName" ) );
 		name.Text = edit.Text; name.Scroll = 0;
 		nameFocused = true; Active = true; editedAt = Time.Now;
@@ -74,8 +74,8 @@ internal sealed class LobbyNamingPanel : Panel
 	}
 
 	/// <summary>
-	/// UIHELPTEXT numbers from the naming table's key 0x11 (US 0x753f68–0x7540a8): Exit 2, OK 360, name 356,
-	/// Instant Action 358, Full Simulation 359. A selected toggle answers key 0x12 instead (0x663890 reads
+	/// UIHELPTEXT numbers from the naming table's key 0x11 (NamingPage_Table (US 0x753f50) 内，位置待核–NamingPage_Table): Exit 2, OK 360, name 356,
+	/// Instant Action 358, Full Simulation 359. A selected toggle answers key 0x12 instead (Ui_Function_TW_663890 (US 待核) reads
 	/// +0x94 when +0x138 is 1, inferred to be the help lookup), which is −1 here.
 	/// </summary>
 	private static readonly (Rectangle Bounds, int Help, int Selected)[] helpElements =
@@ -85,8 +85,8 @@ internal sealed class LobbyNamingPanel : Panel
 	];
 
 	/// <summary>
-	/// Shows the hovered element's help (0x4924b0) and, on its first help in this dialog, places MessageTag1 at
-	/// its centre (0x48b9f0 event 0x11 → 0x484e40(0x5a)).
+	/// Shows the hovered element's help (HelpBar_SetText (US 0x4924b0)) and, on its first help in this dialog, places MessageTag1 at
+	/// its centre (US 待核 event 0x11 → Ui_PlayEffectAtElement (US 待核)(0x5a)).
 	/// </summary>
 	private void UpdateHelp()
 	{
@@ -133,12 +133,12 @@ internal sealed class LobbyNamingPanel : Panel
 		float caret = name.Measure( edit.Text[..edit.Caret] ), width = 563 / 3.2f;
 		if ( caret - name.Scroll > width - 8 / 3.2f ) name.Scroll = caret - width + 8 / 3.2f;
 		if ( caret < name.Scroll ) name.Scroll = caret;
-		// 0x662ca0: disabled=1, hover=2, hover+down=3, held=4, selected/down=5.
+		// UiModel_GetControlState (US 0x668820): disabled=1, hover=2, hover+down=3, held=4, selected/down=5.
 		int State( Rectangle bounds, bool selected = false, bool disabled = false ) => disabled ? 1 :
 			Hit( bounds ) ? (selected || Input.Mouse.Left ? 3 : 2) : selected ? 5 : 0;
 		instant.State = State( Box( 764, 405, 1206, 476 ), CreationMode == 1 );
 		simulation.State = State( Box( 764, 498, 1206, 569 ), CreationMode == 0 );
-		// 0x662d33 initializes white/black text colors; 0x662f53 selects them by button state.
+		// Ui_Function_TW_662d33 (US 待核) initializes white/black text colors; Ui_Function_TW_662f53 (US 待核) selects them by button state.
 		SetButtonText( instantText, instant.State );
 		SetButtonText( simulationText, simulation.State );
 		okay.State = State( Box( 1376, 524, 1460, 608 ) );
@@ -170,7 +170,7 @@ internal sealed class LobbyNamingPanel : Panel
 		backdrop.Draw();
 		foreach ( var control in controls ) control.Draw();
 		if ( CreationMode == 1 ) modeIcon.Draw();
-		// The edit constructor 0x66051d registers a 0x2ee (750 ms) caret timer.
+		// The edit constructor Ui_Function_TW_66051d (US 待核) registers a 0x2ee (750 ms) caret timer.
 		if ( nameFocused && (edit.SelectionLength > 0 || (Time.Now - editedAt) % 1.5f < 0.75f) )
 		{
 			float left = name.Measure( edit.Text[..edit.SelectionStart] ) - name.Scroll;

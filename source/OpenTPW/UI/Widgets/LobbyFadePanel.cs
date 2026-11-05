@@ -2,7 +2,7 @@ using OpenTPW.UI;
 
 namespace OpenTPW;
 
-/// <summary>Black output rectangle from 0x573422..0x57346e.</summary>
+/// <summary>Black output rectangle from Render_DrawViewport (US 待核) 内，位置待核..Render_DrawViewport.</summary>
 internal sealed class LobbyFadePanel : Panel
 {
 	private readonly LobbyFade fade = new();

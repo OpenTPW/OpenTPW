@@ -2,7 +2,7 @@ using System.Numerics;
 
 namespace OpenTPW;
 
-/// <summary>The independent audio LCG and selection rules at TP.exe 0x6b6170/0x6b6780/0x6b68f0.</summary>
+/// <summary>The independent audio LCG and selection rules at TP.exe Audio_SelectVolume (US 0x6bc090)/Audio_SelectSample (US 0x6bc680)/Audio_SelectDefinition (US 0x6bc810).</summary>
 public sealed class SoundSelection
 {
 	private uint state;

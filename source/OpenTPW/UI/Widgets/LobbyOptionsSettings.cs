@@ -1,6 +1,6 @@
 namespace OpenTPW;
 
-/// <summary>Global US options (0x4242c0), separate from the 39-byte player preferences (0x423e90).</summary>
+/// <summary>Global US options (FUN_004242c0 (US 0x4242c0)), separate from the 39-byte player preferences (PlayerPreferences_Serialize (US 0x423e90)).</summary>
 internal sealed class LobbyOptionsSettings
 {
 	private static readonly string[] Presets = { "low", "med", "high" };

@@ -2,10 +2,10 @@ using System.Buffers.Binary;
 
 namespace OpenTPW;
 
-/// <summary>Screen-space key effects from 0x595d30, 0x4b6a30 and 0x4b6b50.</summary>
+/// <summary>Screen-space key effects from FUN_00599880 (US 0x599880), Ui_Function_TW_4b6a30 (US 待核) and FUN_004b90f0 (US 0x4b90f0).</summary>
 internal sealed class LobbyKeyParticles
 {
-	/// <summary>Screen-space particle state in retail integer units, updated by 0x51cc80/0x51dbc0.</summary>
+	/// <summary>Screen-space particle state in retail integer units, updated by Particle_Spawn (US 0x520560)/Particle_Integrate (US 0x5214a0).</summary>
 	internal sealed class Particle
 	{
 		internal int X, Y, Z, Vx, Vy, Vz, Life, InitialLife;
@@ -34,7 +34,7 @@ internal sealed class LobbyKeyParticles
 	private int random = 1, steps;
 	private double milliseconds;
 	private static readonly int[] sine = Enumerable.Range( 0, 512 )
-		// 0x51ba40 samples sin(2*i*0.00613591796875)*256 and truncates to an integer.
+		// Particle_BuildSineTable (US 0x51f320) samples sin(2*i*0.00613591796875)*256 and truncates to an integer.
 		.Select( i => (int)(Math.Sin( i * 2 * 0.00613591796875 ) * 256) ).ToArray();
 	internal IEnumerable<Particle> Particles => emitters.SelectMany( emitter => emitter.Particles );
 
@@ -47,7 +47,7 @@ internal sealed class LobbyKeyParticles
 			throw new InvalidDataException( "Unsupported key particle library" );
 		if ( density < 1 || density > 4096 ) throw new ArgumentOutOfRangeException( nameof(density) );
 		this.library = library; this.density = density;
-		// KeyPuff's child is the stationary class-4 repeller (0x51ea80/0x51d630).
+		// KeyPuff's child is the stationary class-4 repeller (Particle_CreateRepeller (US 待核)/Particle_ApplyInfluencers (US 0x520f10)).
 		int child = 33616 + 5 * 104;
 		if ( BinaryPrimitives.ReadInt32LittleEndian( library.AsSpan( child + 4 ) ) != 4 ||
 			BinaryPrimitives.ReadInt32LittleEndian( library.AsSpan( child + 0x40 ) ) != -2 ||
@@ -56,14 +56,14 @@ internal sealed class LobbyKeyParticles
 	}
 
 	private int Next() => random = unchecked(random * 0x343fd + 0x269ec3);
-	// 0x51df30 uses SAR/IDIV; 0x51df70 additionally masks to 15 bits.
+	// Particle_RandomSigned (US 待核) uses SAR/IDIV; Particle_RandomMasked (US 待核) additionally masks to 15 bits.
 	private int Signed( int range ) => range == 0 ? 0 : (Next() >> 16) % range;
 	private int Positive( int range ) => range == 0 ? 0 : ((Next() >> 16) & 0x7fff) % range;
 	private int Scale( int count ) => count == 0 ? 0 : Math.Clamp( density * count >> 10, 1, int.MaxValue );
 
 	internal void Start( int id, int x, int z )
 	{
-		// 90 is MessageTag1, placed on a UI element whose help is shown (0x484e40).
+		// 90 is MessageTag1, placed on a UI element whose help is shown (Ui_PlayEffectAtElement (US 待核)).
 		if ( id is not (87 or 88 or 90 or 97 or 98) ) throw new ArgumentOutOfRangeException( nameof(id) );
 		var emitter = new Emitter { Id = id, Data = library.AsSpan( 8 + id * 320, 320 ).ToArray(), X = x >> 4, Y = 0, Z = z >> 4 };
 		bool animated = id is 88 or 90 or 97;
@@ -83,7 +83,7 @@ internal sealed class LobbyKeyParticles
 		if ( emitter.Int( 0xb4 ) >= 0 )
 		{
 			// KeyPuff starts influencer 5, MessageTag1 influencer 3 (UIRepel: +0x40 = −1, life 30).
-			// 0x51da3c compares influencer +0x40 with each emitter's first byte (−1 matches all); it is applied
+			// Particle_ApplyInfluencers (US 0x520f10) 内，位置待核 compares influencer +0x40 with each emitter's first byte (−1 matches all); it is applied
 			// here as a force, as for KeyPuff's −2.
 			int child = emitter.Int( 0xb4 );
 			if ( child != (id == 90 ? 3 : 5) || emitter.Data[0xba] != 1 ) throw new InvalidDataException( "Unsupported key child effect" );
@@ -104,7 +104,7 @@ internal sealed class LobbyKeyParticles
 		emitter.Limit = Scale( emitter.Short( 0x64 ) );
 		for ( int i = 0; i < 4; i++ )
 		{
-			// 0x51e480 scales signed emission rates. A negative rate means one birth per -rate ticks.
+			// Particle_ScaleEmissionRate (US 0x521d60) scales signed emission rates. A negative rate means one birth per -rate ticks.
 			int rate = unchecked((sbyte)emitter.Data[0x68 + i]);
 			int scaled = density * rate >> 10;
 			emitter.Rates[i] = rate == 0 ? 0 : scaled == 0 ? 1 : Math.Min( 127, scaled );
@@ -113,7 +113,7 @@ internal sealed class LobbyKeyParticles
 
 	internal void Stop( int id )
 	{
-		// 0x51c5d0 writes -2: stop births without firing the -1 end effect or killing live particles.
+		// Particle_StopEmission (US 0x51feb0) writes -2: stop births without firing the -1 end effect or killing live particles.
 		foreach ( var emitter in emitters.Where( emitter => emitter.Id == id ) ) emitter.Life = -2;
 	}
 
@@ -127,7 +127,7 @@ internal sealed class LobbyKeyParticles
 
 	private void Spawn( Emitter emitter )
 	{
-		// 0x54a970 initializes the lobby pool with 0x800 particles, independently of per-emitter limits.
+		// System_UpdateStateMachine (US 0x54e360) initializes the lobby pool with 0x800 particles, independently of per-emitter limits.
 		if ( Particles.Count() >= 2048 ) return;
 		int life = emitter.Int( 0x78 );
 		life += Signed( life >> 2 );
@@ -151,7 +151,7 @@ internal sealed class LobbyKeyParticles
 		}
 		else
 		{
-			// 0x51cc80 skips the angular draw for zero radial speed (KeySparkle).
+			// Particle_Spawn (US 0x520560) skips the angular draw for zero radial speed (KeySparkle).
 			p.Vx = emitter.Int( 0x38 ) + Signed( emitter.Short( 0x50 ) );
 			p.Vy = emitter.Int( 0x3c ) + Signed( emitter.Short( 0x50 ) );
 			p.Vz = emitter.Int( 0x40 ) + Signed( emitter.Short( 0x50 ) );
@@ -163,7 +163,7 @@ internal sealed class LobbyKeyParticles
 	{
 		if ( !float.IsFinite( seconds ) || seconds < 0 ) throw new ArgumentOutOfRangeException( nameof(seconds) );
 		milliseconds += seconds * 1000.0;
-		// 0x54a970 advances the particle clock to the first 31ms tick at or beyond now.
+		// System_UpdateStateMachine (US 0x54e360) advances the particle clock to the first 31ms tick at or beyond now.
 		while ( milliseconds > 0 ) { milliseconds -= 31; Tick(); }
 	}
 
@@ -191,7 +191,7 @@ internal sealed class LobbyKeyParticles
 		}
 		foreach ( var influence in influencers.ToArray() )
 		{
-			// 0x51d630 applies the class-4 repeller before ordinary acceleration and friction.
+			// Particle_ApplyInfluencers (US 0x520f10) applies the class-4 repeller before ordinary acceleration and friction.
 			if ( --influence.Life < 0 )
 			{
 				if ( influence.Child >= 0 ) Start( influence.Child, influence.X << 4, influence.Z << 4 );
@@ -210,7 +210,7 @@ internal sealed class LobbyKeyParticles
 			foreach ( var p in emitter.Particles )
 			{
 				if ( --p.Life < 0 ) continue;
-				// 0x51dbc0 indexes the sixteen authored colours by remaining lifetime, not elapsed time.
+				// Particle_Integrate (US 0x5214a0) indexes the sixteen authored colours by remaining lifetime, not elapsed time.
 				p.Colour = unchecked((uint)emitter.Int( 0xd8 + (emitter.Int( 0x78 ) < 1 ? 0 : p.Life * 15 / p.InitialLife) * 4 ));
 				int frames = emitter.Short( 0x96 );
 				p.Frame = frames == 0 ? 0 : frames - 1 - (frames - 1) * p.Life / p.InitialLife;

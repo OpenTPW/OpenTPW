@@ -2,7 +2,7 @@ using System.Globalization;
 
 namespace OpenTPW;
 
-/// <summary>Quality-to-output budget at 0x517ff0, capped by the scheduler at 0x6b1130.</summary>
+/// <summary>Quality-to-output budget at Audio_GetQualityBudget (US 待核), capped by the scheduler at Audio_GetOutputCandidateLimit (US 待核).</summary>
 public static class SoundChannelPolicy
 {
 	public const int MaximumChannels = 30;

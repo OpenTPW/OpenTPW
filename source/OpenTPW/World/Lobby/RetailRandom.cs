@@ -1,6 +1,6 @@
 namespace OpenTPW;
 
-/// <summary>The CRT stream used by retail rain initialization and idle animations (0x675a40).</summary>
+/// <summary>The CRT stream used by retail rain initialization and idle animations (System_CrtRandom (US 待核)).</summary>
 internal static class RetailRandom
 {
 	private static uint state = 1;

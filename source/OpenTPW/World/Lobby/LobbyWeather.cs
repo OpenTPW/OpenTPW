@@ -42,7 +42,7 @@ public sealed class LobbyWeather : ModelEntity
 		Model = CreateModel( rainVertices, "raindrop.tga" );
 		boltModel = CreateModel( boltVertices, "lightning.tga" );
 		white = new Texture( [255, 255, 255, 255], 1, 1 );
-		// 0x57b360 draws a white full-screen quad with flags 0x9a1; blend 0xa1 is InverseDestinationColor/Zero,
+		// Weather_DrawLightningFlash (US 0x57ed50) draws a white full-screen quad with flags 0x9a1; blend 0xa1 is InverseDestinationColor/Zero,
 		// so the flash inverts one frame rather than fading to white.
 		flashMaterial = new Material( "content/shaders/ui.shader", MaterialFlags.DisableDepth | MaterialFlags.InvertDestination );
 	}
@@ -105,7 +105,7 @@ public sealed class LobbyWeather : ModelEntity
 	internal static void RainQuad( Vertex[] vertices, ref int offset, N.Vector4 tail, N.Vector4 head, float brightness )
 	{
 		var side = new N.Vector4( (head.Y - tail.Y) * 0.1f, -(head.X - tail.X) * 0.1f, 0, 0 );
-		// 0x57b8ed..0x57b9fe: upper tail Vmax/alpha128, falling head Vmin/alpha255.
+		// Rain_UpdateParticles+0x30d (US 0x57f2dd)..Rain_UpdateParticles (US 0x57efd0) 内，位置待核: upper tail Vmax/alpha128, falling head Vmin/alpha255.
 		Quad( vertices, ref offset, tail - side, tail + side, head - side, head + side,
 			brightness, 128, 255, reverseV: true );
 	}
@@ -143,8 +143,8 @@ public sealed class LobbyWeather : ModelEntity
 					return new( tangent.Y, -tangent.X, 0, 0 );
 				}
 				for ( int i = 0; i < points.Length - 1; i++ )
-					// 0x57a320 submits the previous edge at Vmin and the next edge at Vmax.
-					// 0x57ae20 traverses from the lower endpoint; unlike rain, this path does not reverse V.
+					// Lightning_SubmitStrip (US 0x57dd10) submits the previous edge at Vmin and the next edge at Vmax.
+					// Lightning_SubdivideBranch (US 0x57e810) traverses from the lower endpoint; unlike rain, this path does not reverse V.
 					Quad( boltVertices, ref boltOffset, points[i] - Side( i ), points[i] + Side( i ), points[i + 1] - Side( i + 1 ), points[i + 1] + Side( i + 1 ), brightness, 255, 255 );
 			}
 		}
@@ -157,7 +157,7 @@ public sealed class LobbyWeather : ModelEntity
 			var local = rain.Point( i, Camera.Position );
 			var a = Project( Camera.Position + local );
 			if ( a.W <= 0 ) continue;
-			// 0x57b5e0 uses the same final wind vector for the 0.1-unit head and cube motion.
+			// Rain_UpdateParticles (US 0x57efd0) uses the same final wind vector for the 0.1-unit head and cube motion.
 			var b = Project( Camera.Position + local + LobbyRainSimulation.Direction * 0.1f );
 			float brightness = Math.Max( 0, (int)((6 - a.W) * 12) ) * 3 / 255f;
 			RainQuad( rainVertices, ref rainOffset, a, b, brightness );
@@ -169,7 +169,7 @@ public sealed class LobbyWeather : ModelEntity
 	internal static int CalculateRainAmount( float meanSquaredDistance, int rainyIslands )
 	{
 		if ( rainyIslands == 0 ) return 0;
-		// 0x5dbe7f..0x5dbe90 squares the mean twice before the reverse divide.
+		// Lobby_UpdateCameraAndWeather (US 0x5e0470) 内，位置待核..Lobby_UpdateCameraAndWeather squares the mean twice before the reverse divide.
 		float squared = meanSquaredDistance * meanSquaredDistance;
 		float amount = 1e17f / (squared * squared);
 		return amount < 20 ? 0 : (int)Math.Min( 400, amount );

@@ -2,12 +2,12 @@ using System.Text;
 
 namespace OpenTPW;
 
-/// <summary>Version 12 gms.dat (0x5ac370, 0x5ad180, 0x423980). Unknown fields are retained byte for byte.</summary>
+/// <summary>Version 12 gms.dat (PlayerProfile_Read (US 0x5aff50), PlayerGlobals_Serialize (US 0x5b0d70), PlayerPreferences_Serialize (US 0x423e90)). Unknown fields are retained byte for byte.</summary>
 public sealed class PlayerProfileFile
 {
-	/// <summary>The four enabled/volume pairs in the US 0x423e90 preference block.</summary>
+	/// <summary>The four enabled/volume pairs in the PlayerPreferences_Serialize (US 0x423e90) preference block.</summary>
 	public enum SoundChannel { Effects, Music, Speech, Movie }
-	/// <summary>The seven trailing preference bytes serialized by US 0x423e90.</summary>
+	/// <summary>The seven trailing preference bytes serialized by PlayerPreferences_Serialize (US 0x423e90).</summary>
 	public enum Preference { Advisor, Tutorial, Tooltips, ConfirmDelete, RightMouseScroll, RightMouseCancel, Isometric }
 	public sealed record Segment( string Name, byte[] Data );
 	public byte[] Prefix { get; }
@@ -98,7 +98,7 @@ public sealed class PlayerProfileFile
 		return stream.ToArray();
 	}
 
-	/// <summary>0x5ab370 creates empty lists and fixed prefix defaults; 0x5ac070 sets the creation mode.</summary>
+	/// <summary>PlayerProfile_Initialize (US 0x5aef50) creates empty lists and fixed prefix defaults; PlayerProfile_SetCreationMode (US 0x5afc50) sets the creation mode.</summary>
 	public static PlayerProfileFile Create( byte creationMode, byte[] preferences )
 	{
 		if ( creationMode > 1 || preferences.Length != 39 ) throw new ArgumentException( "Invalid player defaults" );
@@ -108,7 +108,7 @@ public sealed class PlayerProfileFile
 		return new( prefix, [], (byte[])preferences.Clone(), [] );
 	}
 
-	/// <summary>0x423170 initializes the four enabled volume pairs from sound.sam, then seven preference bytes.</summary>
+	/// <summary>PlayerPreferences_Initialize (US 0x423690) initializes the four enabled volume pairs from sound.sam, then seven preference bytes.</summary>
 	public static byte[] DefaultPreferences( SettingsFile sound )
 	{
 		using var stream = new MemoryStream();

@@ -3,7 +3,7 @@ using System.Text;
 
 namespace OpenTPW;
 
-/// <summary>The sixteen ESP sequence descriptors read by TP.exe 0x53d3b0.</summary>
+/// <summary>The sixteen ESP sequence descriptors read by TP.exe Sprite_ReadSequenceDescriptors (US 0x540d90).</summary>
 public sealed class SpriteSequenceFile
 {
 	public sealed record Sequence( int FirstFrame, int FrameCount, bool Directional );
@@ -35,7 +35,7 @@ public sealed class SpriteSequenceFile
 		if ( (uint)sequence >= Sequences.Count ) throw new ArgumentOutOfRangeException( nameof(sequence) );
 		var entry = Sequences[sequence];
 		if ( (uint)frame >= entry.FrameCount ) throw new ArgumentOutOfRangeException( nameof(frame) );
-		// 0x53e9d0 masks direction only for a directional descriptor.
+		// Sprite_SelectDirectionalFrame (US 0x5423a0) masks direction only for a directional descriptor.
 		int index = entry.FirstFrame + frame + entry.FrameCount * (entry.Directional ? direction & 7 : 0);
 		if ( index >= textureFrameCount ) throw new InvalidDataException( "ESP sequence exceeds its texture frames" );
 		return index;

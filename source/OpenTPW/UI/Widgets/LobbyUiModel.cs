@@ -14,8 +14,8 @@ internal sealed class LobbyUiModel : Panel
 	private readonly string modelName;
 	public Rectangle Bounds { get; set; }
 	public int State { get; set; }
-	// 0x572440 maps frame bits 0x10/0x20 to texture bits 0x10000/0x20000;
-	// 0x57dd90 -> 0x563c50 then selects D3DTADDRESS_WRAP instead of CLAMP.
+	// FUN_00575e10 (US 0x575e10) maps frame bits 0x10/0x20 to texture bits 0x10000/0x20000;
+	// Render_ConvertMaterialFlags (US 0x581790) -> Render_SetD3dState (US 0x567620) then selects D3DTADDRESS_WRAP instead of CLAMP.
 	internal static SamplerType TextureSampler( uint frameFlags ) => (frameFlags & 0x30) != 0 ? SamplerType.PointWrap : SamplerType.Point;
 	public LobbyUiModel( string modelName, Rectangle units )
 	{
@@ -60,8 +60,8 @@ internal sealed class LobbyUiModel : Panel
 				string name = mesh.Materials[m].Name?.TrimEnd( '\0' ) ?? throw new InvalidDataException( "UI model material has no texture" );
 				if ( !textures.TryGetValue( name, out var texture ) )
 					textures.Add( name, texture = new Texture( AnimationFiles.ResolveFile( $"ui/textures/{name}.wct", "UI model texture" ), TextureFlags.PointFilter ) );
-				// Retail never culls in hardware (US 0x5668e1 sets CULLMODE 1) but drops back faces in software: 0x580530
-				// emits a face only when 0x581320 finds a positive screen-space winding of its three transformed vertices.
+				// Retail never culls in hardware (Render_InitializeD3dState+0xa1 (US 0x5668e1) sets CULLMODE 1) but drops back faces in software: FUN_00580530 (US 0x580530)
+				// emits a face only when Render_CullBackfaces (US 0x581320) finds a positive screen-space winding of its three transformed vertices.
 				var material = new Material<ObjectUniformBuffer>( shader, MaterialFlags.DisableDepth );
 				material.Set( "Color", texture, TextureSampler( mesh.Materials[m].Flags ) );
 				parts.Add( new Part( new Model( vertices, indices.ToArray(), material ), (Vertex[])vertices.Clone(), positions, geometry ) );

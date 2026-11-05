@@ -30,16 +30,16 @@ public sealed record LobbyPlayerChoice( LobbyPlayerChoiceKind Kind, int Slot, st
 /// <summary>
 /// The lobby's player selection: choose an occupied slot, name a new player in an empty slot, or back out.
 /// Pure state only; it reads nothing and writes no save. The four slots come from
-/// <see cref="LobbyPlayerProfiles"/> (0x5c2680) and the controller wires the buttons.
+/// <see cref="LobbyPlayerProfiles"/> (PlayerProfiles_EnumerateSlots (US 0x5c7590)) and the controller wires the buttons.
 /// </summary>
 public sealed class LobbyPlayerFlow
 {
 	public const int SlotCount = LobbyPlayerProfiles.SlotCount;
 
-	// 0x6607e8 stores a capacity of 0x10; 0x660977 indexes the buffer in 16-bit units.
+	// TextEdit_BindBuffer (US 0x6662b7) stores a capacity of 0x10; TextEdit_CopyUtf16 (US 0x666308) 内，位置待核 indexes the buffer in 16-bit units.
 	public const int MaxNameLength = 16;
 
-	// 0x661cfb( 0x74e090 ) gives the name box the characters "\/*?:|<>"" it refuses to accept.
+	// Naming_SetForbiddenCharacters (US 待核)( Naming_ForbiddenCharacters (US 待核) ) gives the name box the characters "\/*?:|<>"" it refuses to accept.
 	private static readonly char[] ForbiddenCharacters = { '\\', '/', '*', '?', ':', '|', '<', '>', '"' };
 
 	private readonly LobbyPlayerProfile?[] slots;
@@ -57,7 +57,7 @@ public sealed class LobbyPlayerFlow
 	/// <summary>The slot the name dialog belongs to, or -1 outside <see cref="LobbyPlayerFlowState.Naming"/>.</summary>
 	public int ActiveSlot { get; private set; } = -1;
 
-	/// <summary>The name box contents. Retail never clears 0x7e3bc0, so this survives a cancel.</summary>
+	/// <summary>The name box contents. Retail never clears gPlayerNameBuffer (US 待核), so this survives a cancel.</summary>
 	public string Name
 	{
 		get => name;
@@ -72,12 +72,12 @@ public sealed class LobbyPlayerFlow
 
 	public string? SlotLabel( int slot ) => this[slot]?.Name;
 
-	/// <summary>The name as it would be written: trailing spaces removed, everything else kept (0x4a4600).</summary>
+	/// <summary>The name as it would be written: trailing spaces removed, everything else kept (FUN_004a6b80 (US 0x4a6b80)).</summary>
 	public string ResolveName() => Name.TrimEnd( ' ' );
 
 	public bool CanConfirm => State == LobbyPlayerFlowState.Naming && ResolveName().Length > 0;
 
-	/// <summary>Clicking a slot button (0x4a3a90 message 0x10006).</summary>
+	/// <summary>Clicking a slot button (LobbyUi_Dispatch (US 待核) message 0x10006).</summary>
 	public bool Select( int slot )
 	{
 		if ( State != LobbyPlayerFlowState.Browsing || !IsValidSlot( slot ) )
@@ -96,7 +96,7 @@ public sealed class LobbyPlayerFlow
 		return true;
 	}
 
-	/// <summary>Confirming the name dialog (0x4a4780 value 0xffffffff). An unusable name keeps the dialog open.</summary>
+	/// <summary>Confirming the name dialog (NamingDialog_HandleResult (US 0x4a6d00) value 0xffffffff). An unusable name keeps the dialog open.</summary>
 	public bool Confirm()
 	{
 		if ( !CanConfirm )
@@ -109,7 +109,7 @@ public sealed class LobbyPlayerFlow
 		return true;
 	}
 
-	/// <summary>Cancelling the name dialog (0x4a4780 value 0xfffffffe): back to the buttons, nothing created.</summary>
+	/// <summary>Cancelling the name dialog (NamingDialog_HandleResult (US 0x4a6d00) value 0xfffffffe): back to the buttons, nothing created.</summary>
 	public bool Cancel()
 	{
 		if ( State != LobbyPlayerFlowState.Naming )
@@ -137,7 +137,7 @@ public sealed class LobbyPlayerFlow
 
 	/// <summary>
 	/// Records the profile the controller created after <see cref="Confirm"/>, so the slot label updates.
-	/// Retail writes the directory in 0x5c3030 and selects the slot in 0x5c34a0; this class does neither.
+	/// Retail writes the directory in PlayerProfile_Create (US 0x5c7f40) and selects the slot in PlayerProfiles_SelectSlot (US 0x5c83b0); this class does neither.
 	/// </summary>
 	public bool Adopt( LobbyPlayerProfile profile )
 	{

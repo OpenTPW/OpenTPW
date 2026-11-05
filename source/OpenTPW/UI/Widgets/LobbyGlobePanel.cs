@@ -3,7 +3,7 @@ using Veldrid;
 
 namespace OpenTPW;
 
-/// <summary>Shared globe controls from 0x755238 and the dispatch at 0x4c2cc0.</summary>
+/// <summary>Shared globe controls from GlobePage_Table (US 待核) and the dispatch at GlobeControls_HandleTableMessage (US 0x4c53f0).</summary>
 internal sealed class LobbyGlobePanel : Panel
 {
 	private readonly Level level;
@@ -56,7 +56,7 @@ internal sealed class LobbyGlobePanel : Panel
 		sound2 = level.Audio?.Play( "global/sound", "cat_globallobbysfx", 2 ) ?? 0;
 		sound3 = level.Audio?.Play( "global/sound", "cat_globallobbysfx", 3 ) ?? 0;
 		rightDown = Input.Mouse.Right;
-		// 0x5b4910/0x5b4860 request City::GetCityList even on the deferred connection path.
+		// Session_RequestCities (US 待核)/Session_StateUpdate (US 待核) request City::GetCityList even on the deferred connection path.
 		// No local city records are shipped by this path, so do not manufacture map markers.
 		status.Text = Localization.Parse( "#Disconnected" );
 		Log.Info( "Globe opened offline; online city and park lists are unavailable." );
@@ -97,7 +97,7 @@ internal sealed class LobbyGlobePanel : Panel
 				if ( id == 0x16006 ) CameraState.ToggleZoom();
 				heldButton = id; lastRepeat = float.NegativeInfinity;
 			}
-			// 0x6633b5 sets delay=0/interval=10 ms; 0x663259 emits at most one repeat per update.
+			// UiButton_SetRepeatTiming (US 0x668f35) sets delay=0/interval=10 ms; Ui_Function_TW_663259 (US 待核) emits at most one repeat per update.
 			if ( heldButton != id || !Input.Mouse.Left || Time.Now - lastRepeat <= 0.01f ) continue;
 			lastRepeat = Time.Now;
 			if ( id == 0x16001 ) CameraState.Turn( 0, -1 );

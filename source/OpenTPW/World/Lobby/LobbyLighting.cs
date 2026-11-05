@@ -3,17 +3,17 @@ using N = System.Numerics;
 namespace OpenTPW;
 
 /// <summary>
-/// Retail vertex lighting. TP.exe 0x570ca0 colours each vertex with 0x5707f0: the ambient colour plus,
+/// Retail vertex lighting. TP.exe Lighting_ComputeVertexColors (US 待核) colours each vertex with FUN_005741b0 (US 0x5741b0): the ambient colour plus,
 /// for every directional light (type 2), its colour × max(0, −L·N), clamped to 1 and modulated with the
-/// texture (0x563c50 colour op 4). L is the light's world direction moved into the node's space with
-/// the inverse node matrix and renormalised (0x5709e0); N is the authored normal (mesh +0x64).
+/// texture (Render_SetD3dState (US 0x567620) colour op 4). L is the light's world direction moved into the node's space with
+/// the inverse node matrix and renormalised (Lighting_TransformLightDirection (US 待核)); N is the authored normal (mesh +0x64).
 /// <para>
-/// The lobby light belongs to the camera: every camera update (0x5d3eb0) aims it from a point offset
+/// The lobby light belongs to the camera: every camera update (Lobby_UpdateCameraLight (US 0x5d8de0)) aims it from a point offset
 /// from the eye (right × <see cref="RightOffset"/>, up × <see cref="UpOffset"/>) at the camera target;
 /// with <see cref="Flatten"/> the vertical part is dropped and −0.3 added before renormalising. Island
-/// pages use ambient 0x444444, light 0xeeeeee, offsets 8/2 and flattening (0x5dc390 → 0x5d4300 /
-/// 0x5d43b0, camera +0x28/+0x2c/+0x30); the globe page uses 0x202020, 0xffffff and offsets −300/300
-/// without flattening (0x5d8060, page +0x38 = 300 from 0x5d7696). Intensity is 1.0 (0x6fe940).
+/// pages use ambient 0x444444, light 0xeeeeee, offsets 8/2 and flattening (IslandPage_ConfigureLighting (US 待核) → Lobby_SetAmbientLight (US 待核) /
+/// Lobby_SetCameraLight (US 0x5d92e0), camera +0x28/+0x2c/+0x30); the globe page uses 0x202020, 0xffffff and offsets −300/300
+/// without flattening (GlobePage_ActivateCommon (US 0x5dcfe0), page +0x38 = 300 from GlobePage_Construct (US 0x5dc580) 内，位置待核). Intensity is 1.0 (Float_One (US 待核)).
 /// </para>
 /// </summary>
 internal sealed class LobbyLighting
@@ -43,10 +43,10 @@ internal sealed class LobbyLighting
 
 	internal static N.Vector3 Rgb( uint colour ) => new( (colour >> 16 & 255) / 255f, (colour >> 8 & 255) / 255f, (colour & 255) / 255f );
 
-	/// <summary>Re-aims the light from a camera pose given in OpenTPW axes (0x5d3eb0).</summary>
+	/// <summary>Re-aims the light from a camera pose given in OpenTPW axes (Lobby_UpdateCameraLight (US 0x5d8de0)).</summary>
 	internal void Track( N.Vector3 eye, N.Vector3 target ) => WorldDirection = FromRetail( Aim( ToRetail( eye ), ToRetail( target ) ) );
 
-	/// <summary>0x5d3eb0 in retail axes (Y up).</summary>
+	/// <summary>Lobby_UpdateCameraLight (US 0x5d8de0) in retail axes (Y up).</summary>
 	internal N.Vector3 Aim( N.Vector3 eye, N.Vector3 target )
 	{
 		var forward = N.Vector3.Normalize( target - eye );
@@ -60,10 +60,10 @@ internal sealed class LobbyLighting
 		return direction;
 	}
 
-	/// <summary>The vertex colour 0x5707f0 produces for a node-space light direction and normal.</summary>
+	/// <summary>The vertex colour FUN_005741b0 (US 0x5741b0) produces for a node-space light direction and normal.</summary>
 	internal N.Vector3 Colour( N.Vector3 localDirection, N.Vector3 normal )
 	{
-		// Retail adds a light only when −L·N is not negative (sign test at 0x570865); zero normals get ambient only.
+		// Retail adds a light only when −L·N is not negative (sign test at FUN_005741b0 (US 0x5741b0) 内，位置待核); zero normals get ambient only.
 		float facing = MathF.Max( 0, -N.Vector3.Dot( localDirection, normal ) );
 		return N.Vector3.Min( Ambient + Diffuse * facing, N.Vector3.One );
 	}
@@ -77,7 +77,7 @@ internal sealed class LobbyLighting
 		var retail = ToRetail( N.Vector3.Transform( world, N.Quaternion.Inverse( root ) ) );
 		if ( !N.Matrix4x4.Invert( node, out var inverse ) ) throw new InvalidDataException( "Lobby node matrix cannot be inverted for lighting" );
 		var local = N.Vector3.TransformNormal( retail, inverse );
-		// 0x5709e0 renormalises unless the squared length is 0 or already 1.
+		// Lighting_TransformLightDirection (US 待核) renormalises unless the squared length is 0 or already 1.
 		float length = local.LengthSquared();
 		return length is 0 or 1 ? local : local / MathF.Sqrt( length );
 	}

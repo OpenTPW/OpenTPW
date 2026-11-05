@@ -2,7 +2,7 @@ using OpenTPW.UI;
 
 namespace OpenTPW;
 
-/// <summary>The advisor is registered in screen space independently of the world camera (0x429650).</summary>
+/// <summary>The advisor is registered in screen space independently of the world camera (Advisor_ConfigureScreenModel (US 0x429ba0)).</summary>
 internal sealed class LobbyAdvisorPanel : Panel
 {
 	private sealed record Part( int Mesh, Model Model, Vertex[] Vertices );
@@ -19,7 +19,7 @@ internal sealed class LobbyAdvisorPanel : Panel
 		var model = advisor.Geometry.Model;
 		for ( int i = 0; i < names.Length; i++ )
 		{
-			// 0x44a560 calls the case-insensitive CRT comparison at 0x677f10.
+			// Advisor_SelectAnimation (US 待核) calls the case-insensitive CRT comparison at Ui_Function_TW_677f10 (US 待核).
 			int mesh = model.Meshes.FindIndex( candidate => candidate.Name.Equals( names[i], StringComparison.OrdinalIgnoreCase ) );
 			if ( mesh < 0 ) throw new InvalidDataException( $"Missing advisor mouth: {names[i]}" );
 			mouths.Add( mesh, i + 1 );
@@ -38,8 +38,8 @@ internal sealed class LobbyAdvisorPanel : Panel
 				string name = mesh.Materials[m].Name?.TrimEnd( '\0' ) ?? throw new InvalidDataException( "Advisor material has no texture" );
 				if ( !textures.TryGetValue( name, out var texture ) )
 					textures.Add( name, texture = new Texture( AnimationFiles.ResolveFile( $"global/advisor/textures/{name}.wct", "Advisor texture" ) ) );
-				// Retail never culls in hardware (US 0x5668e1 sets CULLMODE 1) but drops back faces in software: 0x580530
-				// emits a face only when 0x581320 finds a positive screen-space winding of its three transformed vertices.
+				// Retail never culls in hardware (Render_InitializeD3dState+0xa1 (US 0x5668e1) sets CULLMODE 1) but drops back faces in software: FUN_00580530 (US 0x580530)
+				// emits a face only when Render_CullBackfaces (US 0x581320) finds a positive screen-space winding of its three transformed vertices.
 				var material = new Material<ObjectUniformBuffer>( shader, MaterialFlags.DisableDepth );
 				material.Set( "Color", texture );
 				var vertices = new Vertex[mesh.Vertices.Length];
@@ -48,14 +48,14 @@ internal sealed class LobbyAdvisorPanel : Panel
 		}
 	}
 
-	// Playback is advanced by Level, outside modal input routing (0x54a970).
+	// Playback is advanced by Level, outside modal input routing (System_UpdateStateMachine (US 0x54e360)).
 	// This panel only projects the current pose; updating here would pause it in dialogs.
 	protected override void OnDelete() => advisor.Cancel();
 	protected override void OnRender()
 	{
 		if ( !advisor.Active ) return;
 		var pose = advisor.Geometry.Pose( advisor.Animation, advisor.Frame );
-		// LIGHTING=0 leaves vertices white like the scene models (0x44ce66).
+		// LIGHTING=0 leaves vertices white like the scene models (Graphics_ApplyOptions (US 待核) 内，位置待核).
 		bool lit = LobbyQuality.Load().LightingEnabled;
 		var lighting = Level.Current?.Lighting ?? LobbyLighting.Islands;
 		var scene = LobbyLighting.RetailDirection;

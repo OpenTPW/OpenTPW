@@ -2,8 +2,8 @@ namespace OpenTPW;
 
 /// <summary>
 /// The twelve animation slots of a model, in the retail order of the slot letter table at
-/// TP.exe 0x6fa67c (letters at 8-byte intervals). Slot 0xC means none
-/// (TP.exe 0x471230).
+/// TP.exe Model_AnimationSlotLetters (US 待核) (letters at 8-byte intervals). Slot 0xC means none
+/// (TP.exe Animation_SelectSlot (US 0x472f60)).
 /// </summary>
 public enum AnimationSlot
 {
@@ -25,14 +25,14 @@ public enum AnimationSlot
 /// Resolves model and animation file names the way the retail model loader does, so that every
 /// caller uses one rule and a missing file is an error rather than a silent no-op.
 /// <para>
-/// Retail rule (TP.exe 0x460ac0, the loader that fills a model's slot tables): for each slot letter
-/// it formats "%s%s%c%d.md2" (format string at 0x748d64) with the model path without its extension
-/// and the number <c>segment + 1</c> (0x460e8a: the stored count plus one), and keeps going while the
+/// Retail rule (TP.exe Model_FindNodeAndLoadAnimations (US 0x461f10), the loader that fills a model's slot tables): for each slot letter
+/// it formats "%s%s%c%d.md2" (format string at Model_AnimationPathFormat (US 待核)) with the model path without its extension
+/// and the number <c>segment + 1</c> (Model_FindNodeAndLoadAnimations (US 0x461f10) 内，位置待核: the stored count plus one), and keeps going while the
 /// file exists. Only if "&lt;model&gt;&lt;letter&gt;1.md2" is missing does it try the unnumbered
-/// "%s%s%c.md2" (0x748d58; 0x460fd4..0x460fe0), which then becomes the slot's only segment.
+/// "%s%s%c.md2" (Model_UnnumberedAnimationFormat (US 待核); Model_FindNodeAndLoadAnimations (US 0x461f10) 内，位置待核..Model_FindNodeAndLoadAnimations), which then becomes the slot's only segment.
 /// Segment N of a slot is therefore "&lt;model&gt;&lt;letter&gt;N+1.md2", e.g. segment 0 of slot M is
-/// "...M1.md2". Playback selects segments by this zero-based index (FUN_00471230 reads
-/// <c>slotTable[index]</c>; lobby flocks call FUN_005d3430( 0, 1 ) = slot M, segment 0, looped).
+/// "...M1.md2". Playback selects segments by this zero-based index (Animation_SelectSlot (US 0x472f60) reads
+/// <c>slotTable[index]</c>; lobby flocks call Lobby_PlayModelAnimation (US 0x5d83f0)( 0, 1 ) = slot M, segment 0, looped).
 /// </para>
 /// <para>
 /// The archives store names in mixed case (e.g. "Bfly_PINKm1.MD2"), so names are matched against the

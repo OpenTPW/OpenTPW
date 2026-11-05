@@ -15,8 +15,8 @@ public sealed class LobbyButtonGeometry
 	public LobbyButtonGeometry( byte[] data, int state = 0 )
 	{
 		Model = new ModelFile( new MemoryStream( data ) );
-		// TP.exe 0x4751d0 transforms the root's two stored bounds through its ancestors,
-		// then 0x474f10 fits their X/Y extent to the control rectangle and flattens Z.
+		// TP.exe UiModel_UpdateBoundsTransform (US 0x476f10) transforms the root's two stored bounds through its ancestors,
+		// then UiModel_ApplyScreenTransform (US 0x476c50) fits their X/Y extent to the control rectangle and flattens Z.
 		int rootOffset = checked((int)BitConverter.ToUInt32( data, 0x78 ));
 		int meshOffset = checked((int)BitConverter.ToUInt32( data, 0x70 ));
 		var roots = new List<int>();

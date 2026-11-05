@@ -1,6 +1,6 @@
 namespace OpenTPW;
 
-/// <summary>Paletted TPC frames loaded by TP.exe 0x584320/0x584bd0.</summary>
+/// <summary>Paletted TPC frames loaded by TP.exe FUN_00587db0 (US 0x587db0)/FUN_00588660 (US 0x588660).</summary>
 public sealed class SpriteTextureFile
 {
 	public sealed record Frame( int Width, int Height, int DisplayWidth, int DisplayHeight,
@@ -47,7 +47,7 @@ public sealed class SpriteTextureFile
 
 	private static byte[] Decode( byte[] data, int width, int height )
 	{
-		// 0x560db0: each row has a byte length, then signed literal/repeat packets.
+		// Sprite_DecodeRows (US 待核): each row has a byte length, then signed literal/repeat packets.
 		var pixels = new byte[checked(width * height)];
 		int source = 0;
 		for ( int row = 0; row < height; row++ )

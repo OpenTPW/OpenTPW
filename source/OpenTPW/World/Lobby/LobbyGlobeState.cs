@@ -5,7 +5,7 @@ namespace OpenTPW;
 /// <summary>Globe page A (visit parks with players) or B (select a park with room).</summary>
 public enum LobbyGlobeMode { Visit, Select }
 
-/// <summary>The fields read from a city object by 0x5d7460 and the A/B predicates.</summary>
+/// <summary>The fields read from a city object by GlobePage_CreatePlaceMarker (US 待核) and the A/B predicates.</summary>
 public sealed record LobbyGlobePlace( string Name, N.Vector3 Position, int Count, int State, int Capacity )
 {
 	public string ModelName => Name.Equals( "North Pole", StringComparison.OrdinalIgnoreCase ) ? "bullfrog" : "hpin";
@@ -14,7 +14,7 @@ public sealed record LobbyGlobePlace( string Name, N.Vector3 Position, int Count
 	public bool VisibleIn( LobbyGlobeMode mode ) => mode == LobbyGlobeMode.Visit ? Count > 0 : State == 0 && Count < Capacity;
 }
 
-/// <summary>Globe camera and hit testing, 0x5d7600/0x5d78d0/0x5d8450.</summary>
+/// <summary>Globe camera and hit testing, GlobePage_Construct (US 0x5dc580)/GlobePage_Update (US 待核)/Globe_SelectCameraParameters (US 0x5dd3d0).</summary>
 public sealed class LobbyGlobeState
 {
 	private readonly float far, near;
@@ -42,7 +42,7 @@ public sealed class LobbyGlobeState
 		Yaw += ticks * yawVelocity;
 		Pitch += ticks * pitchVelocity;
 		if ( Pitch > 1.5f || Pitch < -1.5f ) { Pitch = Math.Clamp( Pitch, -1.5f, 1.5f ); pitchVelocity = 0; }
-		// 0x6feac0 is -0.3f; subtraction produces convergence toward the selected radius.
+		// Globe_RadiusCoefficient (US 待核) is -0.3f; subtraction produces convergence toward the selected radius.
 		Distance += ((Zoomed ? near : far) - Distance) * ticks * 0.3f;
 	}
 	public static LobbyGlobePlace? Pick( N.Vector3 origin, N.Vector3 direction, IEnumerable<LobbyGlobePlace> places, LobbyGlobeMode mode )

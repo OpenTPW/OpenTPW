@@ -13,11 +13,11 @@ namespace OpenTPW;
 public class ModelAnimation : BaseFormat
 {
 	/// <summary>
-	/// Frames per second at playback speed 1: 0x470f20 uses (now - start) ms x speed x 0.03.
+	/// Frames per second at playback speed 1: Animation_ComputeCurrentFrame (US 0x472c60) uses (now - start) ms x speed x 0.03.
 	/// </summary>
 	public const float FramesPerSecond = 30f;
 
-	/// <summary>Segment hiding is an instance binding choice (TP.exe 0x471030), separate from visibility tracks.</summary>
+	/// <summary>Segment hiding is an instance binding choice (TP.exe Animation_SetHiddenNodes (US 待核)), separate from visibility tracks.</summary>
 	public enum SegmentHiding { Disabled, NodeIndex, NodeId }
 
 	[Flags]
@@ -137,7 +137,7 @@ public class ModelAnimation : BaseFormat
 	public uint StartFrame { get; private set; }
 	public uint EndFrame { get; private set; }
 	public List<Track> Tracks { get; private set; } = [];
-	/// <summary>Nodes hidden for this segment, independently of per-frame visibility tracks (TP.exe 0x471030).</summary>
+	/// <summary>Nodes hidden for this segment, independently of per-frame visibility tracks (TP.exe Animation_SetHiddenNodes (US 待核)).</summary>
 	public ushort[] HiddenNodes { get; private set; } = [];
 
 	public float Length => EndFrame - StartFrame;

@@ -1,6 +1,6 @@
 namespace OpenTPW;
 
-/// <summary>Lobby gate names from the US object-name table at 0x7488d8, shared by signs and island titles.</summary>
+/// <summary>Lobby gate names from the US object-name table at ObjectNames_Index (US 0x7488d8), shared by signs and island titles.</summary>
 public static class LobbyObjectNames
 {
 	public static (string First, string Second) Lines( int gateObjectId )
@@ -18,7 +18,7 @@ public static class LobbyObjectNames
 		return (names[index], names[index + 1]);
 	}
 
-	/// <summary>US 0x4146b0 joins the two object-name lines, removing a trailing hyphen instead of inserting a space.</summary>
+	/// <summary>ObjectNames_JoinLines (US 0x4146b0) joins the two object-name lines, removing a trailing hyphen instead of inserting a space.</summary>
 	public static string Title( string first, string second ) => first.EndsWith( "-", StringComparison.Ordinal )
 		? first[..^1] + second : first + (second.Length == 0 ? "" : " ") + second;
 }

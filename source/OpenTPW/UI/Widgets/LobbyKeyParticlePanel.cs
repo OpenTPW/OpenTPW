@@ -43,19 +43,19 @@ internal sealed class LobbyKeyParticlePanel : Panel
 		model = new Model( vertices, material );
 	}
 	internal void IntroductionKey() => state.Start( 87, 90000, 7000 );
-	/// <summary>MessageTag1 at the integer centre of a UI rectangle (0x484e40: x × 100000 / 2048, y × 75000 / 1536).</summary>
+	/// <summary>MessageTag1 at the integer centre of a UI rectangle (Ui_PlayEffectAtElement (US 待核): x × 100000 / 2048, y × 75000 / 1536).</summary>
 	internal void MessageTag( Rectangle units )
 	{
 		int left = (int)units.X, top = (int)units.Y, right = (int)(units.X + units.Width), bottom = (int)(units.Y + units.Height);
 		state.Start( 90, (left + (right - left) / 2) * 100000 / 2048, (top + (bottom - top) / 2) * 75000 / 1536 );
 	}
-	// 0x4b6a30 uses the integer centre of element 0x1e0ea (554,170)-(990,437).
+	// Ui_Function_TW_4b6a30 (US 待核) uses the integer centre of element 0x1e0ea (554,170)-(990,437).
 	internal void EnterIsland() => state.Start( 98, 50000, (170 + (437 - 170) / 2) * 75000 / 1536 );
 	internal void SetAffordable( bool value )
 	{
 		if ( affordable == value ) return;
 		affordable = value;
-		// 0x4b6b50/0x4b6da0 retain one sparkle emitter while the selected island is affordable.
+		// FUN_004b90f0 (US 0x4b90f0)/IslandPage_Update (US 0x4b9340) retain one sparkle emitter while the selected island is affordable.
 		if ( value ) state.Start( 97, 50000, (170 + (437 - 170) / 2) * 75000 / 1536 );
 		else state.Stop( 97 );
 	}
@@ -72,7 +72,7 @@ internal sealed class LobbyKeyParticlePanel : Panel
 			float aspect = (float)frame.Width / frame.Height;
 			float left = ((index % 16) * tileWidth + 1f) / atlasWidth, top = ((index / 16) * tileHeight + 1f) / atlasHeight;
 			float width = (float)frame.Width / atlasWidth, height = (float)frame.Height / atlasHeight;
-			// 0x51b650's integer screen coordinates and size, consumed by 0x578c10.
+			// Particle_DrawScreenEffect (US 待核)'s integer screen coordinates and size, consumed by Render_DrawSpriteQuads (US 0x57c620).
 			float x = ((particle.X - 3125) * 16 / 50) / 1024f;
 			float y = ((particle.Z * 16 - 37500) * 2 / 75) / 1024f;
 			float halfHeight = (particle.Size / 64) / 2048f;

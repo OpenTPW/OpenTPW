@@ -1,6 +1,6 @@
 namespace OpenTPW;
 
-/// <summary>0x579900 initializes the cube; 0x57c560 scrolls it and 0x57b5e0 wraps each point.</summary>
+/// <summary>Rain_InitializePoints (US 待核) initializes the cube; Rain_UpdateScroll (US 0x57ff60) scrolls it and Rain_UpdateParticles (US 0x57efd0) wraps each point.</summary>
 internal sealed class LobbyRainSimulation
 {
 	private readonly Vector3[] drops = new Vector3[1024];
@@ -8,7 +8,7 @@ internal sealed class LobbyRainSimulation
 	internal static readonly Vector3 Direction = InitialDirection();
 	private static Vector3 InitialDirection()
 	{
-		// 0x56f0d3 calls 0x579f30(0, 0.3). Its final writes overwrite the earlier,
+		// Render_Function_TW_56edb0 (US 待核) 内，位置待核 calls Weather_SetWindDirection (US 0x57d920)(0, 0.3). Its final writes overwrite the earlier,
 		// stronger direction with wind layer 3 scaled by 0.2; keep that small residual.
 		float amplitude = 0.3f * 0.0017f;
 		double radians = (double)MathF.PI * 0.0055555557f;
@@ -30,7 +30,7 @@ internal sealed class LobbyRainSimulation
 	}
 	internal void Advance( float seconds )
 	{
-		// 0x57c560 subtracts horizontal phase, then 0x57b5e0 subtracts it again.
+		// Rain_UpdateScroll (US 0x57ff60) subtracts horizontal phase, then Rain_UpdateParticles (US 0x57efd0) subtracts it again.
 		// The resulting particle translation follows Direction on all three engine axes.
 		var moved = offset + Direction * (seconds * 5);
 		offset = new( Wrap( moved.X ), Wrap( moved.Y ), Wrap( moved.Z ) );

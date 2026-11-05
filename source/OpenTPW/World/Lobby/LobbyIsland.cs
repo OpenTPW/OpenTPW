@@ -20,7 +20,7 @@ public sealed class LobbyIsland : Entity
 		Position = placement.Position;
 		Rotation = placement.Rotation;
 		var textures = $"{config.ResourceDirectory}/textures";
-		// 0x5dc1aa may request either segment, so both are required.
+		// Lobby_UpdateCameraAndWeather (US 0x5e0470) 内，位置待核 may request either segment, so both are required.
 		islandAnimations = Enumerable.Range( 0, 2 ).Select( segment =>
 			AnimationFiles.Resolve( config.ModelPath, AnimationSlot.M, segment ) ).ToArray();
 		island = new LobbyModel( Position, config.ModelPath, textures, textureResolver:
@@ -32,10 +32,10 @@ public sealed class LobbyIsland : Entity
 
 	internal static (Vector3 Position, Vector3 Target, Quaternion Rotation) GetPlacement( Vector3 position, LobbyIslandConfig config )
 	{
-		// 0x5daa20 retains the ISLAND height as the orbit/flock anchor, but sets both model roots to Y=0.
+		// Island_Construct (US 0x5dfa60) retains the ISLAND height as the orbit/flock anchor, but sets both model roots to Y=0.
 		var modelPosition = new Vector3( position.X, position.Y, 0 );
 		var target = new Vector3( position.X, position.Y, config.Height );
-		// Retail +Y rotation becomes -Z after swapping retail Y/Z (0x5d33c0 -> 0x46ddf0).
+		// Retail +Y rotation becomes -Z after swapping retail Y/Z (FUN_005d8380 (US 0x5d8380) -> FUN_0046f650 (US 0x46f650)).
 		var rotation = Quaternion.CreateFromAxisAngle( System.Numerics.Vector3.UnitZ, -config.RotationDegrees.DegreesToRadians() );
 		return (modelPosition, target, rotation);
 	}
@@ -44,7 +44,7 @@ public sealed class LobbyIsland : Entity
 	{
 		if ( !islandAnimationStarted || island.AnimationFinished )
 		{
-			// 0x5dc197 selects M1 or M2 with the CRT stream, independently of the lobby LCG.
+			// Lobby_UpdateCameraAndWeather (US 0x5e0470) 内，位置待核 selects M1 or M2 with the CRT stream, independently of the lobby LCG.
 			int segment = RetailRandom.Next() & 1;
 			island.Play( islandAnimations[segment], false );
 			islandAnimationStarted = true;

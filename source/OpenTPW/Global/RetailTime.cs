@@ -3,12 +3,12 @@ namespace OpenTPW;
 /// <summary>Time conversions for the retail lobby, in its original numeric units.</summary>
 public static class RetailTime
 {
-	// FUN_005d0c50: CMP EAX, 0x1f4; FMUL [0x6fe8dc] (0.01f).
+	// Lobby_UpdateFrame (US 0x5d5c50): CMP EAX, 0x1f4; FMUL [Float_Hundredth (US 待核)] (0.01f).
 	public const int MaxFrameMilliseconds = 500;
 	public const float TicksPerMillisecond = 0.01f;
 	public const float TicksPerSecond = 1000 * TicksPerMillisecond;
 	public const float MaxFrameTicks = MaxFrameMilliseconds * TicksPerMillisecond;
-	// FUN_0054a970 state 10 advances DAT_0089136c by 0x1f milliseconds.
+	// System_UpdateStateMachine (US 0x54e360) state 10 advances gParkSimulationClock (US 待核) by 0x1f milliseconds.
 	public const int ParkStepMilliseconds = 31;
 
 	/// <summary>min(seconds * 1000, 500) * 0.01: 16 ms is 0.16, one unit is 100 ms.</summary>

@@ -113,7 +113,7 @@ public class LobbyAnimationTests
 
 			foreach ( var mesh in island.FlyingMeshes )
 			{
-				// FUN_005d4900 plays slot M segment 0 looped.
+				// Flock_SpawnMember (US 0x5d9830) plays slot M segment 0 looped.
 				Animation( Model( mesh.ModelPath ), AnimationFiles.Resolve( mesh.ModelPath, AnimationSlot.M, 0 ) );
 				flocks++;
 			}

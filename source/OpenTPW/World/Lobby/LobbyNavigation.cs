@@ -2,7 +2,7 @@ using System.Globalization;
 
 namespace OpenTPW;
 
-/// <summary>Normal local lobby selection and key checks (0x5dc5f0, 0x5dc6e0, 0x5dcb90).</summary>
+/// <summary>Normal local lobby selection and key checks (Lobby_NextIsland (US 待核), Lobby_PreviousIsland (US 待核), Lobby_EnterIsland (US 0x5e1cc0)).</summary>
 public sealed class LobbyNavigation
 {
 	private readonly LobbyConfig config;
@@ -20,9 +20,9 @@ public sealed class LobbyNavigation
 	/// <summary>Keys needed to enter the current island: <c>Keys.CostToEnter</c> from the theme's global.sam (1..5).</summary>
 	public int RequiredKeys => costs[Island.Id];
 	/// <summary>
-	/// Retail GameType 2 (US 0x550100 selects it when the profile's creation-mode byte +0x24, gms.dat prefix
+	/// Retail GameType 2 (System_UpdateStateMachine (US 0x54e360) 内，位置待核 selects it when the profile's creation-mode byte +0x24, gms.dat prefix
 	/// byte 14, is non-zero, i.e. Instant Action). The island page then hides the keys and disables the arrows
-	/// (US 0x4b9340), next/previous return early (US 0x5e1ee0, 0x5e1f40) and entry skips the key check (US 0x5e1cc0).
+	/// (IslandPage_Update (US 0x4b9340)), next/previous return early (Lobby_SelectNextIsland (US 0x5e1ee0), Lobby_SelectPreviousIsland (US 0x5e1f40)) and entry skips the key check (Lobby_EnterIsland (US 0x5e1cc0)).
 	/// </summary>
 	public bool InstantAction => profile != null && profile.CreationMode != 0;
 	public bool CanEnter => Active && !Entering && (InstantAction || Keys >= RequiredKeys);
@@ -38,8 +38,8 @@ public sealed class LobbyNavigation
 			if ( !int.TryParse( settings["Keys.CostToEnter"], NumberStyles.Integer, CultureInfo.InvariantCulture, out int cost ) || cost < 1 || cost > 5 )
 				throw new InvalidDataException( $"Invalid Keys.CostToEnter for {island.ThemeName}" );
 			costs.Add( island.Id, cost );
-			// US 0x5b11c0 loads global.sam; its balance descriptor 0x73f8a8 puts ParkName.GateObjectId
-			// at +0x18. US 0x5b12e0 passes that object ID to 0x412fb0 for the default title.
+			// PlayerGlobals_LoadBalance (US 0x5b11c0) loads global.sam; its balance descriptor GlobalSam_BalanceDescriptors (US 0x73f8a8) puts ParkName.GateObjectId
+			// at +0x18. Lobby_ResolveIslandTitle (US 0x5b12e0) passes that object ID to FUN_00412fb0 (US 0x412fb0) for the default title.
 			if ( !int.TryParse( settings["ParkName.GateObjectId"], NumberStyles.Integer, CultureInfo.InvariantCulture, out int gateObjectId ) )
 				throw new InvalidDataException( $"Invalid ParkName.GateObjectId for {island.ThemeName}" );
 			var lines = LobbyObjectNames.Lines( gateObjectId );
@@ -57,7 +57,7 @@ public sealed class LobbyNavigation
 		index = 0;
 		IslandSelected?.Invoke( Island.Id );
 	}
-	/// <summary>Moves to the previous (-1, 0x5dc6e0) or next (+1, 0x5dc5f0) island, wrapping at both ends.</summary>
+	/// <summary>Moves to the previous (-1, Lobby_PreviousIsland (US 待核)) or next (+1, Lobby_NextIsland (US 待核)) island, wrapping at both ends.</summary>
 	public void Navigate( int direction )
 	{
 		if ( !Active || Entering || InstantAction ) return;

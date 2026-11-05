@@ -4,7 +4,7 @@ using Veldrid;
 namespace OpenTPW;
 
 /// <summary>
-/// Two-button message dialog, table 0x74b468 and 0x47d290. The US table (0x74f920) gives every element key 0x11 (and
+/// Two-button message dialog, table ConfirmPage_Table (US 0x74f920) and Ui_Function_TW_47d290 (US 待核). The US table (ConfirmPage_Table) gives every element key 0x11 (and
 /// 0x12) = −1, so hovering OK or Cancel shows no help.
 /// </summary>
 internal sealed class LobbyConfirmPanel : Panel

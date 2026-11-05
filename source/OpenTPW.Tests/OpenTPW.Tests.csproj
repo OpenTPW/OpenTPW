@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\OpenTPW\OpenTPW.csproj" />
+    <ProjectReference Include="..\OpenTPW.Graphics\OpenTPW.Graphics.csproj" />
   </ItemGroup>
 
 </Project>

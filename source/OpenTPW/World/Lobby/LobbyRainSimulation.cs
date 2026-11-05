@@ -1,6 +1,6 @@
 namespace OpenTPW;
 
-/// <summary>Rain_InitializePoints (US 待核) initializes the cube; Rain_UpdateScroll (US 0x57ff60) scrolls it and Rain_UpdateParticles (US 0x57efd0) wraps each point.</summary>
+/// <summary>Rain_InitializePoints (US address pending) initializes the cube; Rain_UpdateScroll (US 0x57ff60) scrolls it and Rain_UpdateParticles (US 0x57efd0) wraps each point.</summary>
 internal sealed class LobbyRainSimulation
 {
 	private readonly Vector3[] drops = new Vector3[1024];
@@ -8,7 +8,7 @@ internal sealed class LobbyRainSimulation
 	internal static readonly Vector3 Direction = InitialDirection();
 	private static Vector3 InitialDirection()
 	{
-		// Render_Function_TW_56edb0 (US 待核) 内，位置待核 calls Weather_SetWindDirection (US 0x57d920)(0, 0.3). Its final writes overwrite the earlier,
+		// Render_Function_TW_56edb0 (US address pending), position pending calls Weather_SetWindDirection (US 0x57d920)(0, 0.3). Its final writes overwrite the earlier,
 		// stronger direction with wind layer 3 scaled by 0.2; keep that small residual.
 		float amplitude = 0.3f * 0.0017f;
 		double radians = (double)MathF.PI * 0.0055555557f;

@@ -105,7 +105,7 @@ public sealed class LobbyWeather : ModelEntity
 	internal static void RainQuad( Vertex[] vertices, ref int offset, N.Vector4 tail, N.Vector4 head, float brightness )
 	{
 		var side = new N.Vector4( (head.Y - tail.Y) * 0.1f, -(head.X - tail.X) * 0.1f, 0, 0 );
-		// Rain_UpdateParticles+0x30d (US 0x57f2dd)..Rain_UpdateParticles (US 0x57efd0) 内，位置待核: upper tail Vmax/alpha128, falling head Vmin/alpha255.
+		// Rain_UpdateParticles+0x30d (US 0x57f2dd)..Rain_UpdateParticles (US 0x57efd0), position pending: upper tail Vmax/alpha128, falling head Vmin/alpha255.
 		Quad( vertices, ref offset, tail - side, tail + side, head - side, head + side,
 			brightness, 128, 255, reverseV: true );
 	}
@@ -169,7 +169,7 @@ public sealed class LobbyWeather : ModelEntity
 	internal static int CalculateRainAmount( float meanSquaredDistance, int rainyIslands )
 	{
 		if ( rainyIslands == 0 ) return 0;
-		// Lobby_UpdateCameraAndWeather (US 0x5e0470) 内，位置待核..Lobby_UpdateCameraAndWeather squares the mean twice before the reverse divide.
+		// Lobby_UpdateCameraAndWeather (US 0x5e0470), position pending..Lobby_UpdateCameraAndWeather squares the mean twice before the reverse divide.
 		float squared = meanSquaredDistance * meanSquaredDistance;
 		float amount = 1e17f / (squared * squared);
 		return amount < 20 ? 0 : (int)Math.Min( 400, amount );

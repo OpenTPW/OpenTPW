@@ -33,7 +33,7 @@ public sealed class LobbyPlayerStore
 		if ( ReadSlots()[slot] != null ) throw new IOException( "Player slot is already occupied" );
 		// A new player inherits accepted global defaults; existing profiles retain their own preferences.
 		var profileData = PlayerProfileFile.Create( creationMode, preferences ?? PlayerProfileFile.DefaultPreferences( new SettingsFile( data.OpenRead( "sound.sam" ) ) ) );
-		// Normal lobby creation grants one key before saving (PlayerSelection_Commit (US 0x4a6a50) -> PlayerProfile_GrantInitialKey (US 待核) -> PlayerProfile_Save (US 待核)).
+		// Normal lobby creation grants one key before saving (PlayerSelection_Commit (US 0x4a6a50) -> PlayerProfile_GrantInitialKey (US address pending) -> PlayerProfile_Save (US address pending)).
 		// Keep this inside the staged transaction so retries cannot grant another key to an occupied slot.
 		LobbyPlayerProgress.GrantIntroductionKey( profileData );
 		string destination = Path.Combine( users, $"{slot + 1}{name}" );

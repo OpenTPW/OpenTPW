@@ -2,7 +2,7 @@ using System.Buffers.Binary;
 
 namespace OpenTPW;
 
-/// <summary>Lobby key accounting at PlayerProfile_CountKeys (US 0x5af680) and the new-player grant at PlayerSelection_Commit (US 0x4a6a50)/PlayerProfile_GrantInitialKey (US 待核).</summary>
+/// <summary>Lobby key accounting at PlayerProfile_CountKeys (US 0x5af680) and the new-player grant at PlayerSelection_Commit (US 0x4a6a50)/PlayerProfile_GrantInitialKey (US address pending).</summary>
 public static class LobbyPlayerProgress
 {
 	/// <summary>

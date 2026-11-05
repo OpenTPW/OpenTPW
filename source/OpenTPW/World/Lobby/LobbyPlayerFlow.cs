@@ -36,10 +36,10 @@ public sealed class LobbyPlayerFlow
 {
 	public const int SlotCount = LobbyPlayerProfiles.SlotCount;
 
-	// TextEdit_BindBuffer (US 0x6662b7) stores a capacity of 0x10; TextEdit_CopyUtf16 (US 0x666308) 内，位置待核 indexes the buffer in 16-bit units.
+	// TextEdit_BindBuffer (US 0x6662b7) stores a capacity of 0x10; TextEdit_CopyUtf16 (US 0x666308), position pending indexes the buffer in 16-bit units.
 	public const int MaxNameLength = 16;
 
-	// Naming_SetForbiddenCharacters (US 待核)( Naming_ForbiddenCharacters (US 待核) ) gives the name box the characters "\/*?:|<>"" it refuses to accept.
+	// Naming_SetForbiddenCharacters (US address pending)( Naming_ForbiddenCharacters (US address pending) ) gives the name box the characters "\/*?:|<>"" it refuses to accept.
 	private static readonly char[] ForbiddenCharacters = { '\\', '/', '*', '?', ':', '|', '<', '>', '"' };
 
 	private readonly LobbyPlayerProfile?[] slots;
@@ -57,7 +57,7 @@ public sealed class LobbyPlayerFlow
 	/// <summary>The slot the name dialog belongs to, or -1 outside <see cref="LobbyPlayerFlowState.Naming"/>.</summary>
 	public int ActiveSlot { get; private set; } = -1;
 
-	/// <summary>The name box contents. Retail never clears gPlayerNameBuffer (US 待核), so this survives a cancel.</summary>
+	/// <summary>The name box contents. Retail never clears gPlayerNameBuffer (US address pending), so this survives a cancel.</summary>
 	public string Name
 	{
 		get => name;
@@ -77,7 +77,7 @@ public sealed class LobbyPlayerFlow
 
 	public bool CanConfirm => State == LobbyPlayerFlowState.Naming && ResolveName().Length > 0;
 
-	/// <summary>Clicking a slot button (LobbyUi_Dispatch (US 待核) message 0x10006).</summary>
+	/// <summary>Clicking a slot button (LobbyUi_Dispatch (US address pending) message 0x10006).</summary>
 	public bool Select( int slot )
 	{
 		if ( State != LobbyPlayerFlowState.Browsing || !IsValidSlot( slot ) )

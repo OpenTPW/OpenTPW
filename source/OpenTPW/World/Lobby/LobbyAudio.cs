@@ -1,6 +1,6 @@
 namespace OpenTPW;
 
-/// <summary>Page-scoped island music/SFX handles (TP.exe Lobby_StartIslandAudio (US 待核) 内，位置待核/Lobby_StartIslandAudio and resume paths).</summary>
+/// <summary>Page-scoped island music/SFX handles (TP.exe Lobby_StartIslandAudio (US address pending), position pending/Lobby_StartIslandAudio and resume paths).</summary>
 public sealed class LobbyAudio : IDisposable
 {
 	private readonly AudioSystem audio;
@@ -10,7 +10,7 @@ public sealed class LobbyAudio : IDisposable
 	/// <summary>Play the timed introduction cue from FUN_00599880 (US 0x599880).</summary>
 	public long IntroductionKey()
 	{
-		// Audio_RegisterGlobalCategories (US 0x51eae0) binds gUiAudioCategory (US 待核) to cat_ui; IDs are local to a category,
+		// Audio_RegisterGlobalCategories (US 0x51eae0) binds gUiAudioCategory (US address pending) to cat_ui; IDs are local to a category,
 		// so 0xc6 must not be resolved through the four-entry lobby SFX bank.
 		return audio.Play( "global/sound", "cat_ui", 0xc6 );
 	}

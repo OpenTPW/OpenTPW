@@ -85,12 +85,12 @@ public partial class ModelFile : BaseFormat
 
 		/// <summary>
 		/// One normal per entry of <see cref="Vertices"/>, in node space. Authored normals from the record's
-		/// +0x64 table when present (TP.exe Lighting_ComputeVertexColors (US 待核) lights with them; a few are zero and get ambient only),
+		/// +0x64 table when present (TP.exe Lighting_ComputeVertexColors (US address pending) lights with them; a few are zero and get ambient only),
 		/// otherwise smoothed face normals.
 		/// </summary>
 		public Vector3[] Normals { get; set; }
 
-		/// <summary>Node flags; 0x1000000 marks a prelit mesh (Lighting_UpdateMesh (US 待核) skips lighting it).</summary>
+		/// <summary>Node flags; 0x1000000 marks a prelit mesh (Lighting_UpdateMesh (US address pending) skips lighting it).</summary>
 		public uint Flags { get; set; }
 
 		/// <summary>
@@ -517,7 +517,7 @@ public partial class ModelFile : BaseFormat
 	}
 
 	/// <summary>
-	/// The +0x64 table holds one entry per vertex-order entry: float3 normals (Lighting_ComputeVertexColors (US 待核) steps 12 bytes and
+	/// The +0x64 table holds one entry per vertex-order entry: float3 normals (Lighting_ComputeVertexColors (US address pending) steps 12 bytes and
 	/// passes them to FUN_005741b0 (US 0x5741b0)), or u32 colours for prelit meshes.
 	/// </summary>
 	private static void ReadVertexLighting( BinaryReader reader, Mesh mesh )

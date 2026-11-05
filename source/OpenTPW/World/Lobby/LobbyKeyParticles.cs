@@ -2,7 +2,7 @@ using System.Buffers.Binary;
 
 namespace OpenTPW;
 
-/// <summary>Screen-space key effects from FUN_00599880 (US 0x599880), Ui_Function_TW_4b6a30 (US 待核) and FUN_004b90f0 (US 0x4b90f0).</summary>
+/// <summary>Screen-space key effects from FUN_00599880 (US 0x599880), Ui_Function_TW_4b6a30 (US address pending) and FUN_004b90f0 (US 0x4b90f0).</summary>
 internal sealed class LobbyKeyParticles
 {
 	/// <summary>Screen-space particle state in retail integer units, updated by Particle_Spawn (US 0x520560)/Particle_Integrate (US 0x5214a0).</summary>
@@ -47,7 +47,7 @@ internal sealed class LobbyKeyParticles
 			throw new InvalidDataException( "Unsupported key particle library" );
 		if ( density < 1 || density > 4096 ) throw new ArgumentOutOfRangeException( nameof(density) );
 		this.library = library; this.density = density;
-		// KeyPuff's child is the stationary class-4 repeller (Particle_CreateRepeller (US 待核)/Particle_ApplyInfluencers (US 0x520f10)).
+		// KeyPuff's child is the stationary class-4 repeller (Particle_CreateRepeller (US address pending)/Particle_ApplyInfluencers (US 0x520f10)).
 		int child = 33616 + 5 * 104;
 		if ( BinaryPrimitives.ReadInt32LittleEndian( library.AsSpan( child + 4 ) ) != 4 ||
 			BinaryPrimitives.ReadInt32LittleEndian( library.AsSpan( child + 0x40 ) ) != -2 ||
@@ -56,14 +56,14 @@ internal sealed class LobbyKeyParticles
 	}
 
 	private int Next() => random = unchecked(random * 0x343fd + 0x269ec3);
-	// Particle_RandomSigned (US 待核) uses SAR/IDIV; Particle_RandomMasked (US 待核) additionally masks to 15 bits.
+	// Particle_RandomSigned (US address pending) uses SAR/IDIV; Particle_RandomMasked (US address pending) additionally masks to 15 bits.
 	private int Signed( int range ) => range == 0 ? 0 : (Next() >> 16) % range;
 	private int Positive( int range ) => range == 0 ? 0 : ((Next() >> 16) & 0x7fff) % range;
 	private int Scale( int count ) => count == 0 ? 0 : Math.Clamp( density * count >> 10, 1, int.MaxValue );
 
 	internal void Start( int id, int x, int z )
 	{
-		// 90 is MessageTag1, placed on a UI element whose help is shown (Ui_PlayEffectAtElement (US 待核)).
+		// 90 is MessageTag1, placed on a UI element whose help is shown (Ui_PlayEffectAtElement (US address pending)).
 		if ( id is not (87 or 88 or 90 or 97 or 98) ) throw new ArgumentOutOfRangeException( nameof(id) );
 		var emitter = new Emitter { Id = id, Data = library.AsSpan( 8 + id * 320, 320 ).ToArray(), X = x >> 4, Y = 0, Z = z >> 4 };
 		bool animated = id is 88 or 90 or 97;
@@ -83,7 +83,7 @@ internal sealed class LobbyKeyParticles
 		if ( emitter.Int( 0xb4 ) >= 0 )
 		{
 			// KeyPuff starts influencer 5, MessageTag1 influencer 3 (UIRepel: +0x40 = −1, life 30).
-			// Particle_ApplyInfluencers (US 0x520f10) 内，位置待核 compares influencer +0x40 with each emitter's first byte (−1 matches all); it is applied
+			// Particle_ApplyInfluencers (US 0x520f10), position pending compares influencer +0x40 with each emitter's first byte (−1 matches all); it is applied
 			// here as a force, as for KeyPuff's −2.
 			int child = emitter.Int( 0xb4 );
 			if ( child != (id == 90 ? 3 : 5) || emitter.Data[0xba] != 1 ) throw new InvalidDataException( "Unsupported key child effect" );

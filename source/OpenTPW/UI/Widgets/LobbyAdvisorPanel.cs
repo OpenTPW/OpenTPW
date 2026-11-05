@@ -19,7 +19,7 @@ internal sealed class LobbyAdvisorPanel : Panel
 		var model = advisor.Geometry.Model;
 		for ( int i = 0; i < names.Length; i++ )
 		{
-			// Advisor_SelectAnimation (US 待核) calls the case-insensitive CRT comparison at Ui_Function_TW_677f10 (US 待核).
+			// Advisor_SelectAnimation (US address pending) calls the case-insensitive CRT comparison at Ui_Function_TW_677f10 (US address pending).
 			int mesh = model.Meshes.FindIndex( candidate => candidate.Name.Equals( names[i], StringComparison.OrdinalIgnoreCase ) );
 			if ( mesh < 0 ) throw new InvalidDataException( $"Missing advisor mouth: {names[i]}" );
 			mouths.Add( mesh, i + 1 );
@@ -55,7 +55,7 @@ internal sealed class LobbyAdvisorPanel : Panel
 	{
 		if ( !advisor.Active ) return;
 		var pose = advisor.Geometry.Pose( advisor.Animation, advisor.Frame );
-		// LIGHTING=0 leaves vertices white like the scene models (Graphics_ApplyOptions (US 待核) 内，位置待核).
+		// LIGHTING=0 leaves vertices white like the scene models (Graphics_ApplyOptions (US address pending), position pending).
 		bool lit = LobbyQuality.Load().LightingEnabled;
 		var lighting = Level.Current?.Lighting ?? LobbyLighting.Islands;
 		var scene = LobbyLighting.RetailDirection;

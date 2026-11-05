@@ -22,7 +22,7 @@ public sealed class SoundMixer
 	private int voiceLimit = 30;
 	/// <summary>
 	/// Audible voices allowed by the sound quality preset (<see cref="SoundChannelPolicy"/>), 1..30. Retail caps
-	/// output candidates at 30 (Audio_LimitOutputCandidates (US 待核)/Audio_GetOutputCandidateLimit (US 待核)); its logical instance pool (Audio_GrowInstancePool (US 0x6b68d0)) only grows in steps of 100.
+	/// output candidates at 30 (Audio_LimitOutputCandidates (US address pending)/Audio_GetOutputCandidateLimit (US address pending)); its logical instance pool (Audio_GrowInstancePool (US 0x6b68d0)) only grows in steps of 100.
 	/// </summary>
 	public int VoiceLimit
 	{
@@ -114,8 +114,8 @@ public sealed class SoundMixer
 		for ( int i = offset; i < offset + count; ++i ) buffer[i] = 0;
 		lock ( sync )
 		{
-			// Audio_RankOutputCandidates (US 待核)/Audio_RankOutputCandidatesInternal (US 待核) rank output candidates without destroying logical instances.
-			// Audio_InsertInstance (US 待核) inserts new instances at the head, so newer equal-priority instances are visited first.
+			// Audio_RankOutputCandidates (US address pending)/Audio_RankOutputCandidatesInternal (US address pending) rank output candidates without destroying logical instances.
+			// Audio_InsertInstance (US address pending) inserts new instances at the head, so newer equal-priority instances are visited first.
 			var ordered = voices.OrderByDescending( entry => entry.Value.Priority ).ThenByDescending( entry => entry.Key ).ToArray();
 			for ( int i = 0; i < count; i += Channels )
 			{

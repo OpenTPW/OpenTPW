@@ -234,7 +234,7 @@ public sealed class LobbyModel : Entity
 					changed = true;
 				}
 			}
-			// Lighting_UpdateMesh (US 待核) relights a mesh whenever the light version changes, which every camera update does
+			// Lighting_UpdateMesh (US address pending) relights a mesh whenever the light version changes, which every camera update does
 			// (Lobby_UpdateCameraLight (US 0x5d8de0) re-aims the light); node motion and the model's rotation also move it in node space.
 			if ( part.LitEnabled != LightingEnabled || part.LitWith != lighting || part.LitDirection != LobbyLighting.WorldDirection
 				|| part.LitRotation != Rotation || part.LitWorld != part.World )

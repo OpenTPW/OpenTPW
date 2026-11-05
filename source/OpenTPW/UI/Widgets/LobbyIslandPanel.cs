@@ -94,7 +94,7 @@ internal sealed class LobbyIslandPanel : Panel
 	/// skips elements that are hidden (+0x48 bit 0), disabled (+0x48 bit 1, set by Ui_SetEnabled (US 0x65da8d)) or detached (+4), and
 	/// otherwise takes any element whose shape (+0x44) contains the point. The panel's shape is its outline polygon and
 	/// its children (buttons, key, cost, count group, title text) use their rectangles; the buttons lie inside the
-	/// outline. The advisor is an engine model, not a UI element, and the help strip is created disabled (HelpBar_Create (US 0x492180) 内，位置待核
+	/// outline. The advisor is an engine model, not a UI element, and the help strip is created disabled (HelpBar_Create (US 0x492180), position pending
 	/// calls element +0x14 with 0), so neither blocks.
 	/// </summary>
 	private bool PageTakesPointer()
@@ -118,7 +118,7 @@ internal sealed class LobbyIslandPanel : Panel
 	}
 	/// <summary>
 	/// Shows the hovered element's help and, on its first help since activation, places MessageTag1 at its centre
-	/// (US 待核 event 0x11). Mouse-enter 0x10001 (Ui_UpdatePointerHover+0xc5 (US 0x6589b4)), which the default handler FUN_0065f6d1 (US 0x65f6d1) 内，位置待核 turns into help,
+	/// (element event 0x11, US address pending). Mouse-enter 0x10001 (Ui_UpdatePointerHover+0xc5 (US 0x6589b4)), which the default handler FUN_0065f6d1 (US 0x65f6d1), position pending turns into help,
 	/// only goes to the element the hit test Ui_HitTest (US 0x65db25) returns; that test skips disabled elements, so a disabled arrow
 	/// leaves the pointer on the panel behind it, whose help is −1.
 	/// </summary>

@@ -88,7 +88,7 @@ public static class LobbySigns
 	public sealed record SignDefinition( int Order, int[] Modes, SignLine[] Lines, byte[][] Styles,
 		TextureData[] Patterns, TextureData Background );
 
-	/// <summary>The 101 header and two records are read in the order used by Signs_ReadLayout (US 待核).</summary>
+	/// <summary>The 101 header and two records are read in the order used by Signs_ReadLayout (US address pending).</summary>
 	public static SignDefinition Decode( byte[] data )
 	{
 		using var reader = new BinaryReader( new MemoryStream( data ), Encoding.ASCII );

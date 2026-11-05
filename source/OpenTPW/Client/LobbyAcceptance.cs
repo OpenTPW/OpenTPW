@@ -146,7 +146,7 @@ internal sealed class LobbyAcceptance
 				level.PlayerMenu!.Select( empty ); Next( 11 ); break;
 			case 11 when elapsed > 0.5:
 				Capture( "lobby-naming" );
-				// Hover OK through the input snapshot: help 360 and its MessageTag1 (US 待核).
+				// Hover OK through the input snapshot: help 360 and its MessageTag1 effect (the placing handler's US address is pending).
 				Input.PointerOverride = new Vector2( (1376 + 1460) / 2f * Screen.Size.X / 2048, (524 + 608) / 2f * Screen.Size.Y / 1536 );
 				Next( 30 ); break;
 			case 30 when elapsed > 0.3:

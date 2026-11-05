@@ -5,7 +5,7 @@ namespace OpenTPW;
 /// <summary>
 /// Lobby sky. Lobby_InitializeSkyFog (US 0x5d8b50) -> Sky_LoadTextures (US 0x5852b0) always loads the fantasy sky.tga/sky_rgb.tga/sky_cyl.tga, for every island
 /// (sky_rgb only feeds a colour table that the grid builder overwrites, see LobbySkyGeometry).
-/// SKYQUALITY 0/1/2/4 is the cloud layer count (Graphics_ApplyOptions (US 待核) 内，位置待核 -> Sky_SetLayerCount (US 待核)); 0 draws neither clouds nor horizon.
+/// SKYQUALITY 0/1/2/4 is the cloud layer count (Graphics_ApplyOptions (US address pending), position pending -> Sky_SetLayerCount (US address pending)); 0 draws neither clouds nor horizon.
 /// </summary>
 public class Sky : ModelEntity
 {
@@ -16,7 +16,7 @@ public class Sky : ModelEntity
 		public SkyPart() => Layer = RenderLayer.Background;
 		protected override void OnRender() { if ( Enabled() ) base.OnRender(); }
 	}
-	// Lobby_InitializeSkyFog (US 0x5d8b50) sets the global background/fog colour gFogColour (US 待核) to 0xff44ddff. Island changes never alter it;
+	// Lobby_InitializeSkyFog (US 0x5d8b50) sets the global background/fog colour gFogColour (US address pending) to 0xff44ddff. Island changes never alter it;
 	// SKYCOLOUR only recolours the first cloud layer.
 	private static readonly Vector3 Background = new( 68 / 255f, 221 / 255f, 1 );
 	private Texture? colorTexture;
@@ -99,7 +99,7 @@ public class Sky : ModelEntity
 	protected override void OnRender()
 	{
 		layerCount = quality.SkyLayers;
-		// Sky_UpdateIslandColors (US 0x5d96c0) fills gSkyObject (US 0x8c1828) 内，位置待核 = sky object gSkyObject (US 0x8c1828) + 0xf60: layer zero's colours.
+		// Sky_UpdateIslandColors (US 0x5d96c0) fills gSkyObject (US 0x8c1828), position pending = sky object gSkyObject (US 0x8c1828) + 0xf60: layer zero's colours.
 		colourState.Step( layerCount > 1 );
 		SetColor( Background * (1 - flashStrength) + Vector3.One * flashStrength );
 		Position = Camera.Position;
@@ -135,7 +135,7 @@ internal sealed class LobbySkyColour
 	internal void Step( bool enabled )
 	{
 		if ( !enabled || (Red == targetRed && Green == targetGreen && Blue == targetBlue) ) return;
-		// The retail instruction at Sky_UpdateIslandColors (US 0x5d96c0) 内，位置待核 really reads +0x58 for red as well as blue.
+		// The retail instruction at Sky_UpdateIslandColors (US 0x5d96c0), position pending really reads +0x58 for red as well as blue.
 		Red += (targetBlue - Red) >> 4;
 		Green += (targetGreen - Green) >> 4;
 		Blue += (targetBlue - Blue) >> 4;
@@ -210,7 +210,7 @@ internal sealed class LobbySkyGeometry
 	}
 	/// <summary>
 	/// Sky_BuildCloudGrid (US 0x585720) stores positions at x*16+z. Sky_DrawCloudsAndHorizon (US 0x5863c0) walks that array linearly, but computes U
-	/// from the inner Z index and V from the outer X index, reading colours at z*16+x (Sky_DrawCloudsAndHorizon (US 0x5863c0) 内，位置待核).
+	/// from the inner Z index and V from the outer X index, reading colours at z*16+x (Sky_DrawCloudsAndHorizon (US 0x5863c0), position pending).
 	/// </summary>
 	internal Vertex[] CloudVertices( int layer, float flash = 0, Vector3? layerZeroColour = null )
 	{

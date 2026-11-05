@@ -6,7 +6,7 @@ namespace OpenTPW;
 /// <summary>
 /// Local actions and Options from the shared Escape menu (LobbyMenu_Create (US 0x48c600), LobbyMenu_HandleMessage (US 0x48bd40)). The items are run-time text
 /// elements added by LobbyMenu_AddTextItem (US 0x492f60), which sets no help number, so they keep the element default −1 written by the base
-/// constructor (FUN_0065bcad (US 0x65bcad) 内，位置待核, +0x90): no hover help.
+/// constructor (FUN_0065bcad (US 0x65bcad), position pending, +0x90): no hover help.
 /// </summary>
 internal sealed class LobbyMenuPanel : Panel
 {
@@ -70,7 +70,7 @@ internal sealed class LobbyMenuPanel : Panel
 		if ( action == UIStrings.ResumeGame ) { Close(); return; }
 		// LobbyMenu_HandleMessage (US 0x48bd40) closes the Escape menu before constructing the options page.
 		if ( action == UIStrings.Options ) { Close(); OptionsRequested?.Invoke(); return; }
-		// LobbyMenu_HandleMessage (US 0x48bd40) 内，位置待核 uses ConfirmNewPlayer; LobbyMenu_HandleMessage uses ConfirmQuit. Cancellation keeps the menu.
+		// LobbyMenu_HandleMessage (US 0x48bd40), position pending uses ConfirmNewPlayer; LobbyMenu_HandleMessage uses ConfirmQuit. Cancellation keeps the menu.
 		confirmation.Show( Localization.Parse( action == UIStrings.SelectNewPlayer ? "#ConfirmNewPlayer" : "#ConfirmQuit" ), () =>
 		{
 			Close();

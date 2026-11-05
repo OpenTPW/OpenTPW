@@ -22,7 +22,7 @@ public class Level
 	internal LobbyOptionsPanel? Options { get; private set; }
 	internal LobbyPlayerProfile? SelectedPlayer => selectedPlayer;
 	public bool FogEnabled => GlobeMenu?.Active != true;
-	/// <summary>Scene lighting: the globe page has its own ambient and light (GlobePage_ActivateCommon (US 0x5dcfe0)), every other page the islands' (IslandPage_ConfigureLighting (US 待核)).</summary>
+	/// <summary>Scene lighting: the globe page has its own ambient and light (GlobePage_ActivateCommon (US 0x5dcfe0)), every other page the islands' (IslandPage_ConfigureLighting (US address pending)).</summary>
 	internal LobbyLighting Lighting => GlobeMenu?.Active == true ? LobbyLighting.Globe : LobbyLighting.Islands;
 	/// <summary>Raised when the entry flight completes. No park loader consumes it yet; without a handler the island page is restored.</summary>
 	public event Action<LobbyPlayerProfile, LobbyIslandConfig>? ParkEntryRequested;
@@ -49,7 +49,7 @@ public class Level
 	{
 		SunLight = new Sun() { Position = new( 0, 100, 100 ) };
 
-		// Lobby_LoadWorld (US 0x5d84a0) -> Terrain_LoadBase (US 待核) loads the authored lobby Base, including both sea meshes and their UVs.
+		// Lobby_LoadWorld (US 0x5d84a0) -> Terrain_LoadBase (US address pending) loads the authored lobby Base, including both sea meshes and their UVs.
 		_ = new LobbyModel( Vector3.Zero, "lobby/terrain/Base.md2", "lobby/terrain/textures" );
 		var sky = new Sky();
 		EnvironmentSky = sky;
@@ -84,7 +84,7 @@ public class Level
 		Navigation.IslandSelected += LobbyCameraMode.SelectIsland;
 		Navigation.EntryRequested += () =>
 		{
-			// Lobby_ExitIslandSelection (US 待核) -> Ui_Function_TW_4b6a30 (US 待核) plays global lobby effect 4 when leaving island selection.
+			// Lobby_ExitIslandSelection (US address pending) -> Ui_Function_TW_4b6a30 (US address pending) plays global lobby effect 4 when leaving island selection.
 			Audio?.Play( "global/sound", "cat_globallobbysfx", 4 );
 			keyEffects?.EnterIsland();
 			LobbyCameraMode.BeginEntering();
@@ -141,14 +141,14 @@ public class Level
 
 	internal void ReturnToPlayers()
 	{
-		// Lobby_ConfirmPlayerChange (US 待核) unloads the selected profile (PlayerProfiles_SaveActive (US 0x5c8650)) before reopening Lobby_CreateUi (US 0x4a6580).
+		// Lobby_ConfirmPlayerChange (US address pending) unloads the selected profile (PlayerProfiles_SaveActive (US 0x5c8650)) before reopening Lobby_CreateUi (US 0x4a6580).
 		GlobeMenu?.Hide(); Navigation!.Unbind(); IslandMenu!.Active = false;
 		selectedPlayer = null; PlayerMenu!.Back(); Advisor?.Cancel();
 		LobbyCameraMode.BeginRoaming();
 	}
 	internal void HandleEscape()
 	{
-		// LobbyPageManager_Input (US 待核) first asks the active page to consume Escape. Naming/globe/modals
+		// LobbyPageManager_Input (US address pending) first asks the active page to consume Escape. Naming/globe/modals
 		// keep their own cancellation; an entering island consumes it before the shared menu.
 		if ( Hud.Modal != null || GlobeMenu?.Active == true || !(PlayerMenu!.Browsing || Navigation!.Active) ) return;
 		if ( Navigation!.Entering ) Navigation.CancelEntry();

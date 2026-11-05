@@ -11,7 +11,7 @@ public sealed class LobbyAdvisorGeometry
 	public static readonly System.Numerics.Vector3 ScreenOffset = new( 0.6f, -0.6f, 0.2f );
 
 	/// <summary>
-	/// The advisor's own directional light (record +0x48: constructor AdvisorLight_Construct (US 待核) sets type 2 and colour 1.0;
+	/// The advisor's own directional light (record +0x48: constructor AdvisorLight_Construct (US address pending) sets type 2 and colour 1.0;
 	/// Advisor_ConfigureScreenModel (US 0x429ba0) aims it along (26.67, −26.67, 800) and registers it with mask 0x10, the advisor's own draw list).
 	/// </summary>
 	public static readonly System.Numerics.Vector3 LightDirection = System.Numerics.Vector3.Normalize( new( 26.666666f, -26.666666f, 800 ) );

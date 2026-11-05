@@ -55,7 +55,7 @@ internal sealed class LobbyOptionsPanel : Panel
 		}
 		string T( UIStrings key ) => Localization.Text( key );
 		background = Model( 0xc8a6dfaf, Box( 0, 0, 2048, 1536 ) );
-		// Options_SelectTitleFont (US 0x485d20) selects font slot 5 (record Font_SlotTable (US 0x78b54c) 内，位置待核); UiText_ApplyLabelStyle (US 0x492d20) sets RGBA ea/ef/66/ff.
+		// Options_SelectTitleFont (US 0x485d20) selects font slot 5 (record Font_SlotTable (US 0x78b54c), position pending); UiText_ApplyLabelStyle (US 0x492d20) sets RGBA ea/ef/66/ff.
 		title = new LobbyUiText( T( UIStrings.GameOptions ), Box( 788, 46, 1260, 126 ), LobbyFonts.Name( 5 ), 0xeaef66ff ) { Shadow = true };
 		title.Preload( new[] { title.Text } );
 		status = Text( Box( 57, 1465, 1964, 1530 ), new[] { "", "Saving...", "Save failed. Retry OK or Cancel.",

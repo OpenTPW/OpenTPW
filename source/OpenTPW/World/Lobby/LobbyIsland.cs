@@ -20,7 +20,7 @@ public sealed class LobbyIsland : Entity
 		Position = placement.Position;
 		Rotation = placement.Rotation;
 		var textures = $"{config.ResourceDirectory}/textures";
-		// Lobby_UpdateCameraAndWeather (US 0x5e0470) 内，位置待核 may request either segment, so both are required.
+		// Lobby_UpdateCameraAndWeather (US 0x5e0470), position pending may request either segment, so both are required.
 		islandAnimations = Enumerable.Range( 0, 2 ).Select( segment =>
 			AnimationFiles.Resolve( config.ModelPath, AnimationSlot.M, segment ) ).ToArray();
 		island = new LobbyModel( Position, config.ModelPath, textures, textureResolver:
@@ -44,7 +44,7 @@ public sealed class LobbyIsland : Entity
 	{
 		if ( !islandAnimationStarted || island.AnimationFinished )
 		{
-			// Lobby_UpdateCameraAndWeather (US 0x5e0470) 内，位置待核 selects M1 or M2 with the CRT stream, independently of the lobby LCG.
+			// Lobby_UpdateCameraAndWeather (US 0x5e0470), position pending selects M1 or M2 with the CRT stream, independently of the lobby LCG.
 			int segment = RetailRandom.Next() & 1;
 			island.Play( islandAnimations[segment], false );
 			islandAnimationStarted = true;

@@ -27,7 +27,7 @@ internal sealed class LobbyWeatherSimulation
 	internal LobbyWeatherSimulation( LobbyRandom random, Func<uint>? seed = null )
 	{
 		this.random = random;
-		// Retail seeds each bolt from the low timestamp-counter bits (Weather_ReadTimestamp (US 待核)).
+		// Retail seeds each bolt from the low timestamp-counter bits (Weather_ReadTimestamp (US address pending)).
 		this.seed = seed ?? (() => unchecked((uint)System.Diagnostics.Stopwatch.GetTimestamp()));
 	}
 

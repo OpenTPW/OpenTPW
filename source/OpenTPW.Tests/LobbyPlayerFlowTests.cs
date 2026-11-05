@@ -33,7 +33,7 @@ public class LobbyPlayerFlowTests
 		Assert.AreEqual( LobbyPlayerFlowState.Naming, flow.State );
 		Assert.AreEqual( 1, flow.ActiveSlot );
 		Assert.IsNull( flow.Result );
-		Assert.IsFalse( flow.CanConfirm, "The name box starts empty, as gPlayerNameBuffer (US 待核) does." );
+		Assert.IsFalse( flow.CanConfirm, "The name box starts empty, as gPlayerNameBuffer (US address pending) does." );
 	}
 
 	[TestMethod]
@@ -107,7 +107,7 @@ public class LobbyPlayerFlowTests
 		Assert.IsTrue( flow.Cancel() );
 		Assert.AreEqual( LobbyPlayerFlowState.Browsing, flow.State );
 		Assert.IsNull( flow.Result );
-		Assert.AreEqual( "Draft", flow.Name, "Retail never clears gPlayerNameBuffer (US 待核), so reopening shows the old text." );
+		Assert.AreEqual( "Draft", flow.Name, "Retail never clears gPlayerNameBuffer (US address pending), so reopening shows the old text." );
 
 		flow.Select( 1 );
 		Assert.AreEqual( "Draft", flow.Name );

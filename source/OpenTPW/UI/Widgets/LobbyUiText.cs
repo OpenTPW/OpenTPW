@@ -4,7 +4,7 @@ namespace OpenTPW;
 
 /// <summary>
 /// BF4 text in a retail 2048x1536 control rectangle (3.2 units per 640x480 pixel), clipped to that rectangle.
-/// Alignment 0/1/2 = start/centre/end, as passed to Ui_Function_TW_656a78 (US 待核).
+/// Alignment 0/1/2 = start/centre/end, as passed to Ui_Function_TW_656a78 (US address pending).
 /// </summary>
 internal sealed class LobbyUiText : Panel
 {
@@ -19,19 +19,19 @@ internal sealed class LobbyUiText : Panel
 	/// <summary>Horizontal scroll in 640x480 pixels, used by the name box to keep the caret visible.</summary>
 	public float Scroll { get; set; }
 	/// <summary>
-	/// Draw as a UI-table text element (created by Ui_CreateTextControl (US 0x491920), drawn by TextElement_Draw (US 待核)): a shadow pass first.
+	/// Draw as a UI-table text element (created by Ui_CreateTextControl (US 0x491920), drawn by TextElement_Draw (US address pending)): a shadow pass first.
 	/// Menu items (LobbyMenu_AddTextItem (US 0x492f60)) and edit boxes draw without it.
 	/// </summary>
 	public bool Shadow { get; set; }
 	/// <summary>
 	/// Lay the text out within the rectangle width. Ui_SetTextWrapping (US 0x65c4b9)(1, 1) sends text message 0x3000, which the text element
 	/// handler Ui_HandleTextControlMessage (US 0x48fc40) stores at +0xda/+0xdb; the element draw UiText_DrawLayout (US 0x48f830) then passes its own width to the layout instead
-	/// of the unlimited 0x4000 used when +0xda is 0. The confirmation message (FUN_0047f020 (US 0x47f020) 内，位置待核) and the help strip (HelpBar_Create (US 0x492180) 内，位置待核)
+	/// of the unlimited 0x4000 used when +0xda is 0. The confirmation message (FUN_0047f020 (US 0x47f020), position pending) and the help strip (HelpBar_Create (US 0x492180), position pending)
 	/// set it. The break rules are in <see cref="Layout"/>.
 	/// </summary>
 	public bool WordWrap { get; set; }
 
-	// TextElement_Draw (US 待核) draws every text element twice: a shadow with texel (0x80, 0x80, 0x80, 0x80) 2 pixels
+	// TextElement_Draw (US address pending) draws every text element twice: a shadow with texel (0x80, 0x80, 0x80, 0x80) 2 pixels
 	// left and 2 down, then the text with (0xFF, 0xFF, 0xFF, 0xFF); both are tinted by the element colour.
 	internal const int ShadowOffset = 2;
 	private const byte ShadowLevel = 0x80;
@@ -44,7 +44,7 @@ internal sealed class LobbyUiText : Panel
 		Text = text;
 		Color = color;
 	}
-	/// <summary>RGBA image of a text element with its shadow (TextElement_Draw (US 待核)); the text sits at (ShadowOffset, 0).</summary>
+	/// <summary>RGBA image of a text element with its shadow (TextElement_Draw (US address pending)); the text sits at (ShadowOffset, 0).</summary>
 	internal static TextureData RenderElement( FontFile font, string text, uint color )
 	{
 		var mask = font.RenderString( text );

@@ -10,7 +10,7 @@ public class LobbyWeatherTests
 	[TestMethod]
 	public void RainUsesFourthPowerOfMeanSquaredHorizontalDistance()
 	{
-		// TP.exe Lobby_UpdateCameraAndWeather (US 0x5e0470) 内，位置待核..Lobby_UpdateCameraAndWeather: float arithmetic, threshold, cap, then truncation.
+		// TP.exe Lobby_UpdateCameraAndWeather (US 0x5e0470), position pending..Lobby_UpdateCameraAndWeather: float arithmetic, threshold, cap, then truncation.
 		Assert.AreEqual( 160, LobbyWeather.CalculateRainAmount( 5000, 1 ) );
 		Assert.AreEqual( 400, LobbyWeather.CalculateRainAmount( 1000, 1 ) );
 		Assert.AreEqual( 0, LobbyWeather.CalculateRainAmount( 10000, 1 ) );

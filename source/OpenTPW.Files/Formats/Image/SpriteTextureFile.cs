@@ -47,7 +47,7 @@ public sealed class SpriteTextureFile
 
 	private static byte[] Decode( byte[] data, int width, int height )
 	{
-		// Sprite_DecodeRows (US 待核): each row has a byte length, then signed literal/repeat packets.
+		// Sprite_DecodeRows (US address pending): each row has a byte length, then signed literal/repeat packets.
 		var pixels = new byte[checked(width * height)];
 		int source = 0;
 		for ( int row = 0; row < height; row++ )

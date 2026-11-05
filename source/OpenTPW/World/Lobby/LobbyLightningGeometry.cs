@@ -2,7 +2,7 @@ using N = System.Numerics;
 
 namespace OpenTPW;
 
-/// <summary>Seeded recursive subdivision and side branches from Lightning_Subdivide (US 待核)/Lightning_SubdivideBranch (US 0x57e810).</summary>
+/// <summary>Seeded recursive subdivision and side branches from Lightning_Subdivide (US address pending)/Lightning_SubdivideBranch (US 0x57e810).</summary>
 internal sealed class LobbyLightningGeometry
 {
 	internal sealed record Stroke( int Depth, List<Vector3> Points );

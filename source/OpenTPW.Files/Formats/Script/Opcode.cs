@@ -1,5 +1,6 @@
-﻿namespace OpenTPW;
+namespace OpenTPW;
 
+/// <summary>RSSE opcode IDs from Script_OpcodeTable (TPI 0x9d8988), shared by both games.</summary>
 public enum Opcode
 {
 	NOP = 0,

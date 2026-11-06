@@ -8,7 +8,7 @@ public class Ride : Entity
 	{
 		var rideName = Path.GetFileNameWithoutExtension( rideArchive );
 
-		VM = new RideVM( FileSystem.OpenRead( rideArchive + "\\" + rideName + ".rse" ) );
+		VM = new RideVM( FileSystem.OpenRead( rideArchive + "\\" + rideName + ".rse" ), new RideScriptHost() );
 		var settingsFile = new SettingsFile( FileSystem.OpenRead( rideArchive + "\\" + rideName + ".sam" ) );
 
 		Log.Trace( $"Loaded ride {settingsFile.Entries.First( x => x.Key == "Info.Name" ).Value}" );

@@ -16,6 +16,53 @@ public partial class ModelFile : BaseFormat
 	/// </summary>
 	public List<Node> Nodes { get; private set; } = [];
 
+	/// <summary>
+	/// Texture name of each entry in the frame list, without extension.
+	/// </summary>
+	public string[] TextureNames { get; private set; } = [];
+
+	/// <summary>
+	/// The terrain of a level's base.md2, or null.
+	/// </summary>
+	public HeightfieldData? Heightfield { get; private set; }
+
+	/// <summary>
+	/// A grid of cells with heights at their corners, from the structure at header offset 0x6C, as
+	/// Terrain_LoadBase (US address pending) reads it. Theme Park Inc's game.exe loads the same structure
+	/// (TPI 0x4a4dd0), so both games use this reader.
+	/// </summary>
+	public class HeightfieldData
+	{
+		/// <summary>
+		/// Cell size along X and Z (10 in every level).
+		/// </summary>
+		public float CellSizeX { get; set; }
+		public float CellSizeZ { get; set; }
+
+		/// <summary>
+		/// Cells along X and Z.
+		/// </summary>
+		public int Width { get; set; }
+		public int Depth { get; set; }
+		public float MinHeight { get; set; }
+		public float MaxHeight { get; set; }
+
+		/// <summary>
+		/// Corner heights (Y), (Width + 1) * (Depth + 1), row by row along Z.
+		/// </summary>
+		public float[] Heights { get; set; } = [];
+
+		/// <summary>
+		/// Cell attributes, Width * Depth, row by row along Z. Byte 0 bit 0: water;
+		/// byte 2: ground texture, an index into <see cref="TextureNames"/>.
+		/// </summary>
+		public uint[] Cells { get; set; } = [];
+
+		public float HeightAt( int x, int z ) => Heights[z * (Width + 1) + x];
+		public bool IsWater( int x, int z ) => (Cells[z * Width + x] & 1) != 0;
+		public int TextureAt( int x, int z ) => (int)((Cells[z * Width + x] >> 16) & 0xFF);
+	}
+
 	public ModelFile( Stream stream )
 	{
 		ReadFromStream( stream );
@@ -169,6 +216,37 @@ public partial class ModelFile : BaseFormat
 		return name.ToString();
 	}
 
+	private static HeightfieldData ReadHeightfield( BinaryReader reader, uint offset )
+	{
+		// +0x04 and +0x06 hold the corner and cell counts as u16; +0x08 is unknown
+		reader.BaseStream.Seek( offset + 0x10, SeekOrigin.Begin );
+
+		var heightfield = new HeightfieldData
+		{
+			CellSizeX = reader.ReadSingle(),
+			CellSizeZ = reader.ReadSingle(),
+			Width = (int)reader.ReadUInt32(),
+			Depth = (int)reader.ReadUInt32(),
+			MinHeight = reader.ReadSingle(),
+			MaxHeight = reader.ReadSingle()
+		};
+
+		uint heightPtr = reader.ReadUInt32();
+		uint cellPtr = reader.ReadUInt32();
+
+		reader.BaseStream.Seek( heightPtr, SeekOrigin.Begin );
+		heightfield.Heights = new float[(heightfield.Width + 1) * (heightfield.Depth + 1)];
+		for ( int i = 0; i < heightfield.Heights.Length; i++ )
+			heightfield.Heights[i] = reader.ReadSingle();
+
+		reader.BaseStream.Seek( cellPtr, SeekOrigin.Begin );
+		heightfield.Cells = new uint[heightfield.Width * heightfield.Depth];
+		for ( int i = 0; i < heightfield.Cells.Length; i++ )
+			heightfield.Cells[i] = reader.ReadUInt32();
+
+		return heightfield;
+	}
+
 	private static Matrix4x4 ReadMatrix( BinaryReader reader )
 	{
 		var m = new float[16];
@@ -235,6 +313,19 @@ public partial class ModelFile : BaseFormat
 					FrameNameOff = reader.ReadUInt32()
 				} );
 			}
+
+			TextureNames = new string[frameCount];
+			for ( int i = 0; i < frameCount; i++ )
+			{
+				reader.BaseStream.Seek( frameData[i].FrameNameOff, SeekOrigin.Begin );
+				var texName = Encoding.ASCII.GetString( reader.ReadBytes( 20 ) ).Split( '\0' )[0];
+				TextureNames[i] = Path.GetFileNameWithoutExtension( texName );
+			}
+
+			reader.BaseStream.Seek( 0x6C, SeekOrigin.Begin );
+			uint heightfieldPtr = reader.ReadUInt32();
+			if ( heightfieldPtr != 0 )
+				Heightfield = ReadHeightfield( reader, heightfieldPtr );
 
 			reader.BaseStream.Seek( 0x70, SeekOrigin.Begin );
 			uint meshPtr = reader.ReadUInt32();

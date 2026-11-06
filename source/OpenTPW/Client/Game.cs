@@ -56,6 +56,7 @@ internal static class Game
 		//
 		Render = new();
 		using var window = Render.Window;
+		using var renderer = Render;
 
 		//
 		// Create level
@@ -70,8 +71,6 @@ internal static class Game
 		using var audio = new AudioSystem( unchecked((uint)DateTimeOffset.UtcNow.ToUnixTimeSeconds()) );
 		audio.ConfigureQuality( LobbyOptionsSettings.Current.AudioQuality );
 		if ( LobbyOptionsSettings.Current.Preferences is { } preferences ) audio.ConfigurePreferences( preferences );
-		long previewVoice = 0;
-		ModKit.GlobalNamespace.PreviewSound = path => { audio.Stop( previewVoice ); previewVoice = audio.PlayFile( path ); };
 		var level = new Level( "jungle", audio );
 #if DEBUG
 		LobbyAcceptance? acceptance = options.TryGetValue( "--verify-lobby", out var output ) ? new( level, output ) : null;
@@ -83,6 +82,12 @@ internal static class Game
 		// Run game loop
 		//
 		Render.OnUpdate += level.Update;
+		Render.PrepareResources += () =>
+		{
+			level.IslandMenu?.PrepareText();
+			level.EnvironmentSky?.PrepareTexture();
+			LobbyUiText.PrepareFrame();
+		};
 #if DEBUG
 		if ( acceptance != null ) Render.OnUpdate += acceptance.Update;
 		if ( optionsAcceptance != null ) Render.OnUpdate += optionsAcceptance.Update;
@@ -92,7 +97,6 @@ internal static class Game
 		try { Render.Run(); }
 		finally
 		{
-			ModKit.GlobalNamespace.PreviewSound = null;
 			Device.WaitForIdle();
 		}
 		Log.Info( "Render loop stopped" );

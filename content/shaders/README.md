@@ -1,6 +1,6 @@
 # Shader sources and precompiled SDL GPU programs
 
-The `.shader` files and `includes/3d.vert` remain the inputs to the current Veldrid renderer. Each has a corresponding `.hlsl` source with `VSMain` and `PSMain` entry points. These programs are prepared for the SDL GPU renderer; they are not loaded by the current renderer.
+The SDL GPU renderer loads the precompiled DXIL or SPIR-V programs. Each `.hlsl` source has `VSMain` and `PSMain` entry points. The legacy `.shader` files and `includes/3d.vert` are retained as reference inputs to the binding verifier; the game no longer preprocesses or compiles them at run time.
 
 ## Rebuild
 

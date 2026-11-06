@@ -1,6 +1,5 @@
 using System.Runtime.InteropServices;
 using SDL;
-using Veldrid;
 using static SDL.SDL3;
 
 namespace OpenTPW;
@@ -17,7 +16,7 @@ public sealed unsafe class Window : IDisposable
 		get
 		{
 			int width, height;
-			Check( SDL_GetWindowSize( Handle, &width, &height ) );
+			Check( SDL_GetWindowSizeInPixels( Handle, &width, &height ) );
 			return new Point2( width, height );
 		}
 	}
@@ -48,17 +47,6 @@ public sealed unsafe class Window : IDisposable
 		catch { Dispose(); throw; }
 	}
 
-	/// <summary>Veldrid creates its Vulkan surface from SDL3's native Windows properties.</summary>
-	public SwapchainSource CreateSwapchainSource()
-	{
-		if ( !OperatingSystem.IsWindows() ) throw new PlatformNotSupportedException( "The current renderer requires Win32 window handles." );
-		var properties = SDL_GetWindowProperties( Handle );
-		var hwnd = SDL_GetPointerProperty( properties, SDL_PROP_WINDOW_WIN32_HWND_POINTER, IntPtr.Zero );
-		var instance = SDL_GetPointerProperty( properties, SDL_PROP_WINDOW_WIN32_INSTANCE_POINTER, IntPtr.Zero );
-		if ( hwnd == IntPtr.Zero || instance == IntPtr.Zero ) throw new InvalidOperationException( $"SDL3 window handles unavailable: {SDL_GetError()}" );
-		return SwapchainSource.CreateWin32( hwnd, instance );
-	}
-
 	public InputSnapshot PumpEvents()
 	{
 		snapshot.BeginFrame();
@@ -71,7 +59,7 @@ public sealed unsafe class Window : IDisposable
 			// All event structures handled here carry windowID at the same offset.
 			if ( ev.window.windowID != SDL_GetWindowID( Handle ) ) continue;
 			if ( type == SDL_EventType.SDL_EVENT_WINDOW_CLOSE_REQUESTED ) Close();
-			else if ( type == SDL_EventType.SDL_EVENT_WINDOW_RESIZED ) resized = true;
+			else if ( type is SDL_EventType.SDL_EVENT_WINDOW_RESIZED or SDL_EventType.SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED ) resized = true;
 			else snapshot.Process( ev );
 		}
 		float x, y;

@@ -2,15 +2,24 @@
 
 namespace OpenTPW.Tests;
 
+/// <summary>Loads every game shader using its production SDL resource-count declarations.</summary>
 [TestClass]
+[DoNotParallelize]
 public class ShaderTests
 {
 	[TestMethod]
-	public void PreprocessTest()
+	public void EveryPrecompiledGameProgramLoads()
 	{
-		Log = new();
-
-		var result = ShaderPreprocessor.PreprocessShader( Content.GetPath( "shaders/test.shader" ) );
-		Assert.IsTrue( result.VertexShader.Length > 0 && result.FragmentShader.Length > 0 );
+		using var device = OpenTPW.Graphics.GpuDevice.Create();
+		Global.Device = device;
+		try
+		{
+			foreach ( string name in new[] { "3d", "water", "lobby-model", "test", "unlit", "lobby-sky", "blit", "ui", "ui-lit", "lobby-particles", "lobby-weather" } )
+			{
+				var shader = new Shader( Content.GetPath( $"shaders/{name}.shader" ) );
+				Assert.AreEqual( name, shader.Program.Name );
+			}
+		}
+		finally { Shader.ReleasePrograms(); }
 	}
 }

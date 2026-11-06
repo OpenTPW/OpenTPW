@@ -36,7 +36,8 @@ internal sealed class Settings
 	[JsonConverter( typeof( PointConverter ) )]
 	public Point GameWindowSize { get; set; } = new( 1280, 720 );
 
-	public string PreferredBackend { get; set; } = "Vulkan";
+	/// <summary>Legacy serialized field retained for old settings; SDL GPU chooses its supported backend automatically.</summary>
+	public string PreferredBackend { get; set; } = "Automatic";
 
 	public string LobbyQuality { get; set; } = "med";
 

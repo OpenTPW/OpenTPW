@@ -14,6 +14,10 @@ internal sealed class LobbyKeyParticlePanel : Panel
 	private readonly SpriteTextureFile sprites;
 	private readonly int tileWidth, tileHeight, atlasWidth, atlasHeight;
 	private bool affordable;
+	private Rectangle? hoveredButton;
+	private double hoverStarted;
+	private int hoverEmitterCount;
+	internal bool ButtonEffectActive => hoveredButton != null;
 	internal LobbyKeyParticlePanel()
 	{
 		quality = LobbyQuality.Load();
@@ -39,15 +43,24 @@ internal sealed class LobbyKeyParticlePanel : Panel
 			}
 		}
 		var material = new Material( "content/shaders/lobby-particles.shader", MaterialFlags.DisableDepth | MaterialFlags.DisableCulling | MaterialFlags.Additive );
-		material.Set( "Color", new Texture( rgba, atlasWidth, atlasHeight, TextureFlags.PointFilter ), SamplerType.Point );
+		material.Set( "Color", new Texture( rgba, atlasWidth, atlasHeight, TextureFlags.PointFilter ), SamplerType.PointMinLinearMag );
 		model = new Model( vertices, material );
 	}
 	internal void IntroductionKey() => state.Start( 87, 90000, 7000 );
-	/// <summary>MessageTag1 at the integer centre of a UI rectangle (Ui_PlayEffectAtElement (US address pending): x × 100000 / 2048, y × 75000 / 1536).</summary>
-	internal void MessageTag( Rectangle units )
+	/// <summary>Starts and stops the authored Button effect when the pointer enters or leaves a button.</summary>
+	internal void HoverButton( Rectangle? bounds )
 	{
-		int left = (int)units.X, top = (int)units.Y, right = (int)(units.X + units.Width), bottom = (int)(units.Y + units.Height);
-		state.Start( 90, (left + (right - left) / 2) * 100000 / 2048, (top + (bottom - top) / 2) * 75000 / 1536 );
+		// Ui_HandleGlobalMessage (US 0x485780) suppresses the effect when popup help is disabled.
+		if ( Level.Current?.Audio is { TooltipsEnabled: false } ) bounds = null;
+		if ( hoveredButton == bounds ) return;
+		state.Stop( 35 );
+		hoveredButton = bounds;
+		if ( bounds is not { } b ) return;
+		// ButtonSpark_Start (US 0x5ed920) selects 2..5 effect-35 emitters from normalized button area.
+		float area = b.Width / 2048f * (b.Height / 1536f);
+		hoverEmitterCount = Math.Clamp( 2 - (int)((area - 0.0016f) / 0.0051f * -3), 2, 5 );
+		hoverStarted = Time.Now;
+		for ( int i = 0; i < hoverEmitterCount; i++ ) state.Start( 35, 0, 0 );
 	}
 	// Ui_Function_TW_4b6a30 (US address pending) uses the integer centre of element 0x1e0ea (554,170)-(990,437).
 	internal void EnterIsland() => state.Start( 98, 50000, (170 + (437 - 170) / 2) * 75000 / 1536 );
@@ -60,7 +73,35 @@ internal sealed class LobbyKeyParticlePanel : Panel
 		else state.Stop( 97 );
 	}
 	// The particle clock uses the frontend's elapsed milliseconds, independently of capped camera dt.
-	internal void Advance( float seconds ) { state.SetDensity( quality.ParticleDensity ); state.Advance( seconds ); }
+	internal void Advance( float seconds )
+	{
+		state.SetDensity( quality.ParticleDensity );
+		if ( hoveredButton is { } bounds )
+		{
+			// ButtonSpark_Update (US 0x5ed770) expands the ellipse over 400 ms and rotates at 0.4 turns per interval.
+			float t = (float)((Time.Now - hoverStarted) / 0.4);
+			float radius = (1 + 2 * Math.Clamp( t, 0, 1 )) / 3;
+			float cx = (bounds.X + bounds.Width / 2 - 1024) / 1024;
+			float cy = (bounds.Y + bounds.Height / 2 - 768) / 768;
+			for ( int i = 0; i < hoverEmitterCount; i++ )
+			{
+				float phase = i / (float)hoverEmitterCount + t * 0.4f;
+				int angle = (int)((phase - MathF.Floor( phase )) * 512) & 511;
+				float sin = (int)(Math.Sin( angle * Math.Tau / 512 ) * 256) / 256f;
+				float cos = (int)(Math.Sin( ((angle + 128) & 511) * Math.Tau / 512 ) * 256) / 256f;
+				int x = (int)((cx + bounds.Width / 2048 * radius * sin + 1) * 50000);
+				int z = (int)((cy - bounds.Height / 1536 * radius * cos + 1) * 37500);
+				state.MoveButtonEmitter( i, x, z );
+			}
+		}
+		state.Advance( seconds );
+	}
+	/// <summary>
+	/// Screen position in retail particle units. Particle_DrawScreenEffect (US address pending) uses integer divisors
+	/// 49 and 37, followed by Render_DrawSpriteQuads (US 0x57c620) scaling by 1/1024. These differ from UI design-unit
+	/// divisors; retaining the reviewed LobbyFollowup mapping keeps the effect on the button outline.
+	/// </summary>
+	internal static (float X, float Y) ScreenPosition( int x, int z ) => (((x - 3125) * 16 / 49) / 1024f, ((z * 16 - 37500) / 37) / 1024f);
 	protected override void OnRender()
 	{
 		Array.Clear( vertices );
@@ -72,9 +113,7 @@ internal sealed class LobbyKeyParticlePanel : Panel
 			float aspect = (float)frame.Width / frame.Height;
 			float left = ((index % 16) * tileWidth + 1f) / atlasWidth, top = ((index / 16) * tileHeight + 1f) / atlasHeight;
 			float width = (float)frame.Width / atlasWidth, height = (float)frame.Height / atlasHeight;
-			// Particle_DrawScreenEffect (US address pending)'s integer screen coordinates and size, consumed by Render_DrawSpriteQuads (US 0x57c620).
-			float x = ((particle.X - 3125) * 16 / 50) / 1024f;
-			float y = ((particle.Z * 16 - 37500) * 2 / 75) / 1024f;
+			var (x, y) = ScreenPosition( particle.X, particle.Z );
 			float halfHeight = (particle.Size / 64) / 2048f;
 			float angle = (particle.Angle >> 8) * (MathF.Tau / 256);
 			float c = MathF.Cos( angle ), s = MathF.Sin( angle );

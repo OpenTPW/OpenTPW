@@ -1,5 +1,4 @@
 using OpenTPW.UI;
-using Veldrid;
 
 namespace OpenTPW;
 
@@ -108,7 +107,7 @@ internal sealed class LobbyOptionsPanel : Panel
 			Add( 0xc1 + i, i < 5 ? 0x3aec1u : 0x211ef0a0u,
 				Box( i < 5 ? 1786 : 1807, buttonY[i], i < 5 ? 1930 : 1910, buttonY[i] + 102 ) );
 		}
-		// Hardware/software and adapter selection have no equivalent in the current Vulkan renderer.
+		// Hardware/software and adapter selection are managed by SDL GPU rather than the retail options.
 		Add( 0xd2, 0x211ef0a0, Box( 521, 190, 624, 292 ) );
 		Add( 0xd3, 0x211ef0a0, Box( 1140, 190, 1242, 292 ) );
 		void Slider( int id, int top, UIStrings name, IEnumerable<string> values, bool audio )
@@ -274,6 +273,7 @@ internal sealed class LobbyOptionsPanel : Panel
 			// instead display UITEXT 0x193 (RestartGame); they are not a timed display confirmation.
 			LobbyQuality.Apply( new[] { "low", "med", "high" }[draft.Graphics] );
 			level.Audio?.ConfigureQuality( draft.AudioQuality );
+			level.Audio?.ConfigurePreferences( preferences.Preferences );
 			Settings.Default.Language = draft.Language; Settings.Default.LanguagePack = draft.LanguagePack;
 			if ( level.PlayerMenu?.Profile is { } profile ) preferences.Preferences.CopyTo( profile.Preferences, 0 );
 			if ( level.Advisor != null ) level.Advisor.Enabled = preferences.Enabled( PlayerProfileFile.Preference.Advisor );

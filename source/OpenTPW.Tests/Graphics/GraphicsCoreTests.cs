@@ -315,6 +315,59 @@ public sealed unsafe class GraphicsCoreTests
 	}
 
 	[TestMethod]
+	public void SharedTextureUploadBuildsUsableMipLevels()
+	{
+		byte[] pixels = [255, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255, 255, 255, 255, 255];
+		using var texture = TexturePixels.Create( device, pixels, 2, 2 );
+		using var target = new RenderTarget( device, 1, 1, Rgba, depth: false );
+		Assert.AreEqual( 2u, texture.Levels );
+		var result = Render( target, GpuClear.ToColor( 0, 0, 0, 1 ), ( frame, pass ) =>
+			pass.Draw( Pipeline( target, ui ), frame.Upload( FullScreen ), 6,
+				[new TextureBinding( texture, device.GetSampler( SamplerPreset.Point ) )] ) );
+		AssertPixel( Pixel( result, target, 0, 0 ), 0.5, 0.5, 0.5, 1, "generated one-pixel mip" );
+	}
+
+	[TestMethod]
+	public void SharedMeshPreservesEarlierAnimatedDrawsAndMaterialBindings()
+	{
+		using var red = Texture( 1, 1, 0xff0000ff );
+		using var green = Texture( 1, 1, 0x00ff00ff );
+		using var target = new RenderTarget( device, 16, 8, Rgba, depth: false );
+		using var mesh = new MeshGeometry<MeshVertex>( device, FullScreen );
+		var material = new MeshMaterial( device, ui, MeshVertex.Layout, new MeshRenderState
+			{ Blend = GpuBlend.None, Cull = GpuCull.None, DepthTest = false, DepthWrite = false } );
+		material.Prepare( target );
+		for ( int i = 0; i < 32; i++ )
+		{
+			var result = Render( target, GpuClear.ToColor( 0, 0, 0, 1 ), ( frame, pass ) =>
+			{
+				mesh.UpdateVertices( Quad( -1, 1, 0, -1 ) );
+				material.SetTextures( [new TextureBinding( red, device.GetSampler( SamplerPreset.Point ) )] );
+				mesh.Draw( frame, pass, material );
+				mesh.UpdateVertices( Quad( 0, 1, 1, -1 ) );
+				material.SetTextures( [new TextureBinding( green, device.GetSampler( SamplerPreset.Point ) )] );
+				mesh.Draw( frame, pass, material );
+			} );
+			AssertPixel( Pixel( result, target, 3, 3 ), 1, 0, 0, 1, $"earlier mesh draw {i}" );
+			AssertPixel( Pixel( result, target, 12, 3 ), 0, 1, 0, 1, $"later mesh draw {i}" );
+		}
+	}
+
+	[TestMethod]
+	public void CancelledFrameAllowsCleanupAndTheNextFrame()
+	{
+		using var target = new RenderTarget( device, 4, 4, Rgba, depth: false );
+		var unused = Texture( 1, 1, 0xffffffff );
+		var frame = device.BeginFrame();
+		frame.BeginPass( target, GpuClear.ToColor( 1, 0, 0, 1 ) );
+		unused.Dispose();
+		frame.Cancel();
+		Assert.ThrowsExactly<InvalidOperationException>( () => frame.Submit() );
+		var result = Render( target, GpuClear.ToColor( 0, 1, 0, 1 ), ( _, _ ) => { } );
+		AssertPixel( Pixel( result, target, 1, 1 ), 0, 1, 0, 1, "frame after cancellation" );
+	}
+
+	[TestMethod]
 	public void FramesPresentToAnAttachedWindow()
 	{
 		Assert.IsTrue( SDL3.SDL_InitSubSystem( SDL_InitFlags.SDL_INIT_VIDEO ), SDL3.SDL_GetError() );

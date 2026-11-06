@@ -146,12 +146,29 @@ internal sealed class LobbyAcceptance
 				level.PlayerMenu!.Select( empty ); Next( 11 ); break;
 			case 11 when elapsed > 0.5:
 				Capture( "lobby-naming" );
-				// Hover OK through the input snapshot: help 360 and its MessageTag1 effect (the placing handler's US address is pending).
+				// Hover OK through the input snapshot: help 360 and the type-2 button effect.
 				Input.PointerOverride = new Vector2( (1376 + 1460) / 2f * Screen.Size.X / 2048, (524 + 608) / 2f * Screen.Size.Y / 1536 );
 				Next( 30 ); break;
 			case 30 when elapsed > 0.3:
 				Capture( "lobby-naming-help" );
 				Check( level.Help?.Shown == 360, "hovering OK shows UIHELPTEXT 360" );
+				if ( level.Audio is { } audio && level.KeyEffects is { } effects )
+				{
+					byte[] saved = audio.SnapshotPreferences();
+					try
+					{
+						var profile = PlayerProfileFile.Create( 0, saved );
+						profile.SetEnabled( PlayerProfileFile.Preference.Tooltips, true );
+						audio.ConfigurePreferences( profile.Preferences );
+						effects.HoverButton( LobbyNamingPanel.Box( 1376, 524, 1460, 608 ) );
+						Check( effects.ButtonEffectActive, "enabling Popup help allows the button effect" );
+						profile.SetEnabled( PlayerProfileFile.Preference.Tooltips, false );
+						audio.ConfigurePreferences( profile.Preferences );
+						effects.HoverButton( LobbyNamingPanel.Box( 1376, 524, 1460, 608 ) );
+						Check( !effects.ButtonEffectActive, "disabling Popup help stops the button effect" );
+					}
+					finally { audio.ConfigurePreferences( saved ); }
+				}
 				Input.PointerOverride = null; level.PlayerMenu!.Cancel();
 				Check( level.Help?.Shown == -1, "closing the naming dialog hides the help strip" );
 				Check( level.PlayerMenu.Browsing, "naming cancellation returns to profile selection without creating data" ); Next( 12 ); break;

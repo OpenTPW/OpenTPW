@@ -1,10 +1,9 @@
 using System.Runtime.InteropServices;
 using SDL;
-using Veldrid;
 
 namespace OpenTPW;
 
-/// <summary>SDL3 events adapted to the temporary Veldrid input contract shared with ModKit.</summary>
+/// <summary>SDL3 events retained as game-owned input transitions and text.</summary>
 internal sealed unsafe class SdlInputSnapshot : InputSnapshot
 {
 	private readonly List<KeyEvent> keys = new();

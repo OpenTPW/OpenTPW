@@ -8,5 +8,7 @@ public enum SamplerType
 
 	AnisotropicWrap,
 	AnisotropicRepeat,
-	PointWrap
+	PointWrap,
+	/// <summary>Render_SetD3dState (US 0x567620): screen sprites use point minification and linear magnification.</summary>
+	PointMinLinearMag
 }

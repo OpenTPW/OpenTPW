@@ -27,14 +27,9 @@ public class LobbyWeatherTests
 	[TestMethod]
 	public void WeatherUsesSourceAlphaPlusDestinationAndOtherMaterialsKeepTheirBlend()
 	{
-		var weather = Material.BlendState( MaterialFlags.Additive ).AttachmentStates[0];
-		Assert.AreEqual( Veldrid.BlendFactor.SourceAlpha, weather.SourceColorFactor );
-		Assert.AreEqual( Veldrid.BlendFactor.One, weather.DestinationColorFactor );
-		var flash = Material.BlendState( MaterialFlags.InvertDestination ).AttachmentStates[0];
-		Assert.AreEqual( Veldrid.BlendFactor.InverseDestinationColor, flash.SourceColorFactor );
-		Assert.AreEqual( Veldrid.BlendFactor.Zero, flash.DestinationColorFactor );
-		Assert.AreEqual( Veldrid.BlendFactor.InverseSourceAlpha,
-			Material.BlendState( MaterialFlags.None ).AttachmentStates[0].DestinationColorFactor );
+		Assert.AreEqual( OpenTPW.Graphics.GpuBlend.Additive, Material.BlendState( MaterialFlags.Additive ) );
+		Assert.AreEqual( OpenTPW.Graphics.GpuBlend.InvertDestination, Material.BlendState( MaterialFlags.InvertDestination ) );
+		Assert.AreEqual( OpenTPW.Graphics.GpuBlend.Alpha, Material.BlendState( MaterialFlags.None ) );
 	}
 
 	[TestMethod]

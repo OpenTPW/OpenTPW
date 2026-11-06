@@ -1,4 +1,3 @@
-﻿using Veldrid;
 using static SDL.SDL3;
 
 namespace OpenTPW;

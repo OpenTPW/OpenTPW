@@ -28,15 +28,9 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="ImGui.NET" Version="1.87.2" />
 		<PackageReference Include="ppy.SDL3-CS" Version="2026.1002.1" />
-		<PackageReference Include="SharpText.Veldrid" Version="0.3.1" />
 		<PackageReference Include="SharpZipLib" Version="1.4.2" />
 		<PackageReference Include="StbImageSharp" Version="2.27.8" />
-		<PackageReference Include="Veldrid" Version="4.9.0" />
-		<PackageReference Include="Veldrid.ImGui" Version="5.72.0" />
-		<PackageReference Include="Veldrid.SDL2" Version="4.8.0" />
-		<PackageReference Include="Veldrid.SPIRV" Version="1.0.14" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -44,7 +38,7 @@
 	  <ProjectReference Include="..\OpenTPW.Files\OpenTPW.Files.csproj" />
 	  <ProjectReference Include="..\OpenTPW.Audio\OpenTPW.Audio.csproj" />
 	  <ProjectReference Include="..\OpenTPW.Scripting\OpenTPW.Scripting.csproj" />
-	  <ProjectReference Include="..\OpenTPW.ModKit\OpenTPW.ModKit.csproj" />
+	  <ProjectReference Include="..\OpenTPW.Graphics\OpenTPW.Graphics.csproj" />
 	</ItemGroup>
 
 </Project>

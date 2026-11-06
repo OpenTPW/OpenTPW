@@ -1,6 +1,5 @@
 #if DEBUG
-using System.Runtime.InteropServices;
-using Veldrid;
+using System.Text.Json;
 
 namespace OpenTPW;
 
@@ -15,6 +14,9 @@ internal sealed class FrameCapture
 	private readonly int count;
 	private double started = -1;
 	private int captured;
+	/// <summary>Source input-frame index and capture clock for a consecutive resolved-frame readback.</summary>
+	private sealed record FrameStamp( int Index, ulong SourceFrame, double CaptureSeconds );
+	private readonly List<FrameStamp> stamps = [];
 
 	internal FrameCapture( string output, double warmUpSeconds = 20, int count = 30 )
 	{
@@ -24,15 +26,22 @@ internal sealed class FrameCapture
 	}
 
 	/// <summary>
-	/// Called from the update of the next frame: by then the renderer has waited for the previous
-	/// frame's fence, so the resolved target holds exactly that frame.
+	/// Called before recording the next frame. Download queues behind earlier submissions and waits,
+	/// so the resolved target contains the last submitted frame even with multiple GPU frames in flight.
 	/// </summary>
 	internal void Update()
 	{
 		if ( started < 0 ) started = Time.Now;
 		if ( Time.Now - started < warmUpSeconds ) return;
 		SaveBmp( Path.Join( output, $"frame-{captured:D3}.bmp" ) );
+		stamps.Add( new( captured, Input.FrameNumber - 1, Time.Now ) );
 		if ( ++captured < count ) return;
+		File.WriteAllText( Path.Join( output, "capture.json" ), JsonSerializer.Serialize( new
+		{
+			width = Render.ResolveColorTexture.Width, height = Render.ResolveColorTexture.Height,
+			view = LobbyCameraMode.FixedViewPath, frames = stamps,
+			assembly = typeof(FrameCapture).Assembly.ManifestModule.ModuleVersionId
+		}, new JsonSerializerOptions { WriteIndented = true } ) );
 		Log.Info( $"Captured {count} consecutive frames to {output}" );
 		Window.Current.Close();
 	}
@@ -41,26 +50,16 @@ internal sealed class FrameCapture
 	internal static void SaveBmp( string path )
 	{
 		var source = Render.ResolveColorTexture;
-		using var staging = Device.ResourceFactory.CreateTexture( TextureDescription.Texture2D( source.Width, source.Height,
-			1, 1, PixelFormat.B8_G8_R8_A8_UNorm, TextureUsage.Staging ) );
-		using var commands = Device.ResourceFactory.CreateCommandList();
-		commands.Begin(); commands.CopyTexture( source, staging ); commands.End();
-		Device.SubmitCommands( commands ); Device.WaitForIdle();
-		var mapped = Device.Map( staging, MapMode.Read );
-		try
-		{
-			int stride = checked((int)source.Width * 4), height = checked((int)source.Height);
-			using var stream = File.Create( path );
-			using var writer = new BinaryWriter( stream );
-			// A negative DIB height preserves the top-first GPU rows without an extra image flip.
-			writer.Write( (ushort)0x4d42 ); writer.Write( 54 + stride * height ); writer.Write( 0 ); writer.Write( 54 );
-			writer.Write( 40 ); writer.Write( (int)source.Width ); writer.Write( -height );
-			writer.Write( (ushort)1 ); writer.Write( (ushort)32 ); writer.Write( 0 ); writer.Write( stride * height );
-			writer.Write( 0 ); writer.Write( 0 ); writer.Write( 0 ); writer.Write( 0 );
-			var row = new byte[stride];
-			for ( int y = 0; y < height; y++ ) { Marshal.Copy( mapped.Data + checked((int)(y * mapped.RowPitch)), row, 0, stride ); writer.Write( row ); }
-		}
-		finally { Device.Unmap( staging ); }
+		var pixels = source.Download();
+		int stride = checked((int)source.Width * 4), height = checked((int)source.Height);
+		using var stream = File.Create( path );
+		using var writer = new BinaryWriter( stream );
+		// The resolved target is BGRA8, so its top-first bytes directly match a negative-height BMP.
+		writer.Write( (ushort)0x4d42 ); writer.Write( 54 + stride * height ); writer.Write( 0 ); writer.Write( 54 );
+		writer.Write( 40 ); writer.Write( (int)source.Width ); writer.Write( -height );
+		writer.Write( (ushort)1 ); writer.Write( (ushort)32 ); writer.Write( 0 ); writer.Write( stride * height );
+		writer.Write( 0 ); writer.Write( 0 ); writer.Write( 0 ); writer.Write( 0 );
+		writer.Write( pixels );
 	}
 }
 #endif

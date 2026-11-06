@@ -22,6 +22,8 @@ public sealed class AudioSystem : IDisposable
 	public string? Failure { get; }
 	private readonly float[] channelVolumes = new float[4];
 	private byte[] currentPreferences = new byte[39];
+	/// <summary>Current player preference for popup help, including the button-hover effect.</summary>
+	internal bool TooltipsEnabled => currentPreferences[32 + (int)PlayerProfileFile.Preference.Tooltips] != 0;
 	/// <summary>Snapshot the live options for modal preview rollback, including disabled channels' stored volumes.</summary>
 	public byte[] SnapshotPreferences() => (byte[])currentPreferences.Clone();
 

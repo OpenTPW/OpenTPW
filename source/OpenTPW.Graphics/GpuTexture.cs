@@ -38,7 +38,9 @@ public sealed unsafe class GpuTexture : IDisposable
 	/// <summary>A sampled texture, by default 8-bit RGBA with one mip level.</summary>
 	public static GpuTexture Create2D( GpuDevice device, uint width, uint height,
 		SDL_GPUTextureFormat format = SDL_GPUTextureFormat.SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM, uint levels = 1 )
-		=> new( device, width, height, levels, format, SDL_GPUTextureUsageFlags.SDL_GPU_TEXTUREUSAGE_SAMPLER, SDL_GPUSampleCount.SDL_GPU_SAMPLECOUNT_1 );
+		// SDL generates mip levels by rendering into them; sampled-only storage lacks the target views.
+		=> new( device, width, height, levels, format, SDL_GPUTextureUsageFlags.SDL_GPU_TEXTUREUSAGE_SAMPLER |
+			(levels > 1 ? SDL_GPUTextureUsageFlags.SDL_GPU_TEXTUREUSAGE_COLOR_TARGET : 0), SDL_GPUSampleCount.SDL_GPU_SAMPLECOUNT_1 );
 
 	internal static GpuTexture CreateTarget( GpuDevice device, uint width, uint height, SDL_GPUTextureFormat format,
 		SDL_GPUTextureUsageFlags usage, SDL_GPUSampleCount sampleCount )
@@ -97,6 +99,18 @@ public sealed unsafe class GpuTexture : IDisposable
 			finally { SDL_UnmapGPUTransferBuffer( device.Handle, (SDL_GPUTransferBuffer*)transfer ); }
 		}
 		finally { SDL_ReleaseGPUTransferBuffer( device.Handle, (SDL_GPUTransferBuffer*)transfer ); }
+	}
+
+	/// <summary>Generates the remaining levels after level zero has been uploaded, outside any render or copy pass.</summary>
+	public void GenerateMipmaps()
+	{
+		ObjectDisposedException.ThrowIf( Handle == null, this );
+		if ( device.Recording != null ) throw new InvalidOperationException( "Generate mipmaps between frames." );
+		if ( Levels <= 1 ) return;
+		var commands = SDL_AcquireGPUCommandBuffer( device.Handle );
+		if ( commands == null ) throw GraphicsException.FromSdl( nameof(SDL_AcquireGPUCommandBuffer) );
+		SDL_GenerateMipmapsForGPUTexture( commands, Handle );
+		GraphicsException.Check( SDL_SubmitGPUCommandBuffer( commands ), nameof(SDL_SubmitGPUCommandBuffer) );
 	}
 
 	public void Dispose()

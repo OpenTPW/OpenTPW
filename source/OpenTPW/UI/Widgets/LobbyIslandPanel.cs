@@ -1,5 +1,4 @@
 using OpenTPW.UI;
-using Veldrid;
 
 namespace OpenTPW;
 
@@ -12,11 +11,9 @@ internal sealed class LobbyIslandPanel : Panel
 	public event Action? GlobeRequested;
 	public bool Active { get; set; } = true;
 	private ulong activatedFrame;
-	/// <summary>Elements whose help has already placed a MessageTag1 since the page was activated.</summary>
-	private readonly HashSet<int> tagged = new();
 	private bool helpShown;
 	// Do not let the click that left the previous page activate a newly visible control.
-	public void Activate() { Active = true; activatedFrame = Input.FrameNumber; tagged.Clear(); }
+	public void Activate() { Active = true; activatedFrame = Input.FrameNumber; }
 	public string Failure { get => error.Text; set => error.Text = value; }
 	private static Rectangle Box( float l, float t, float r, float b ) => LobbyNamingPanel.Box( l, t, r, b );
 	private static readonly Rectangle EnterBox = Box( 68, 1114, 221, 1267 ), GlobeBox = Box( 68, 946, 221, 1099 ),
@@ -117,16 +114,14 @@ internal sealed class LobbyIslandPanel : Panel
 		return inside;
 	}
 	/// <summary>
-	/// Shows the hovered element's help and, on its first help since activation, places MessageTag1 at its centre
-	/// (element event 0x11, US address pending). Mouse-enter 0x10001 (Ui_UpdatePointerHover+0xc5 (US 0x6589b4)), which the default handler FUN_0065f6d1 (US 0x65f6d1), position pending turns into help,
-	/// only goes to the element the hit test Ui_HitTest (US 0x65db25) returns; that test skips disabled elements, so a disabled arrow
-	/// leaves the pointer on the panel behind it, whose help is −1.
+	/// Ui_UpdatePointerHover (US 0x6588ef) starts the type-2 button effect on pointer entry.
+	/// Ui_HitTest (US 0x65db25) skips disabled controls, leaving help hidden behind disabled arrows.
 	/// </summary>
 	private void UpdateHelp( bool arrows )
 	{
 		if ( Level.Current?.Help is not { } help ) return;
 		int index = Array.FindIndex( helpElements, element => (arrows || !element.Arrow) && LobbyNamingPanel.Hit( element.Bounds ) );
-		if ( index >= 0 && tagged.Add( index ) ) Level.Current.KeyEffects?.MessageTag( helpElements[index].Bounds );
+		Level.Current.KeyEffects?.HoverButton( index >= 0 ? helpElements[index].Bounds : null );
 		help.Show( index >= 0 ? helpElements[index].Help : -1 );
 		helpShown = index >= 0;
 	}
@@ -134,7 +129,15 @@ internal sealed class LobbyIslandPanel : Panel
 	{
 		if ( !helpShown ) return;
 		helpShown = false;
+		Level.Current?.KeyEffects?.HoverButton( null );
 		Level.Current?.Help?.Show( -1 );
+	}
+	/// <summary>Resolve dynamic labels before the frame begins, including changes made by acceptance callbacks.</summary>
+	internal void PrepareText()
+	{
+		if ( !Active || !navigation.Active ) return;
+		count.Text = $"{navigation.Keys} x";
+		title.Text = navigation.IslandTitle;
 	}
 	protected override void OnRender()
 	{
@@ -150,11 +153,9 @@ internal sealed class LobbyIslandPanel : Panel
 			// IslandPage_Update (US 0x4b9340) shows group 0x1e0ec only while the player holds keys; IslandPage_KeyCountFormat (US 0x758194) formats L"%d x".
 			if ( navigation.Keys > 0 )
 			{
-				count.Text = $"{navigation.Keys} x";
 				count.Draw(); goldKey.Draw();
 			}
 		}
-		title.Text = navigation.IslandTitle;
 		title.Draw(); error.Draw();
 	}
 }

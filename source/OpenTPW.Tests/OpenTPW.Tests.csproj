@@ -19,6 +19,7 @@
     <ProjectReference Include="..\OpenTPW\OpenTPW.csproj" />
     <ProjectReference Include="..\OpenTPW.Graphics\OpenTPW.Graphics.csproj" />
     <ProjectReference Include="..\OpenTPW.UI\OpenTPW.UI.csproj" />
+    <ProjectReference Include="..\OpenTPW.ModKit\OpenTPW.ModKit.csproj" />
   </ItemGroup>
 
 </Project>

@@ -10,7 +10,10 @@ internal sealed class LobbyUiText : Panel
 {
 	private readonly FontFile font;
 	private readonly Rectangle units;
-	private readonly Dictionary<(string Text, uint Color), Texture> textures = new();
+	private readonly Dictionary<(string Text, uint Color, bool Shadow), Texture> textures = new();
+	private static readonly List<LobbyUiText> elements = [];
+	private (string Text, uint Color, bool Wrap, bool Shadow)? prepared;
+	private string[] preparedLines = [];
 	public string Text { get; set; }
 	public uint Color { get; set; }
 	public Vector2 Offset { get; set; }
@@ -43,6 +46,19 @@ internal sealed class LobbyUiText : Panel
 		this.units = units;
 		Text = text;
 		Color = color;
+		elements.Add( this );
+	}
+	/// <summary>Builds only changed labels before GPU recording; drawing consumes prepared textures.</summary>
+	internal static void PrepareFrame()
+	{
+		foreach ( var element in elements )
+		{
+			var key = (element.Text, element.Color, element.WordWrap, element.Shadow);
+			if ( element.prepared == key ) continue;
+			element.preparedLines = element.Lines( element.Text );
+			foreach ( string line in element.preparedLines ) if ( line.Length > 0 ) element.Prepare( line );
+			element.prepared = key;
+		}
 	}
 	/// <summary>RGBA image of a text element with its shadow (TextElement_Draw (US address pending)); the text sits at (ShadowOffset, 0).</summary>
 	internal static TextureData RenderElement( FontFile font, string text, uint color )
@@ -73,7 +89,8 @@ internal sealed class LobbyUiText : Panel
 	protected override void OnRender()
 	{
 		if ( Text.Length == 0 ) return;
-		var lines = Lines( Text );
+		if ( prepared != (Text, Color, WordWrap, Shadow) ) throw new InvalidOperationException( "UI text changed during GPU recording." );
+		var lines = preparedLines;
 		float top = units.Y / 3.2f + (units.Height / 3.2f - LineHeight * lines.Length) * VerticalAlignment / 2 + Offset.Y;
 		for ( int line = 0; line < lines.Length; line++ ) DrawLine( lines[line], top + line * LineHeight );
 	}
@@ -144,17 +161,17 @@ internal sealed class LobbyUiText : Panel
 	}
 	private Texture Prepare( string text )
 	{
-		if ( !textures.TryGetValue( (text, Color), out var texture ) )
+		if ( !textures.TryGetValue( (text, Color, Shadow), out var texture ) )
 		{
 			var image = Shadow ? RenderElement( font, text, Color ) : font.RenderString( text, Color );
-			textures.Add( (text, Color), texture = new Texture( image.Data, image.Width, image.Height, TextureFlags.PointFilter ) );
+			textures.Add( (text, Color, Shadow), texture = new Texture( image.Data, image.Width, image.Height, TextureFlags.PointFilter ) );
 		}
 		return texture;
 	}
 	private void DrawLine( string text, float y )
 	{
 		if ( text.Length == 0 ) return;
-		var texture = Prepare( text );
+		var texture = textures[(text, Color, Shadow)];
 		// The text itself keeps its place; a shadowed image starts 2 pixels further left.
 		float x = units.X / 3.2f + (units.Width / 3.2f - font.MeasureString( text )) * HorizontalAlignment / 2 + Offset.X - Scroll
 			- (Shadow ? ShadowOffset : 0);

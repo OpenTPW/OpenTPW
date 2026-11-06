@@ -22,6 +22,8 @@ internal sealed class LobbyUiModel : Panel
 		this.modelName = modelName.Replace( '\\', '/' );
 		Bounds = units;
 		states.Add( 0, Build( 0 ) );
+		// Controls can select any authored state while drawing; prepare their resources during scene creation.
+		PreloadAll();
 	}
 	/// <summary>Prepare interactive states during scene construction, outside the frame loop.</summary>
 	internal void Preload( params int[] values )
@@ -71,7 +73,7 @@ internal sealed class LobbyUiModel : Panel
 	}
 	protected override void OnRender()
 	{
-		if ( !states.TryGetValue( State, out var parts ) ) states.Add( State, parts = Build( State ) );
+		if ( !states.TryGetValue( State, out var parts ) ) throw new InvalidOperationException( $"UI model {modelName} state {State} was not preloaded." );
 		var frame = new Rectangle( Bounds.X / 3.2f, Bounds.Y / 3.2f, Bounds.Width / 3.2f, Bounds.Height / 3.2f );
 		foreach ( var part in parts )
 		{

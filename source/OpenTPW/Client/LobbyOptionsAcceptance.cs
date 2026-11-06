@@ -15,6 +15,7 @@ internal sealed class LobbyOptionsAcceptance
 	private int stage;
 	private double changed = Time.Now;
 	private int ticks;
+	private bool? previousTooltips;
 	internal LobbyOptionsAcceptance( Level level, string output )
 	{
 		this.level = level; this.output = Directory.CreateDirectory( output ).FullName;
@@ -54,18 +55,21 @@ internal sealed class LobbyOptionsAcceptance
 				SaveFileSystem = new BaseFileSystem( Path.Join( output, "test-save" ) );
 				options.PersistencePathOverride = Path.Join( output, Settings.FileName );
 				level.Menu!.Show(); level.Menu.Choose( UIStrings.Options );
+				previousTooltips = level.Audio?.TooltipsEnabled;
+				options.Activate( 0xc3 );
 				options.SetPercent( 0xd6, 100 ); options.SetPercent( 0xd8, 37 ); options.Activate( -1 );
 				stage++; ticks = 0; break;
 			case 4:
 				if ( options.Active ) break;
 				Require( LobbyOptionsSettings.Current.Graphics == 2 && LobbyQuality.Load().Preset == "high", "OK applies quality" );
+				if ( previousTooltips.HasValue ) Require( level.Audio!.TooltipsEnabled != previousTooltips.Value, "OK applies Popup help" );
 				var saved = Settings.Load( options.PersistencePathOverride! );
 				Require( saved.LobbyQuality == "high" && saved.LobbyPreferences![4] == 37, "OK publishes global preferences" );
 				File.WriteAllText( Path.Join( output, "options-acceptance.json" ), JsonSerializer.Serialize( new
 				{
 					passed = true, language = GameLanguage.Name, framesBefore = before, framesAfter = after,
 					meanBefore = before.Average(), meanAfter = after.Average(), entityCount,
-					checks = new[] { "Esc menu opens options", "Cancel restores routing", "Draft not saved", "Quality reuses resources", "OK applies quality", "OK publishes preferences" }
+					checks = new[] { "Esc menu opens options", "Cancel restores routing", "Draft not saved", "Quality reuses resources", "OK applies quality", "OK applies Popup help", "OK publishes preferences" }
 				}, new JsonSerializerOptions { WriteIndented = true } ) );
 				SaveFileSystem = originalSaves; LobbyOptionsSettings.Accept( original );
 				LobbyQuality.Apply( new[] { "low", "med", "high" }[original.Graphics] );

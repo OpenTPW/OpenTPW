@@ -30,21 +30,23 @@ public class Sky : ModelEntity
 	private float flashStrength;
 	public Vector3 Color { get => color; set => SetColor( value ); }
 
-	public unsafe void SetColor( Vector3 rgb01 )
+	public void SetColor( Vector3 rgb01 )
 	{
 		if ( color == rgb01 ) return;
 		color = rgb01;
 		if ( colorTexture == null ) return;
-		byte* rgba = stackalloc byte[4];
+		Span<byte> rgba = stackalloc byte[4];
 		rgba[0] = (byte)(Math.Clamp( color.X, 0, 1 ) * 255);
 		rgba[1] = (byte)(Math.Clamp( color.Y, 0, 1 ) * 255);
 		rgba[2] = (byte)(Math.Clamp( color.Z, 0, 1 ) * 255);
 		rgba[3] = 255;
-		Device.UpdateTexture( colorTexture.NativeTexture, (IntPtr)rgba, 4, 0, 0, 0, 1, 1, 1, 0, 0 );
+		colorTexture.NativeTexture.Upload( rgba );
 	}
 
 	public void SetIslandColour( System.Numerics.Vector3 rgb255 ) => colourState.SetTarget( rgb255 );
 	public void SetFlash( float strength ) => flashStrength = Math.Clamp( strength, 0, 1 );
+	/// <summary>Apply the latest flash before recording; texture uploads during drawing are forbidden.</summary>
+	internal void PrepareTexture() => SetColor( Background * (1 - flashStrength) + Vector3.One * flashStrength );
 
 	public override void Spawn()
 	{
@@ -101,7 +103,6 @@ public class Sky : ModelEntity
 		layerCount = quality.SkyLayers;
 		// Sky_UpdateIslandColors (US 0x5d96c0) fills gSkyObject (US 0x8c1828), position pending = sky object gSkyObject (US 0x8c1828) + 0xf60: layer zero's colours.
 		colourState.Step( layerCount > 1 );
-		SetColor( Background * (1 - flashStrength) + Vector3.One * flashStrength );
 		Position = Camera.Position;
 		for ( int layer = 0; layer < clouds.Count; layer++ )
 		{

@@ -3,7 +3,6 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using SDL;
-using Veldrid;
 
 namespace OpenTPW.Tests;
 
@@ -29,7 +28,9 @@ public unsafe class SdlInputTests
 	{
 		Assert.IsTrue( window.Exists ); Assert.IsFalse( window.Visible );
 		Assert.AreEqual( new Point2( 320, 240 ), window.Size );
-		if ( OperatingSystem.IsWindows() ) Assert.IsNotNull( window.CreateSwapchainSource() );
+		int width, height;
+		Window.Check( SDL.SDL3.SDL_GetWindowSizeInPixels( window.Handle, &width, &height ) );
+		Assert.AreEqual( window.Size, new Point2( width, height ) );
 		Window.Check( SDL.SDL3.SDL_SetWindowSize( window.Handle, 400, 300 ) );
 		window.PumpEvents(); Assert.AreEqual( new Point2( 400, 300 ), window.Size );
 		var ev = new SDL_Event { window = new SDL_WindowEvent { type = SDL_EventType.SDL_EVENT_WINDOW_CLOSE_REQUESTED, windowID = SDL.SDL3.SDL_GetWindowID( window.Handle ) } };
@@ -81,7 +82,7 @@ public unsafe class SdlInputTests
 	}
 
 	[TestMethod]
-	public void KeyRangesAndCommandKeysMapToVeldrid()
+	public void KeyRangesAndCommandKeysMapToGameKeys()
 	{
 		Assert.AreEqual( Key.A, SdlInputSnapshot.MapKey( SDL_Scancode.SDL_SCANCODE_A ) );
 		Assert.AreEqual( Key.Z, SdlInputSnapshot.MapKey( SDL_Scancode.SDL_SCANCODE_Z ) );

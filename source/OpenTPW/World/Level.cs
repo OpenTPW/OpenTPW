@@ -157,7 +157,7 @@ public class Level
 	public void Update()
 	{
 		Audio?.Update();
-		if ( Input.Pressed( Veldrid.Key.Escape ) ) HandleEscape();
+		if ( Input.Pressed( OpenTPW.Key.Escape ) ) HandleEscape();
 		// System_UpdateStateMachine (US 0x54e360) updates FUN_00599880 (US 0x599880) and the particle clock outside UI dispatch.
 		// Modal input routing must not freeze speech/lips or the authored particle chain.
 		Advisor?.Update( Time.Now );

@@ -129,6 +129,19 @@ public sealed unsafe class GpuFrame
 		if ( submitted ) throw new InvalidOperationException( "This frame has already been submitted." );
 	}
 
+	/// <summary>Discards an unsubmitted frame, including an open pass, and releases its deferred resources.</summary>
+	public void Cancel()
+	{
+		if ( submitted ) return;
+		// No native command buffer exists before Submit. Abandoning the CPU records is safe, while
+		// ending ownership lets callers clean up after a scene exception without masking that exception.
+		submitted = true;
+		open = null;
+		device.EndRecording( this );
+		foreach ( var release in releases ) release();
+		releases.Clear();
+	}
+
 	/// <summary>Replays the recorded frame into one command buffer and submits it. The frame slot keeps its fence.</summary>
 	public void Submit()
 	{

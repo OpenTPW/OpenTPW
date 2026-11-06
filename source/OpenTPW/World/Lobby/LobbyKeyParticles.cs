@@ -26,7 +26,7 @@ internal sealed class LobbyKeyParticles
 		internal short Short( int offset ) => BinaryPrimitives.ReadInt16LittleEndian( Data.AsSpan( offset, 2 ) );
 	}
 	/// <summary>Point force from the PLB influencer table; when its life ends it starts <c>Child</c> (-1 for none) at its position.</summary>
-	private sealed record Influencer( int X, int Y, int Z, int Force, int Child ) { internal int Life; }
+	private sealed record Influencer( int X, int Y, int Z, int Category, int Force, int Child ) { internal int Life; }
 	private readonly byte[] library;
 	private int density;
 	private readonly List<Emitter> emitters = new();
@@ -63,11 +63,10 @@ internal sealed class LobbyKeyParticles
 
 	internal void Start( int id, int x, int z )
 	{
-		// 90 is MessageTag1, placed on a UI element whose help is shown (Ui_PlayEffectAtElement (US address pending)).
-		if ( id is not (87 or 88 or 90 or 97 or 98) ) throw new ArgumentOutOfRangeException( nameof(id) );
+		if ( id is not (35 or 87 or 88 or 90 or 97 or 98) ) throw new ArgumentOutOfRangeException( nameof(id) );
 		var emitter = new Emitter { Id = id, Data = library.AsSpan( 8 + id * 320, 320 ).ToArray(), X = x >> 4, Y = 0, Z = z >> 4 };
-		bool animated = id is 88 or 90 or 97;
-		if ( emitter.Data[4] != (id == 97 ? 0 : id == 90 ? 3 : 4) || emitter.Data[5] != 1 || emitter.Short( 0x0e ) != 0 ||
+		bool animated = id is 35 or 88 or 90 or 97;
+		if ( emitter.Data[4] != (id is 35 or 97 ? 0 : id == 90 ? 3 : 4) || emitter.Data[5] != 1 || emitter.Short( 0x0e ) != 0 ||
 			emitter.Short( 0x94 ) != (animated ? 12 : 15) || emitter.Short( 0x96 ) != (animated ? 16 : 1) || emitter.Short( 0xa2 ) != 1000 ||
 			emitter.Int( 0x58 ) != 0 || emitter.Int( 0x98 ) != -1 )
 			throw new InvalidDataException( $"Unsupported key emitter {id}" );
@@ -83,8 +82,8 @@ internal sealed class LobbyKeyParticles
 		if ( emitter.Int( 0xb4 ) >= 0 )
 		{
 			// KeyPuff starts influencer 5, MessageTag1 influencer 3 (UIRepel: +0x40 = −1, life 30).
-			// Particle_ApplyInfluencers (US 0x520f10), position pending compares influencer +0x40 with each emitter's first byte (−1 matches all); it is applied
-			// here as a force, as for KeyPuff's −2.
+			// Particle_ApplyInfluencers (US 0x520f10) uses +0x04 as the category filter and +0x40 as
+			// the force. UIRepel targets category 3; KeyPuff targets category 4.
 			int child = emitter.Int( 0xb4 );
 			if ( child != (id == 90 ? 3 : 5) || emitter.Data[0xba] != 1 ) throw new InvalidDataException( "Unsupported key child effect" );
 			AddInfluencer( child, emitter );
@@ -117,11 +116,19 @@ internal sealed class LobbyKeyParticles
 		foreach ( var emitter in emitters.Where( emitter => emitter.Id == id ) ) emitter.Life = -2;
 	}
 
+	/// <summary>Moves the live button emitters in creation order; existing particles keep their positions.</summary>
+	internal void MoveButtonEmitter( int index, int x, int z )
+	{
+		var emitter = emitters.Where( e => e.Id == 35 && e.Life >= 0 ).Reverse().ElementAt( index );
+		emitter.X = x >> 4;
+		emitter.Z = z >> 4;
+	}
+
 	private void AddInfluencer( int id, Emitter emitter )
 	{
 		int offset = 33616 + id * 104;
 		int Read( int field ) => BinaryPrimitives.ReadInt32LittleEndian( library.AsSpan( offset + field, 4 ) );
-		influencers.Insert( 0, new Influencer( emitter.X, emitter.Y, emitter.Z, Read( 0x40 ),
+		influencers.Insert( 0, new Influencer( emitter.X, emitter.Y, emitter.Z, Read( 0x04 ), Read( 0x40 ),
 			BinaryPrimitives.ReadInt16LittleEndian( library.AsSpan( offset + 0x46, 2 ) ) ) { Life = Read( 0x4c ) } );
 	}
 
@@ -197,7 +204,8 @@ internal sealed class LobbyKeyParticles
 				if ( influence.Child >= 0 ) Start( influence.Child, influence.X << 4, influence.Z << 4 );
 				continue;
 			}
-			foreach ( var p in Particles )
+			foreach ( var emitter in emitters.Where( emitter => emitter.Data[4] == influence.Category ) )
+			foreach ( var p in emitter.Particles )
 			{
 				int dx = (influence.X - p.X) / 4, dy = (influence.Y - p.Y) / 4, dz = (influence.Z - p.Z) / 4;
 				int distance = ((dx * dx + dy * dy + dz * dz) >> 8) + 10;

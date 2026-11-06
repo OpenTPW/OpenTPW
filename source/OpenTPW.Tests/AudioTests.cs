@@ -9,6 +9,20 @@ namespace OpenTPW.Tests;
 public class AudioTests
 {
 	[TestMethod]
+	public void PopupHelpPreferenceFollowsTheCurrentProfile()
+	{
+		GameData.Require();
+		using var audio = new AudioSystem( 123, false );
+		var profile = PlayerProfileFile.Create( 0, audio.SnapshotPreferences() );
+		profile.SetEnabled( PlayerProfileFile.Preference.Tooltips, false );
+		audio.ConfigurePreferences( profile.Preferences );
+		Assert.IsFalse( audio.TooltipsEnabled );
+		profile.SetEnabled( PlayerProfileFile.Preference.Tooltips, true );
+		audio.ConfigurePreferences( profile.Preferences );
+		Assert.IsTrue( audio.TooltipsEnabled );
+	}
+
+	[TestMethod]
 	public void OutputBudgetRanksVoicesWithoutRestartingVirtualInstances()
 	{
 		var mixer = new SoundMixer( 1000, 2 ) { VoiceLimit = 1 };

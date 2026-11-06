@@ -1,5 +1,4 @@
 using OpenTPW.UI;
-using Veldrid;
 using static SDL.SDL3;
 
 namespace OpenTPW;
@@ -23,8 +22,6 @@ internal sealed class LobbyNamingPanel : Panel
 	private readonly LobbyUiModel selection, modeIcon;
 	private float editedAt;
 	private bool nameFocused;
-	/// <summary>Elements whose help has already placed a MessageTag1 since the dialog opened (element property 0xa).</summary>
-	private readonly HashSet<int> tagged = new();
 	public byte CreationMode { get; private set; } = 1;
 	public bool Active { get; set; }
 
@@ -70,7 +67,6 @@ internal sealed class LobbyNamingPanel : Panel
 		name.Text = edit.Text; name.Scroll = 0;
 		nameFocused = true; Active = true; editedAt = Time.Now;
 		CreationMode = 1;
-		tagged.Clear();
 	}
 
 	/// <summary>
@@ -85,8 +81,8 @@ internal sealed class LobbyNamingPanel : Panel
 	];
 
 	/// <summary>
-	/// Shows the hovered element's help (HelpBar_SetText (US 0x4924b0)) and, on its first help in this dialog, places MessageTag1 at
-	/// its centre (element event 0x11, US address pending → Ui_PlayEffectAtElement (US address pending)(0x5a)).
+	/// Shows the hovered element's help and applies the global button-hover effect to type 2 controls.
+	/// Ui_HandleGlobalMessage (US 0x485780) starts ButtonSpark_Start (US 0x5ed920) on pointer entry.
 	/// </summary>
 	private void UpdateHelp()
 	{
@@ -99,7 +95,7 @@ internal sealed class LobbyNamingPanel : Panel
 			bool selected = index == 3 ? CreationMode == 1 : index == 4 && CreationMode == 0;
 			number = selected ? helpElements[index].Selected : helpElements[index].Help;
 		}
-		if ( number >= 0 && tagged.Add( index ) ) level.KeyEffects?.MessageTag( helpElements[index].Bounds );
+		level.KeyEffects?.HoverButton( index is 0 or 1 or 3 or 4 ? helpElements[index].Bounds : null );
 		help.Show( number );
 	}
 
@@ -107,6 +103,7 @@ internal sealed class LobbyNamingPanel : Panel
 	public void Close()
 	{
 		Active = false;
+		Level.Current?.KeyEffects?.HoverButton( null );
 		Level.Current?.Help?.Show( -1 );
 	}
 	public void ShowError( string message ) => error.Text = message;

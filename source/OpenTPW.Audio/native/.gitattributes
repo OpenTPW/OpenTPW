@@ -1,0 +1,5 @@
+# Keep reproducible native build inputs stable across Windows checkouts.
+audio.c text eol=lf
+build.ps1 text eol=lf
+build.json text eol=lf
+.gitattributes text eol=lf

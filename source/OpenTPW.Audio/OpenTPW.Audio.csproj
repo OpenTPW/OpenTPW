@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <Description>SDL3 audio output, host-configurable mixing and SDT PCM/MPEG decoding.</Description>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="ppy.SDL3-CS" Version="2026.1002.1" />
+    <ProjectReference Include="..\OpenTPW.Files\OpenTPW.Files.csproj" />
+    <None Include="runtimes\win-x64\native\OpenTPW.Audio.Native.dll" Link="OpenTPW.Audio.Native.dll" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Pack="true" PackagePath="runtimes/win-x64/native" />
+    <None Update="README.md" Pack="true" PackagePath="/" />
+    <None Remove="native\minimp3\LICENSE" />
+    <None Include="native\minimp3\LICENSE" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Link="licenses\minimp3.txt" Pack="true" PackagePath="licenses/minimp3/" />
+  </ItemGroup>
+</Project>

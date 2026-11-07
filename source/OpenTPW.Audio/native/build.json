@@ -1,0 +1,22 @@
+{
+  "compiler": "gcc.exe (GCC) 16.2.0",
+  "flags": "-std=c11 -O2 -Wall -Wextra -Werror -shared -static-libgcc -Wl,--no-insert-timestamp",
+  "files": [
+    {
+      "path": "audio.c",
+      "sha256": "FB5A934836EF4DF95EC98ADBD4D08AC5DB044CCBFC650FDD74D70D1C8C814087"
+    },
+    {
+      "path": "minimp3/minimp3.h",
+      "sha256": "57E437C5C1F0E8B243885D3929C8973B5E6C778451E0100AB4251D19915CB3AD"
+    },
+    {
+      "path": "minimp3/LICENSE",
+      "sha256": "6A1EE543E5282CD9061881EDF462E6FDAB181F328DA71FC2C9A6950A80E94D01"
+    },
+    {
+      "path": "../runtimes/win-x64/native/OpenTPW.Audio.Native.dll",
+      "sha256": "29E758E40D8D533E5AEF9D67C1D8E05A62CC6E87E7BD55FEB25059A583962A36"
+    }
+  ]
+}

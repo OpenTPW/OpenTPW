@@ -1,3 +1,5 @@
+using OpenTPW.Audio;
+
 namespace OpenTPW;
 
 /// <summary>Shared audio output for scene sounds, music and speech.</summary>

@@ -3,23 +3,25 @@ using System.Runtime.InteropServices;
 using SDL;
 using static SDL.SDL3;
 
-namespace OpenTPW;
+namespace OpenTPW.Audio;
 
 /// <summary>Pull-driven SDL3 float PCM output; owns its stream, callback context and audio subsystem reference.</summary>
-internal sealed unsafe class SdlAudioOutput : IDisposable
+public sealed unsafe class SdlAudioOutput : IDisposable
 {
 	private readonly SoundMixer mixer;
-	private readonly float[] block = new float[2048];
+	private readonly float[] block;
 	private SDL_AudioStream* stream;
 	private GCHandle context;
 	private Exception? failure;
 	private bool initialized;
 	private long submittedFrames;
-	internal long SubmittedFrames => Interlocked.Read( ref submittedFrames );
+	public long SubmittedFrames => Interlocked.Read( ref submittedFrames );
 
 	public SdlAudioOutput( SoundMixer mixer )
 	{
 		this.mixer = mixer;
+		// Keep callback storage aligned even for mono hosts. No decoding or allocation occurs in Feed.
+		block = new float[1024 * mixer.Channels];
 		if ( !SDL_InitSubSystem( SDL_InitFlags.SDL_INIT_AUDIO ) ) throw Error();
 		initialized = true;
 		try
@@ -29,6 +31,7 @@ internal sealed unsafe class SdlAudioOutput : IDisposable
 			stream = SDL_OpenAudioDeviceStream( SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, &Fill, GCHandle.ToIntPtr( context ) );
 			if ( stream == null || !SDL_ResumeAudioStreamDevice( stream ) ) throw Error();
 		}
+		// Partial stream creation must release both the callback context and subsystem reference.
 		catch { Dispose(); throw; }
 	}
 

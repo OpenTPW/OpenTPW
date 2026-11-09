@@ -15,6 +15,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenTPW.ModKit", "OpenTPW.M
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OpenTPW.Graphics", "OpenTPW.Graphics\OpenTPW.Graphics.csproj", "{E177155F-957C-42BE-A043-B69F6EC2C663}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OpenTPW.UI", "OpenTPW.UI\OpenTPW.UI.csproj", "{3F2A6B1C-7D44-4E8B-9C21-5A0D8E7F6B13}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -45,6 +47,10 @@ Global
 		{E177155F-957C-42BE-A043-B69F6EC2C663}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E177155F-957C-42BE-A043-B69F6EC2C663}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E177155F-957C-42BE-A043-B69F6EC2C663}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3F2A6B1C-7D44-4E8B-9C21-5A0D8E7F6B13}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3F2A6B1C-7D44-4E8B-9C21-5A0D8E7F6B13}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3F2A6B1C-7D44-4E8B-9C21-5A0D8E7F6B13}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3F2A6B1C-7D44-4E8B-9C21-5A0D8E7F6B13}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

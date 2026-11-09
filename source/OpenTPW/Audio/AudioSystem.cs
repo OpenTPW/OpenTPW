@@ -127,7 +127,7 @@ public sealed class AudioSystem : IDisposable
 			uint volume = BitConverter.ToUInt32( preferences, i * 8 + 4 );
 			channelVolumes[i] = preferences[i * 8] == 0 ? 0 : volume / 100f;
 		}
-		// Category volume changes affect existing output too (Audio_ApplyCategoryVolumes (US address pending) -> Audio_ApplyCategoryVolumeA (US address pending)/Audio_ApplyCategoryVolumeB (US address pending)/Audio_ApplyCategoryVolumeC (US address pending)).
+		// Category volume changes affect existing output too (Audio_ApplyCategoryVolumes (US 0x423dd0) -> Audio_ApplyCategoryVolumeA (US 0x51bb80)/Audio_ApplyCategoryVolumeB (US 0x51bba0)/Audio_ApplyCategoryVolumeC (US 0x51bbc0)).
 		foreach ( var (handle, gain) in gains ) Mixer.SetVolume( handle, gain.Gain * ChannelVolume( gain.Category ) );
 	}
 	public void ConfigureQuality( int quality ) => Mixer.VoiceLimit = SoundChannelPolicy.Limit( settings, quality );

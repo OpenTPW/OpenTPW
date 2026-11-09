@@ -84,7 +84,7 @@ public class Level
 		Navigation.IslandSelected += LobbyCameraMode.SelectIsland;
 		Navigation.EntryRequested += () =>
 		{
-			// Lobby_ExitIslandSelection (US address pending) -> Ui_Function_TW_4b6a30 (US address pending) plays global lobby effect 4 when leaving island selection.
+			// Lobby_ExitIslandSelection (US 0x5e1e30) -> Ui_Function_TW_4b6a30 (US 0x4b8fd0) plays global lobby effect 4 when leaving island selection.
 			Audio?.Play( "global/sound", "cat_globallobbysfx", 4 );
 			keyEffects?.EnterIsland();
 			LobbyCameraMode.BeginEntering();

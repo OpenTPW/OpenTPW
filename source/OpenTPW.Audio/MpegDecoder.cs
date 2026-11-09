@@ -42,6 +42,11 @@ public static unsafe class MpegDecoder
 					out int bytes, out int skipped, out int nextChannels, out int nextRate, out int nextLayer );
 				if ( frames < 0 || bytes < 0 || bytes > data.Length - offset ) throw new InvalidDataException( "Invalid native MPEG result." );
 				// Preserve incomplete tails as metadata; never fabricate samples or spin on zero progress.
+				// Layer III frames that start before the bit reservoir is filled are consumed without output
+				// (minimp3 returns 0 samples but a parsed header: layer 3, a rate and a frame size); skip them instead of
+				// ending the clip. When no frame is found at all minimp3 also returns 0 with the skipped byte count, but
+				// leaves layer and rate at 0, so trailing padding still ends the clip. Retail SDTs contain no Layer III.
+				if ( frames == 0 && nextLayer == 3 && nextRate > 0 && bytes > 0 && skipped == 0 ) { offset += bytes; continue; }
 				if ( frames == 0 ) break;
 				if ( bytes == 0 || skipped != 0 || nextRate <= 0 || nextChannels is not (1 or 2) || frames * nextChannels > block.Length )
 					throw new InvalidDataException( "Invalid MPEG frame or gap inside stream." );

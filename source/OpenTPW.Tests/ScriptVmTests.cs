@@ -133,7 +133,8 @@ public class ScriptVmTests
 	[TestMethod]
 	public void WaitanimMinimumDiffersFromTriganimScaling()
 	{
-		var host = new Host { Clock = 100, Length = 100 };
+		// 400 ms at speed factor 2: (400 - 300) / 2 = 50, raised to the 300 ms minimum after scaling.
+		var host = new Host { Clock = 100, Length = 400 };
 		var vm = Create( host, [Op( Opcode.WAITANIM ), 1, 0, Op( Opcode.COPY ), V, 9, Op( Opcode.ENDSLICE )] );
 		vm.Speed = 150;
 		vm.Tick( 0 ); host.Clock = 399; vm.Tick( 8 );
@@ -141,6 +142,47 @@ public class ScriptVmTests
 		host.Clock = 400; vm.Tick( 16 );
 		Assert.AreEqual( 9, vm.Variables[0] );
 		Assert.AreEqual( 1, host.Animations );
+	}
+
+	[TestMethod]
+	public void ShortAnimationsFollowRetailUnsignedArithmetic()
+	{
+		// WAITANIM: length - 300 is loaded unsigned (Script_Step, TPI 0x6a73a0). A 100 ms animation at factor 1 gives
+		// 2^32 - 200, so the deadline wraps to clock - 200 and the script goes on at its next visit, without the
+		// 300 ms minimum.
+		var host = new Host { Clock = 1000, Length = 100 };
+		var vm = Create( host, [Op( Opcode.WAITANIM ), 1, 0, Op( Opcode.COPY ), V, 9, Op( Opcode.ENDSLICE )] );
+		vm.Tick( 0 );
+		Assert.AreEqual( 0, vm.Variables[0] );
+		vm.Tick( 8 );
+		Assert.AreEqual( 9, vm.Variables[0] );
+
+		// At factor 2 the quotient is about 2^31, so the deadline is far ahead and the script stays waiting.
+		host = new Host { Clock = 1000, Length = 100 };
+		vm = Create( host, [Op( Opcode.WAITANIM ), 1, 0, Op( Opcode.COPY ), V, 9, Op( Opcode.ENDSLICE )] );
+		vm.Speed = 150;
+		vm.Tick( 0 );
+		host.Clock = 1_000_000; vm.Tick( 8 );
+		Assert.AreEqual( 0, vm.Variables[0] );
+
+		// TRIGANIM: 0 (no object) is used as is, giving the 300 ms minimum.
+		host = new Host { Clock = 100, Length = 0 };
+		vm = Create( host, [Op( Opcode.TRIGANIM ), 2, 0, V, Op( Opcode.ENDSLICE )] );
+		vm.Tick( 0 );
+		Assert.AreEqual( 300, vm.Variables[0] );
+		Assert.AreEqual( 400, vm.AnimationDeadline );
+	}
+
+	[TestMethod]
+	public void SpeedFactorRoundsOnceLikeX87()
+	{
+		// Rounded once (x87): bit patterns 0x3f3851eb and 0x3f8a3d71. Rounding the product to float first would give
+		// 0x3f3851ec and 0x3f8a3d70, one unit off, which changes truncated waits near whole milliseconds.
+		var vm = Create( new Host(), [Op( Opcode.END )] );
+		vm.Speed = 22;
+		Assert.AreEqual( 0x3f3851ebu, BitConverter.SingleToUInt32Bits( vm.SpeedFactor ) );
+		vm.Speed = 58;
+		Assert.AreEqual( 0x3f8a3d71u, BitConverter.SingleToUInt32Bits( vm.SpeedFactor ) );
 	}
 
 	[TestMethod]

@@ -36,7 +36,18 @@ public sealed class RideVM
 	/// Ride speed setting; waits and animations are scaled by Speed * 0.01 + 0.5.
 	/// </summary>
 	public short Speed { get; set; } = 50;
-	public float SpeedFactor => Speed * 0.01f + 0.5f;
+	// Script_Step (TPI 0x6a73a0) computes speed * 0.01f + 0.5f on the x87 stack and stores a float. The product of a
+	// short and a float is exact in double, so one rounding to float matches; float arithmetic would round twice.
+	public float SpeedFactor => (float)(Speed * (double)0.01f + 0.5f);
+
+	/// <summary>
+	/// A duration divided by <see cref="SpeedFactor"/>: Script_Step (TPI 0x6a73a0) divides on the x87 stack and
+	/// truncates to a 64-bit integer (Runtime_TruncateFloatToInt64, TPI 0x86fab0); callers keep the low 32 bits.
+	/// </summary>
+	private int Scale( long duration ) => unchecked((int)(long)(duration / (double)SpeedFactor));
+
+	/// <summary>Script_Step (TPI 0x6a73a0) compares the clock with every deadline unsigned (jb).</summary>
+	private bool Reached( int deadline ) => unchecked((uint)Host.Now >= (uint)deadline);
 
 	/// <summary>
 	/// Run on every scheduler visit instead of every eighth.
@@ -347,7 +358,7 @@ public sealed class RideVM
 				var n = Fetch();
 				if ( waitDeadline != 0 )
 				{
-					if ( Host.Now >= waitDeadline )
+					if ( Reached( waitDeadline ) )
 					{
 						waitDeadline = 0;
 						return;
@@ -358,7 +369,7 @@ public sealed class RideVM
 					// WAIT is scaled by the ride speed, WAITABS isn't
 					// Script_Step (TPI 0x6a73a0) calls Runtime_TruncateFloatToInt64 (TPI 0x86fab0),
 					// which temporarily selects x87 truncation, rather than rounding to nearest.
-					waitDeadline = Host.Now + (opcode == Opcode.WAIT ? (int)(Value( n ) / SpeedFactor) : Value( n ));
+					waitDeadline = unchecked(Host.Now + (opcode == Opcode.WAIT ? Scale( Value( n ) ) : Value( n )));
 				}
 
 				// Run this instruction again on the next visit
@@ -371,7 +382,7 @@ public sealed class RideVM
 				if ( AnimationDeadline == 0 )
 					return;
 
-				if ( Host.Now >= AnimationDeadline )
+				if ( Reached( AnimationDeadline ) )
 				{
 					AnimationDeadline = 0;
 					return;
@@ -393,10 +404,11 @@ public sealed class RideVM
 				if ( IsStopped )
 					return;
 
+				// The length is used as returned: 0 (script without an object) gives the 300 ms minimum, not 700.
 				var length = Host.PlayAnimation( this, Value( a ), Value( b ), false, SpeedFactor );
-				LV = Math.Max( (length == 0 ? 1000 : length) - 300, 300 );
+				LV = Math.Max( length - 300, 300 );
 				Store( c, LV );
-				AnimationDeadline = Host.Now + (int)(LV / SpeedFactor);
+				AnimationDeadline = unchecked(Host.Now + Scale( LV ));
 				loopingAnimation = 0xFFFF;
 				return;
 			}
@@ -409,7 +421,7 @@ public sealed class RideVM
 
 				if ( waitAnimationDeadline != 0 )
 				{
-					if ( Host.Now >= waitAnimationDeadline )
+					if ( Reached( waitAnimationDeadline ) )
 					{
 						waitAnimationDeadline = 0;
 						return;
@@ -417,8 +429,14 @@ public sealed class RideVM
 				}
 				else
 				{
+					// Unlike TRIGANIM, Script_Step (TPI 0x6a73a0) loads length - 300 as an unsigned 64-bit value
+					// (fild qword, high half zero), divides, and clamps the quotient unsigned (jae 300). For an animation
+					// shorter than 300 ms (or none: length 0) the 32-bit result wraps: at speed factor 1 the deadline
+					// lands just before now and the script continues on its next visit (no 300 ms minimum); at other
+					// factors it lands about 2^31 ms or more ahead and the script effectively stays blocked. Kept as is.
 					var length = Host.PlayAnimation( this, Value( a ), Value( b ), false, SpeedFactor );
-					waitAnimationDeadline = Host.Now + Math.Max( (int)(((length == 0 ? 1000 : length) - 300) / SpeedFactor ), 300 );
+					uint scaled = unchecked((uint)Scale( unchecked((uint)(length - 300)) ));
+					waitAnimationDeadline = unchecked(Host.Now + (int)Math.Max( scaled, 300u ));
 					AnimationDeadline = 0;
 					loopingAnimation = 0xFFFF;
 				}

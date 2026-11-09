@@ -17,7 +17,9 @@ internal sealed class RideScriptHost : IRideVMHost
 	public int PlayAnimation( RideVM vm, int slot, int variant, bool loop, float speed )
 	{
 		Report( loop ? Opcode.LOOPANIM : Opcode.TRIGANIM );
-		return 0;
+		// No animation system yet: answer like the game's animation start for a missing animation (1000 ms),
+		// not 0, which would mean "no object" and send WAITANIM through its wrapped short-animation arithmetic.
+		return 1000;
 	}
 
 	public void FlushAnimation( RideVM vm ) => Report( Opcode.FLUSHANIM );

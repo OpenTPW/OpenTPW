@@ -22,7 +22,9 @@ public interface IRideVMHost
 	/// <summary>
 	/// Starts animation <paramref name="variant"/> of <paramref name="slot"/> (0 to 11: C D I L S M E U W B R O)
 	/// on the script's object, at <paramref name="speed"/> times normal speed. Returns its length in
-	/// milliseconds, or 0 when there is no such animation (the game then assumes 1000).
+	/// milliseconds. As in the game, a missing animation returns 1000 (the animation start function); 0 means the
+	/// script has no object at all, which the VM treats as retail does (300 ms for TRIGANIM; for WAITANIM the
+	/// wrapped arithmetic in <see cref="RideVM"/>).
 	/// </summary>
 	int PlayAnimation( RideVM vm, int slot, int variant, bool loop, float speed );
 

@@ -5,6 +5,15 @@ namespace OpenTPW;
 /// <summary>The advisor is registered in screen space independently of the world camera (Advisor_ConfigureScreenModel (US 0x429ba0)).</summary>
 internal sealed class LobbyAdvisorPanel : Panel
 {
+	/// <summary>
+	/// Depth test, depth write and back-face culling all on. Retail never culls in hardware (Render_InitializeD3dState+0xa1 (US 0x5668e1)
+	/// sets CULLMODE 1) but drops back faces in software (<see cref="LobbyAdvisorGeometry.FacesViewer"/>), which the GPU's clockwise
+	/// front face reproduces. Model primitives keep ZENABLE: Render_SetD3dState (US 0x567620) turns it off only for primitive flag
+	/// 0x8000, which no model path sets, and Render_ConvertMaterialFlags (US 0x581790) turns ZWRITEENABLE off (0x800) only for mesh
+	/// flag 2, which no advisor mesh carries. The hands overlap themselves in screen space, so without the depth buffer
+	/// their faces would show in index order instead of nearest first.
+	/// </summary>
+	internal const MaterialFlags DrawFlags = MaterialFlags.None;
 	private sealed record Part( int Mesh, Model Model, Vertex[] Vertices );
 	private readonly List<Part> parts = new();
 	private readonly Dictionary<int, int> mouths = new();
@@ -38,9 +47,7 @@ internal sealed class LobbyAdvisorPanel : Panel
 				string name = mesh.Materials[m].Name?.TrimEnd( '\0' ) ?? throw new InvalidDataException( "Advisor material has no texture" );
 				if ( !textures.TryGetValue( name, out var texture ) )
 					textures.Add( name, texture = new Texture( AnimationFiles.ResolveFile( $"global/advisor/textures/{name}.wct", "Advisor texture" ) ) );
-				// Retail never culls in hardware (Render_InitializeD3dState+0xa1 (US 0x5668e1) sets CULLMODE 1) but drops back faces in software: FUN_00580530 (US 0x580530)
-				// emits a face only when Render_CullBackfaces (US 0x581320) finds a positive screen-space winding of its three transformed vertices.
-				var material = new Material<ObjectUniformBuffer>( shader, MaterialFlags.DisableDepth );
+				var material = new Material<ObjectUniformBuffer>( shader, DrawFlags );
 				material.Set( "Color", texture );
 				var vertices = new Vertex[mesh.Vertices.Length];
 				parts.Add( new( meshIndex, new Model( vertices, indices.ToArray(), material ), vertices ) );
@@ -57,20 +64,20 @@ internal sealed class LobbyAdvisorPanel : Panel
 		var pose = advisor.Geometry.Pose( advisor.Animation, advisor.Frame );
 		// LIGHTING=0 leaves vertices white like the scene models (Graphics_ApplyOptions (US address pending), position pending).
 		bool lit = LobbyQuality.Load().LightingEnabled;
-		var lighting = Level.Current?.Lighting ?? LobbyLighting.Islands;
-		var scene = LobbyLighting.RetailDirection;
+		var ambient = (Level.Current?.Lighting ?? LobbyLighting.Islands).Ambient;
 		foreach ( var part in parts )
 		{
 			// Mouth meshes are selected by LIP state; all other nodes follow segment hiding.
 			int index = part.Mesh;
 			if ( mouths.TryGetValue( index, out int mouth ) ? mouth != advisor.Mouth : pose.Hidden[index] ) continue;
 			var mesh = advisor.Geometry.Model.Meshes[index];
+			var light = lit ? LobbyAdvisorGeometry.LocalLight( pose.WorldTransforms[index] ) : default;
 			for ( int i = 0; i < part.Vertices.Length; i++ )
 			{
 				var source = pose.Positions[index]?[i] ?? mesh.Vertices[i].Position;
 				var point = System.Numerics.Vector3.Transform( source.GetSystemVector3(), pose.WorldTransforms[index] );
-				var colour = lit ? LobbyAdvisorGeometry.Colour( lighting.Ambient, pose.WorldTransforms[index],
-					mesh.Normals[i].GetSystemVector3(), scene, lighting.Diffuse ) : System.Numerics.Vector3.One;
+				// Animated hands move their vertices but keep the authored normals, as in retail (see Colour).
+				var colour = lit ? LobbyAdvisorGeometry.Colour( ambient, light, mesh.Normals[i].GetSystemVector3() ) : System.Numerics.Vector3.One;
 				part.Vertices[i] = new Vertex( LobbyAdvisorGeometry.Project( point ), pose.TexCoords[index]?[i] ?? mesh.TexCoords[i] )
 					{ Normal = new Vector3( colour.X, colour.Y, colour.Z ) };
 			}

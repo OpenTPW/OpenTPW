@@ -148,27 +148,144 @@ public class LobbyAdvisorPlaybackTests
 	}
 
 	[TestMethod]
-	public void AdvisorOwnLightBrightensFacesTowardsTheViewer()
+	public void AdvisorLightIsInvertedThroughTheScaledNodeChainAndRenormalised()
 	{
-		var ambient = new System.Numerics.Vector3( 0x44 / 255f );
-		var node = System.Numerics.Matrix4x4.CreateScale( 0.01125f, 0.001f, 0.015f );
-		// The light travels into the screen (+Z), so a normal pointing out of it (−Z) is fully lit.
-		var dark = System.Numerics.Vector3.Zero;
-		Assert.AreEqual( System.Numerics.Vector3.One, LobbyAdvisorGeometry.Colour( ambient, node, -System.Numerics.Vector3.UnitZ, System.Numerics.Vector3.UnitX, dark ) );
-		Assert.AreEqual( ambient, LobbyAdvisorGeometry.Colour( ambient, node, System.Numerics.Vector3.UnitZ, System.Numerics.Vector3.UnitX, dark ) );
+		// Row-vector convention, full inverse including the 0.001 flattening, then one normalisation (Render_NormalizeVector (US 0x5743a0)).
+		var node = System.Numerics.Matrix4x4.CreateRotationX( 0.7f ) * System.Numerics.Matrix4x4.CreateRotationY( -1.1f )
+			* System.Numerics.Matrix4x4.CreateScale( 0.01125f, 0.001f, 0.015f ) * System.Numerics.Matrix4x4.CreateRotationZ( 0.4f );
+		Assert.IsTrue( System.Numerics.Matrix4x4.Invert( node, out var inverse ) );
+		var expected = System.Numerics.Vector3.Normalize( System.Numerics.Vector3.TransformNormal( LobbyAdvisorGeometry.LightDirection, inverse ) );
+		var light = LobbyAdvisorGeometry.LocalLight( node );
+		Assert.AreEqual( 0, (expected - light).Length(), 1e-5f );
+		// Not the inverse transpose: that would leave the tilted light direction tilted instead of snapping it to the flattened axis.
+		var transposed = System.Numerics.Vector3.Normalize( System.Numerics.Vector3.TransformNormal( LobbyAdvisorGeometry.LightDirection, System.Numerics.Matrix4x4.Transpose( inverse ) ) );
+		Assert.IsTrue( (transposed - light).Length() > 0.1f );
 	}
 
 	[TestMethod]
-	public void LobbyCameraLightAlsoReachesFacesTurnedAwayFromTheAdvisorLight()
+	public void ShippedRootFlatteningTurnsTheAdvisorLightIntoAHeadOnLightAndHandsStayRigid()
+	{
+		GameData.Require();
+		var geometry = new LobbyAdvisorGeometry();
+		// In the root's own frame the light runs along the flattened axis (local Y, which maps to -Z on screen),
+		// although it was authored 2.7 degrees off the screen normal.
+		var head = LobbyAdvisorGeometry.LocalLight( geometry.RootTransform );
+		Assert.IsTrue( head.Y < -0.99999f, $"root-space light {head}" );
+		Assert.IsTrue( System.Numerics.Matrix4x4.Invert( geometry.RootTransform, out var rootInverse ) );
+		var animations = AnimationFiles.Segments( LobbyAdvisorGeometry.ModelPath, AnimationSlot.M ).Select( path => new ModelAnimation( path ) ).ToArray();
+		int[] hands = [ geometry.Model.Meshes.FindIndex( mesh => mesh.Name == "Right hand" ), geometry.Model.Meshes.FindIndex( mesh => mesh.Name == "Left Hand" ) ];
+		foreach ( var animation in animations )
+		for ( float frame = animation.StartFrame; frame <= animation.EndFrame; frame += 5 )
+		{
+			var pose = geometry.Pose( animation, frame );
+			foreach ( int node in hands )
+			{
+				// Above the root the hand chain is a pure rotation in every frame: no mirror (which would flip the
+				// winding against the normals) and no scale or shear (which would bend the head-on light).
+				var chain = pose.WorldTransforms[node] * rootInverse;
+				var x = new System.Numerics.Vector3( chain.M11, chain.M12, chain.M13 );
+				var y = new System.Numerics.Vector3( chain.M21, chain.M22, chain.M23 );
+				var z = new System.Numerics.Vector3( chain.M31, chain.M32, chain.M33 );
+				Assert.AreEqual( 1, System.Numerics.Vector3.Dot( System.Numerics.Vector3.Cross( x, y ), z ), 2e-3f, $"node {node} frame {frame}" );
+				Assert.AreEqual( 1, x.Length(), 2e-3f ); Assert.AreEqual( 1, y.Length(), 2e-3f ); Assert.AreEqual( 1, z.Length(), 2e-3f );
+				// So the node-space light is the same head-on direction, merely rotated with the hand.
+				var light = System.Numerics.Vector3.TransformNormal( LobbyAdvisorGeometry.LocalLight( pose.WorldTransforms[node] ), chain );
+				Assert.AreEqual( 0, (light - head).Length(), 2e-3f, $"node {node} frame {frame}" );
+			}
+		}
+	}
+
+	[TestMethod]
+	public void AdvisorIsLitByItsOwnLightOnly()
 	{
 		var ambient = new System.Numerics.Vector3( 0x44 / 255f );
-		var diffuse = new System.Numerics.Vector3( 0xee / 255f * 0.5f );
-		var node = System.Numerics.Matrix4x4.CreateScale( 0.01125f, 0.001f, 0.015f );
-		// A face pointing into the screen gets nothing from the advisor light but all of a scene light travelling
-		// out of the screen (−Z), even through the advisor's non-uniform root scale.
-		var colour = LobbyAdvisorGeometry.Colour( ambient, node, System.Numerics.Vector3.UnitZ, -System.Numerics.Vector3.UnitZ, diffuse );
-		Assert.AreEqual( ambient.X + diffuse.X, colour.X, 1e-5f );
-		// A scene light behind the face adds nothing.
-		Assert.AreEqual( ambient, LobbyAdvisorGeometry.Colour( ambient, node, System.Numerics.Vector3.UnitZ, System.Numerics.Vector3.UnitZ, diffuse ) );
+		// The shipped root: flattened along local Y, which the root rotation maps to -Z on screen.
+		var node = System.Numerics.Matrix4x4.CreateScale( 0.01125f, 0.001f, 0.015f ) * System.Numerics.Matrix4x4.CreateRotationX( -MathF.PI / 2 );
+		var light = LobbyAdvisorGeometry.LocalLight( node );
+		// The light travels into the screen, so a normal pointing out of it (local +Y) is fully lit.
+		Assert.AreEqual( System.Numerics.Vector3.One, LobbyAdvisorGeometry.Colour( ambient, light, System.Numerics.Vector3.UnitY ) );
+		// A face turned away stays at ambient: the scene's mask-0x70 lights are skipped for the screen-space advisor
+		// (ModelInstance_Submit (US 0x57a750) sets list flag 0x2000000), so nothing can light it from behind.
+		Assert.AreEqual( ambient, LobbyAdvisorGeometry.Colour( ambient, light, -System.Numerics.Vector3.UnitY ) );
+		var half = LobbyAdvisorGeometry.Colour( ambient, light, System.Numerics.Vector3.Normalize( new( 0, 1, 1 ) ) );
+		Assert.AreEqual( ambient.X + MathF.Sqrt( 0.5f ), half.X, 2e-3f );
+		Assert.AreEqual( 3, typeof(LobbyAdvisorGeometry).GetMethod( nameof(LobbyAdvisorGeometry.Colour) )!.GetParameters().Length, "Colour takes no scene light" );
+	}
+
+	[TestMethod]
+	public void AdvisorDrawsWithDepthAndClockwiseFrontFaces()
+	{
+		Assert.IsFalse( LobbyAdvisorPanel.DrawFlags.HasFlag( MaterialFlags.DisableDepthTest ), "retail keeps ZENABLE for model primitives" );
+		Assert.IsFalse( LobbyAdvisorPanel.DrawFlags.HasFlag( MaterialFlags.DisableDepthWrite ), "no advisor mesh carries mesh flag 2" );
+		Assert.IsFalse( LobbyAdvisorPanel.DrawFlags.HasFlag( MaterialFlags.DisableCulling ) );
+		Assert.AreEqual( SDL.SDL_GPUFrontFace.SDL_GPU_FRONTFACE_CLOCKWISE, new OpenTPW.Graphics.MeshRenderState().FrontFace );
+		// Render_CullBackfaces (US 0x581320): clockwise on a y-down screen is kept. Project output is y-up, so "right, then down" is clockwise.
+		var a = new Vector3( 0, 0, 0.2f ); var b = new Vector3( 1, 0, 0.2f ); var c = new Vector3( 0, -1, 0.2f );
+		Assert.IsTrue( LobbyAdvisorGeometry.FacesViewer( a, b, c ) );
+		Assert.IsFalse( LobbyAdvisorGeometry.FacesViewer( a, c, b ) );
+		// The vertex shader must hand the projected depth to the rasteriser; a constant would disable the depth test in effect.
+		string shader = File.ReadAllText( Content.GetPath( "shaders/ui-lit.hlsl" ) );
+		StringAssert.Contains( shader, "float4( input.position, 1 )" );
+	}
+
+	[TestMethod]
+	public void ShippedAdvisorWindingAgreesWithItsNormalsAndHandsKeepAuthoredNormals()
+	{
+		GameData.Require();
+		var geometry = new LobbyAdvisorGeometry();
+		var model = geometry.Model;
+		var animations = AnimationFiles.Segments( LobbyAdvisorGeometry.ModelPath, AnimationSlot.M ).Select( path => new ModelAnimation( path ) ).ToArray();
+		// M10 moves the fingers with packed vertex keys; the mesh still has exactly one authored normal per vertex to light with.
+		var waving = geometry.Pose( animations[9], animations[9].StartFrame + 20 );
+		foreach ( string hand in new[] { "Right hand", "Left Hand" } )
+		{
+			int index = model.Meshes.FindIndex( mesh => mesh.Name == hand );
+			Assert.IsNotNull( waving.Positions[index], $"{hand} is vertex animated" );
+			Assert.AreEqual( model.Meshes[index].Vertices.Length, model.Meshes[index].Normals.Length );
+		}
+		// In the rest pose, faces that the head-on light reaches are the ones the retail winding test keeps.
+		var pose = geometry.Pose( animations[13], animations[13].StartFrame );
+		int lit = 0, kept = 0;
+		for ( int index = 0; index < model.Meshes.Count; index++ )
+		{
+			var mesh = model.Meshes[index];
+			if ( pose.Hidden[index] || mesh.Name.StartsWith( "Mouth", StringComparison.OrdinalIgnoreCase ) ) continue;
+			var light = LobbyAdvisorGeometry.LocalLight( pose.WorldTransforms[index] );
+			for ( int i = 0; i < mesh.Indices.Length; i += 3 )
+			{
+				var points = new Vector3[3]; var normal = System.Numerics.Vector3.Zero;
+				for ( int k = 0; k < 3; k++ )
+				{
+					int vertex = (int)mesh.Indices[i + k];
+					var source = pose.Positions[index]?[vertex] ?? mesh.Vertices[vertex].Position;
+					points[k] = LobbyAdvisorGeometry.Project( System.Numerics.Vector3.Transform( source.GetSystemVector3(), pose.WorldTransforms[index] ) );
+					normal += mesh.Normals[vertex].GetSystemVector3();
+				}
+				if ( -System.Numerics.Vector3.Dot( light, System.Numerics.Vector3.Normalize( normal ) ) < 0.5f ) continue;
+				lit++;
+				if ( LobbyAdvisorGeometry.FacesViewer( points[0], points[1], points[2] ) ) kept++;
+			}
+		}
+		Assert.IsTrue( lit > 100, $"lit faces {lit}" );
+		Assert.IsTrue( kept >= lit * 0.97, $"{kept} of {lit} lit faces wind towards the viewer" );
+	}
+
+	[TestMethod]
+	public void NamingResponseKeepsPlayingUntilItsOwnEndWhenNothingCancelsIt()
+	{
+		GameData.Require();
+		using var audio = new AudioSystem( 1, false );
+		var advisor = new LobbyAdvisor( audio, () => 0 );
+		// NamingDialog_Open (US 0x4a6e40) queues 0x23a with the replace flag; cancelling the dialog calls nothing on the advisor.
+		advisor.Say( 0x23a, true );
+		advisor.Update( 0 );
+		Assert.AreEqual( 0x23a, advisor.Response );
+		int total = advisor.ResponseMilliseconds;
+		// 800 ms lead-in, the gesture sequence covering the speech plus 500 ms, and the closing M15 segment.
+		Assert.IsTrue( total > 800 + 500, $"response length {total}" );
+		// One segment is entered per update, as in retail, so step through the response.
+		for ( int time = 0; time < total - 50; time += 20 ) advisor.Update( time / 1000.0 );
+		Assert.IsTrue( advisor.Active, "the advisor stays until its response ends" );
+		Assert.AreEqual( 14, advisor.SegmentIndex, "it leaves with the closing segment M15" );
 	}
 }

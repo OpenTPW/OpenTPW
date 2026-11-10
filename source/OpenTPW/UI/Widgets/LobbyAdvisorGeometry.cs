@@ -17,28 +17,48 @@ public sealed class LobbyAdvisorGeometry
 	public static readonly System.Numerics.Vector3 LightDirection = System.Numerics.Vector3.Normalize( new( 26.666666f, -26.666666f, 800 ) );
 
 	/// <summary>
-	/// Vertex colour for a node-to-screen matrix and an authored normal (FUN_005741b0 (US 0x5741b0), Render_NormalizeVector (US 0x5743a0)). Render_ApplyLightLists (US 0x57aa10) lights
-	/// every mesh with the lights of the list being drawn (engine +0x30, here the advisor light) and, unless the
-	/// draw flags carry 0x3000000, also the global mask-0x70 list (engine +0x2c). Category lists are drawn with
-	/// gRenderListFlags (US 0x8bb624) = 0 (FUN_00576910 (US 0x576910) sets 0x1000000 only for the global list itself), so the advisor also receives the
-	/// lobby camera light, which Lobby_SetCameraLight (US 0x5d92e0) registers with mask 0x70. That light's world direction (retail axes)
-	/// is applied unchanged in the advisor's screen space, so it shifts with the lobby camera.
+	/// The advisor light's direction in a node's own space, as Render_NormalizeVector (US 0x5743a0) leaves it at light +0x38:
+	/// the node-chain matrix that Model_SubmitNodeTree (US 0x57a530) builds for lighting (local matrices from the mesh node up
+	/// to the root, including the root basis scaled by Model_ScaleLocalBasis (US 0x46fa70)) is inverted by Matrix_Invert (US 0x578b20),
+	/// the direction is multiplied as a row vector by its upper 3x3 and then renormalised. Because the root is flattened to 0.001
+	/// along the screen depth, the inverse stretches that axis a thousandfold: after renormalising, the light runs along the
+	/// model's depth axis whatever its authored tilt, so the model is shaded as if lit head-on before flattening.
 	/// </summary>
-	public static System.Numerics.Vector3 Colour( System.Numerics.Vector3 ambient, Matrix4x4 node, System.Numerics.Vector3 normal,
-		System.Numerics.Vector3 sceneDirection, System.Numerics.Vector3 sceneDiffuse )
+	public static System.Numerics.Vector3 LocalLight( Matrix4x4 node )
 	{
 		if ( !Matrix4x4.Invert( node, out var inverse ) ) throw new InvalidDataException( "Advisor node matrix cannot be inverted for lighting" );
-		float Facing( System.Numerics.Vector3 direction )
-		{
-			var local = System.Numerics.Vector3.TransformNormal( direction, inverse );
-			// Render_NormalizeVector (US 0x5743a0) renormalises unless the squared length is 0 or already 1.
-			float length = local.LengthSquared();
-			if ( length is not (0 or 1) ) local /= MathF.Sqrt( length );
-			return MathF.Max( 0, -System.Numerics.Vector3.Dot( local, normal ) );
-		}
-		var total = ambient + new System.Numerics.Vector3( Facing( LightDirection ) ) + sceneDiffuse * Facing( sceneDirection );
+		var local = System.Numerics.Vector3.TransformNormal( LightDirection, inverse );
+		// Render_NormalizeVector (US 0x5743a0) renormalises unless the squared length is 0 or already 1.
+		float length = local.LengthSquared();
+		if ( length is not (0 or 1) ) local /= MathF.Sqrt( length );
+		return local;
+	}
+
+	/// <summary>
+	/// Vertex colour from <see cref="LocalLight"/> and an authored normal: ambient plus max(0, −L·N) of the white advisor light,
+	/// clamped (FUN_005741b0 (US 0x5741b0), Lighting_ComputeVertexColors (US 0x574660)).
+	/// The advisor light is the only one. Render_ApplyLightLists (US 0x57aa10) collects the lights of the list being drawn
+	/// (engine +0x30, the advisor's mask-0x10 list holding this light) and adds the global mask-0x70 list (engine +0x2c, where
+	/// Lobby_SetCameraLight (US 0x5d92e0) registers the lobby camera light) only when the draw flags lack 0x3000000.
+	/// Advisor_ConfigureScreenModel (US 0x429ba0) marks the model with Model_MarkScreenSpace (US 0x45bed0) (model flag 0x200), and
+	/// ModelInstance_Submit (US 0x57a750) sets gRenderListFlags (US 0x8bb624) bit 0x2000000 for such models, so the scene lights never
+	/// reach the advisor. Normals are the model's static ones even on vertex-animated hands: the instance is created with
+	/// flags 0x2117, without the bit (8) that gives FUN_00454a10 (US 0x454a10) a private normal array.
+	/// </summary>
+	public static System.Numerics.Vector3 Colour( System.Numerics.Vector3 ambient, System.Numerics.Vector3 localLight, System.Numerics.Vector3 normal )
+	{
+		var total = ambient + new System.Numerics.Vector3( MathF.Max( 0, -System.Numerics.Vector3.Dot( localLight, normal ) ) );
 		return System.Numerics.Vector3.Min( total, System.Numerics.Vector3.One );
 	}
+
+	/// <summary>
+	/// Whether retail draws a triangle: Render_CullBackfaces (US 0x581320), called per face by FUN_00580530 (US 0x580530), keeps it
+	/// when the determinant of its three (x, y, rhw) screen vertices is positive, i.e. when it winds clockwise on a
+	/// screen whose y grows downwards. The test runs on projected vertices, so it needs no correction for mirrored
+	/// node matrices. Points here are <see cref="Project"/> output (y up), hence the negated area.
+	/// </summary>
+	public static bool FacesViewer( Vector3 a, Vector3 b, Vector3 c )
+		=> (b.X - a.X) * (c.Y - a.Y) - (c.X - a.X) * (b.Y - a.Y) < 0;
 
 	public LobbyAdvisorGeometry()
 	{

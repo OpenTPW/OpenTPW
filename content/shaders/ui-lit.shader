@@ -17,7 +17,6 @@ vertex {
     vs_out.texCoords = texCoords;
     vs_out.color = color;
     gl_Position = vec4(position, 1.0);
-    gl_Position.z = 0; // We could probably do this better in a dedicated pipeline
   }
 }
 

@@ -17,7 +17,9 @@ UiLitOutput VSMain( UiLitInput input )
 	UiLitOutput output;
 	output.texCoords = input.texCoords;
 	output.color = input.color;
-	output.position = float4( input.position.xy, 0, 1 );
+	// The advisor is drawn with the depth buffer (retail keeps ZENABLE and ZWRITEENABLE for model primitives), so its
+	// screen-space depth passes through; the model is flattened to a thin slab around 0.2, in front of the scene.
+	output.position = float4( input.position, 1 );
 	return output;
 }
 #else

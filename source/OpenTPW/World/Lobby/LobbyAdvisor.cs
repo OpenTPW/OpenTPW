@@ -45,6 +45,14 @@ public sealed class LobbyAdvisor
 	public ModelAnimation Animation => animations[sequence!.Segments[segment]];
 	public float Frame { get; private set; }
 	public int PendingCount => queue.Count;
+	/// <summary>Index (zero based) of the M segment being played.</summary>
+	public int SegmentIndex => sequence!.Segments[segment];
+	/// <summary>
+	/// Time from the start of the current response to the earliest moment it can end: the 800 ms lead-in plus the gesture
+	/// sequence, which ends with the closing segment M15. Nothing shortens it when a dialog closes, so this is how long the
+	/// advisor stays after the response began; the speech must also have finished.
+	/// </summary>
+	public int ResponseMilliseconds => sequence!.DurationMilliseconds + 800;
 
 	public LobbyAdvisor( AudioSystem audio, Func<int>? nextRandom = null )
 	{
@@ -85,6 +93,10 @@ public sealed class LobbyAdvisor
 		if ( replace ) Cancel();
 		queue.Enqueue( response );
 	}
+	/// <summary>
+	/// Drops the queue and stops the response in progress at once (FUN_005d6060 (US 0x5d6060), which calls Advisor_StopSpeech (US 0x5994e0)).
+	/// Retail reaches this only from callers that reset the queue; closing a dialog is not one of them.
+	/// </summary>
 	public void Cancel()
 	{
 		queue.Clear();

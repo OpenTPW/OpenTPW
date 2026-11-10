@@ -106,7 +106,10 @@ internal sealed class LobbyPlayerPanel : Panel
 	{
 		flow.Cancel();
 		naming.Close();
-		level.Advisor?.Cancel();
+		// The advisor is left alone: NamingDialog_HandleResult (US 0x4a6d00) answers Cancel (message 0x100 with result −2, or message 0x804) by posting
+		// only the close message 4. Just the confirm path resets the response queue (FUN_004a6a50 (US 0x4a6a50) → FUN_005d6060 (US 0x5d6060)
+		// → Advisor_StopSpeech (US 0x5994e0)), so the response queued when the dialog opened (0x23a) plays to its end and the
+		// advisor leaves by itself afterwards.
 	}
 	public void Back()
 	{

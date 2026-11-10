@@ -22,6 +22,9 @@ internal sealed class LobbyAcceptance
 		LobbyCameraMode.GateAnimationRequested += ( _, entering ) => { if ( entering ) opened++; else closed++; };
 	}
 	private void Next( int value ) { stage = value; changed = Time.Now; }
+	/// <summary>When the naming dialog opened and was cancelled, and the length of the advisor response it started.</summary>
+	private double namingOpened, namingCancelled;
+	private int namingResponse;
 	/// <summary>Points the simulated mouse at a position in the 2048x1536 retail UI units.</summary>
 	private static void Hover( float x, float y ) => Input.PointerOverride = new Vector2( x * Screen.Size.X / 2048, y * Screen.Size.Y / 1536 );
 	private void Check( bool value, string description )
@@ -143,7 +146,7 @@ internal sealed class LobbyAcceptance
 				// An empty slot exercises the real naming dialog without publishing a new profile.
 				int empty = Array.FindIndex( LobbyPlayerProfiles.Read(), profile => profile == null );
 				if ( empty < 0 ) throw new InvalidOperationException( "Naming acceptance needs an empty test slot" );
-				level.PlayerMenu!.Select( empty ); Next( 11 ); break;
+				level.PlayerMenu!.Select( empty ); namingOpened = Time.Now; Next( 11 ); break;
 			case 11 when elapsed > 0.5:
 				Capture( "lobby-naming" );
 				// Hover OK through the input snapshot: help 360 and the type-2 button effect.
@@ -170,9 +173,22 @@ internal sealed class LobbyAcceptance
 					finally { audio.ConfigurePreferences( saved ); }
 				}
 				Input.PointerOverride = null; level.PlayerMenu!.Cancel();
+				if ( level.Advisor is { Enabled: true } advisor )
+				{
+					Check( advisor.Active && advisor.Response == 0x23a, "canceling naming leaves the active advisor response playing" );
+					namingCancelled = Time.Now; namingResponse = advisor.ResponseMilliseconds;
+				}
 				Check( level.Help?.Shown == -1, "closing the naming dialog hides the help strip" );
 				Check( level.PlayerMenu.Browsing, "naming cancellation returns to profile selection without creating data" ); Next( 12 ); break;
+			// Retail has no exit timer: the advisor stays for the rest of the response that opening the dialog started.
+			case 12 when namingResponse != 0 && level.Advisor!.Active && elapsed < 30: break;
 			case 12 when elapsed > 0.5:
+				if ( namingResponse != 0 )
+				{
+					double total = Time.Now - namingOpened, stayed = Time.Now - namingCancelled;
+					Log.Info( $"Lobby acceptance: advisor left {total:0.000} s after naming opened, {stayed:0.000} s after cancel; response {namingResponse} ms" );
+					Check( !level.Advisor!.Active && Math.Abs( total * 1000 - namingResponse ) < 500, "the advisor leaves when its naming response ends, not when the dialog closes" );
+				}
 				level.HandleEscape(); level.Menu!.Choose( UIStrings.QuitGame ); Next( 13 ); break;
 			case 13 when elapsed > 0.5:
 				Capture( "lobby-quit-accept" ); Confirmation.Accept(); Next( 14 ); break;

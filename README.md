@@ -78,7 +78,7 @@ Debug builds accept these options:
 | `--verify-lobby <folder>` | Drives the lobby pages and saves frames and a log to the folder, then exits |
 | `--verify-options <folder>` | Checks the options page the same way |
 | `--lobby-view <file>` | Fixes the lobby camera at a recorded view for comparison with the original game |
-| `--capture-frames <folder>` | Saves 30 consecutive frames after a 20 second warm-up |
+| `--capture-frames <folder>` | Saves 30 consecutive frames after a 20 second warm-up; `--capture-after <seconds>` and `--capture-count <frames>` change the two numbers |
 
 ## Contributing
 

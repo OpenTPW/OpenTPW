@@ -75,7 +75,10 @@ internal static class Game
 #if DEBUG
 		LobbyAcceptance? acceptance = options.TryGetValue( "--verify-lobby", out var output ) ? new( level, output ) : null;
 		LobbyOptionsAcceptance? optionsAcceptance = options.TryGetValue( "--verify-options", out var optionsOutput ) ? new( level, optionsOutput ) : null;
-		FrameCapture? frames = options.TryGetValue( "--capture-frames", out var framesOutput ) ? new( framesOutput ) : null;
+		// --capture-after and --capture-count move and size the window, e.g. onto the advisor's welcome gestures.
+		FrameCapture? frames = options.TryGetValue( "--capture-frames", out var framesOutput ) ? new( framesOutput,
+			options.TryGetValue( "--capture-after", out var after ) ? double.Parse( after, System.Globalization.CultureInfo.InvariantCulture ) : 20,
+			options.TryGetValue( "--capture-count", out var frameCount ) ? int.Parse( frameCount, System.Globalization.CultureInfo.InvariantCulture ) : 30 ) : null;
 #endif
 
 		//
@@ -114,8 +117,8 @@ internal static class Game
 		var options = new Dictionary<string, string>();
 		for ( int i = 0; i < args.Length; i += 2 )
 		{
-			if ( args[i] is not ("--verify-lobby" or "--lobby-view" or "--capture-frames" or "--verify-options") || i + 1 >= args.Length || !options.TryAdd( args[i], args[i + 1] ) )
-				throw new ArgumentException( $"Expected --verify-lobby <dir>, --verify-options <dir>, --lobby-view <file>, --capture-frames <dir>, got: {string.Join( ' ', args )}" );
+			if ( args[i] is not ("--verify-lobby" or "--lobby-view" or "--capture-frames" or "--capture-after" or "--capture-count" or "--verify-options") || i + 1 >= args.Length || !options.TryAdd( args[i], args[i + 1] ) )
+				throw new ArgumentException( $"Expected --verify-lobby <dir>, --verify-options <dir>, --lobby-view <file>, --capture-frames <dir> [--capture-after <seconds>] [--capture-count <frames>], got: {string.Join( ' ', args )}" );
 		}
 		return options;
 	}

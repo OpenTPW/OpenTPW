@@ -23,6 +23,9 @@ public sealed class LobbyAdvisorGeometry
 	/// the direction is multiplied as a row vector by its upper 3x3 and then renormalised. Because the root is flattened to 0.001
 	/// along the screen depth, the inverse stretches that axis a thousandfold: after renormalising, the light runs along the
 	/// model's depth axis whatever its authored tilt, so the model is shaded as if lit head-on before flattening.
+	/// The chain starts from the renderable's lighting matrix (+0x50), which its constructor FUN_00579cd0 (US 0x579cd0) sets to
+	/// identity; only Render_ApplyModelScreenTransform (US 0x57a260) with mode bit 2 would overwrite it, and none of its three callers passes that
+	/// bit (they set only the screen matrix +0x10). So <paramref name="node"/> is the node chain alone.
 	/// </summary>
 	public static System.Numerics.Vector3 LocalLight( Matrix4x4 node )
 	{

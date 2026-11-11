@@ -1,11 +1,6 @@
-using System.Numerics;
 using Heightfield = OpenTPW.ModelFile.HeightfieldData;
 
 namespace OpenTPW.Park;
-
-// Inside the namespace these aliases win over OpenTPW.Vector2/Vector3 from OpenTPW.Common.
-using Vector2 = System.Numerics.Vector2;
-using Vector3 = System.Numerics.Vector3;
 
 /// <summary>A placed object as a save records it; each game's save reader supplies these (see <see cref="IParkSave"/>).</summary>
 /// <param name="TopLeft">The saved mTopLeft: 1 + z × 128 + x of the model origin cell before the corner shift; 0 when not on the map.</param>
@@ -38,17 +33,17 @@ public static class ObjectPlacement
 	/// other objects use the saved cell and the footprint height. The saved angle is used as is.
 	/// </summary>
 	/// <returns>Null for a non-fixed object that is not on the map (mTopLeft 0).</returns>
-	public static PlacedInstance? Place( Heightfield terrain, Vector2 origin, ObjectType type, SavedObject saved, (int X, int Z) fixedItemOrigin )
+	public static PlacedInstance? Place( Heightfield terrain, ObjectType type, SavedObject saved, (int X, int Z) fixedItemOrigin )
 	{
 		if ( type.IsFixed )
 		{
 			int x = type.Info.EngineMapOffsetOverrideX != 0 ? type.Info.EngineMapOffsetOverrideX : fixedItemOrigin.X;
 			int z = type.Info.EngineMapOffsetOverrideZ != 0 ? type.Info.EngineMapOffsetOverrideZ : fixedItemOrigin.Z;
-			return Placement.Place( terrain, origin, x, z, saved.AngleDegrees, type.Width, type.Depth, type.Info.Shape, PlacementKind.Fixed );
+			return Placement.Place( terrain, x, z, saved.AngleDegrees, type.Width, type.Depth, type.Info.Shape, PlacementKind.Fixed );
 		}
 		if ( saved.TopLeft <= 0 ) return null;
 		var (cellX, cellZ) = saved.Cell;
-		return Placement.Place( terrain, origin, cellX, cellZ, saved.AngleDegrees, type.Width, type.Depth, type.Info.Shape, PlacementKind.Object );
+		return Placement.Place( terrain, cellX, cellZ, saved.AngleDegrees, type.Width, type.Depth, type.Info.Shape, PlacementKind.Object );
 	}
 }
 
@@ -64,11 +59,12 @@ public static class QueuePieces
 	public static int Angle( int rotationDegrees ) => 360 - rotationDegrees is var angle && angle == 360 ? 0 : angle;
 
 	/// <summary>
-	/// Queue_PlacePiece passes a static one-cell shape (US 0x816d68 / TPI 0xaf7548) with kind 0x33a, so the height is the
-	/// footprint rule over that cell's four corners.
+	/// Queue_PlacePiece passes a static one-cell shape (US 0x816d68 / TPI 0xaf7548). Queue_LoadPieceModels (US 0x522900) sets
+	/// only its width and depth to 1, so its cell value stays 0 and is not "set"; the cell still counts because kind 0x33a
+	/// has the all-cells bit, so the height is the footprint rule over that cell's four corners.
 	/// </summary>
-	private static readonly FootprintShape OneCell = new( ["*"] );
+	private static readonly FootprintShape OneCell = new( ["."], ShapeCharacters.ThemeParkWorld );
 
-	public static PlacedInstance Place( Heightfield terrain, Vector2 origin, QueueCell cell ) =>
-		Placement.Place( terrain, origin, cell.X, cell.Z, Angle( cell.RotationDegrees ), 1, 1, OneCell, PlacementKind.QueuePiece );
+	public static PlacedInstance Place( Heightfield terrain, QueueCell cell ) =>
+		Placement.Place( terrain, cell.X, cell.Z, Angle( cell.RotationDegrees ), 1, 1, OneCell, PlacementKind.QueuePiece );
 }

@@ -27,12 +27,27 @@ public partial class ModelFile : BaseFormat
 	public HeightfieldData? Heightfield { get; private set; }
 
 	/// <summary>
+	/// Index into <see cref="Nodes"/> of the node at header +0x78, or -1 when that is not a node record. The game walks the
+	/// node tree from it (Model_SubmitNodeTree, US 0x57a530, follows its sibling and child links) and
+	/// MeshInstance_SetTransform (US 0x467030) turns and places only this node. In the retail models of both games it is
+	/// the one node without a parent; only Theme Park World's jungle <c>wr_tunnel.md2</c> holds no record offset there.
+	/// </summary>
+	public int RootNodeIndex { get; private set; } = -1;
+
+	/// <summary>
 	/// A grid of cells with heights at their corners, from the structure at header offset 0x6C, as
 	/// Terrain_LoadBase (US address pending) reads it. Theme Park Inc's game.exe loads the same structure
 	/// (TPI 0x4a4dd0), so both games use this reader.
 	/// </summary>
 	public class HeightfieldData
 	{
+		/// <summary>
+		/// World position of grid corner (0, 0) along X and Z (record +0x08/+0x0C). MeshInstance_SetTransform (US 0x467030)
+		/// adds it to an instance's cell position.
+		/// </summary>
+		public float OriginX { get; set; }
+		public float OriginZ { get; set; }
+
 		/// <summary>
 		/// Cell size along X and Z (10 in every level).
 		/// </summary>
@@ -218,11 +233,13 @@ public partial class ModelFile : BaseFormat
 
 	private static HeightfieldData ReadHeightfield( BinaryReader reader, uint offset )
 	{
-		// +0x04 and +0x06 hold the corner and cell counts as u16; +0x08 is unknown
-		reader.BaseStream.Seek( offset + 0x10, SeekOrigin.Begin );
+		// +0x04 and +0x06 hold the corner and cell counts as u16
+		reader.BaseStream.Seek( offset + 0x08, SeekOrigin.Begin );
 
 		var heightfield = new HeightfieldData
 		{
+			OriginX = reader.ReadSingle(),
+			OriginZ = reader.ReadSingle(),
 			CellSizeX = reader.ReadSingle(),
 			CellSizeZ = reader.ReadSingle(),
 			Width = (int)reader.ReadUInt32(),
@@ -343,6 +360,9 @@ public partial class ModelFile : BaseFormat
 
 				return -1;
 			}
+
+			reader.BaseStream.Seek( 0x78, SeekOrigin.Begin );
+			RootNodeIndex = NodeIndexAt( reader.ReadUInt32() );
 
 			Meshes = new List<Mesh>( meshCnt );
 			Nodes = new List<Node>( nodeCnt );

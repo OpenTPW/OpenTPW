@@ -70,10 +70,10 @@ public static class Placement
 	/// Places an instance whose model origin is at cell (<paramref name="cellX"/>, <paramref name="cellZ"/>), turned by
 	/// <paramref name="angle"/> (0, 90, 180 or 270), with a footprint of <paramref name="width"/> × <paramref name="depth"/> cells.
 	/// </summary>
-	/// <param name="origin">The heightfield's world origin (heightfield +0x08/+0x0C; 0 or −0 in retail levels).</param>
+	/// <param name="terrain">The level heightfield; its origin (record +0x08/+0x0C) and cell size give the translation.</param>
 	/// <param name="shape">The object's shape grid, or null (then every cell counts for the height).</param>
 	/// <exception cref="ArgumentOutOfRangeException">The angle is not a quarter turn: the game handles only those four.</exception>
-	public static PlacedInstance Place( Heightfield terrain, Vector2 origin, int cellX, int cellZ, int angle,
+	public static PlacedInstance Place( Heightfield terrain, int cellX, int cellZ, int angle,
 		int width, int depth, FootprintShape? shape, PlacementKind kind )
 	{
 		if ( angle is not (0 or 90 or 180 or 270) ) throw new ArgumentOutOfRangeException( nameof( angle ), angle, "Placement handles quarter turns only" );
@@ -84,7 +84,8 @@ public static class Placement
 		float height = shape == null || (kind & PlacementKind.FootprintHeight) == 0
 			? Corner( terrain, x, z )
 			: GroundHeight( terrain, left, top, width, depth, angle, shape, (kind & PlacementKind.AllCells) != 0 );
-		var translation = new Vector3( x * terrain.CellSizeX + origin.X, height, z * terrain.CellSizeZ + origin.Y );
+		// MeshInstance_SetTransform reads the record the terrain model's +0x6C points at: origin +0x08/+0x0C, cell size +0x10/+0x14.
+		var translation = new Vector3( x * terrain.CellSizeX + terrain.OriginX, height, z * terrain.CellSizeZ + terrain.OriginZ );
 		return new PlacedInstance( x, z, left, top, extentX, extentZ, height, angle, translation, (kind & PlacementKind.Transform) != 0 );
 	}
 
@@ -168,14 +169,22 @@ public static class Placement
 		terrain.HeightAt( Math.Clamp( x, 0, terrain.Width ), Math.Clamp( z, 0, terrain.Depth ) );
 
 	/// <summary>
-	/// Cosine and sine of a quarter turn. The game looks both up in its sine table (sin(a + π/2) and sin(a), US 0x7b0968);
-	/// exact values are used here, the table's quarter-turn entries have not been read.
+	/// Cosine and sine of an angle in degrees as MeshInstance_SetTransform looks them up: entries
+	/// round((a·0.017453292 + 1.5707964)·scale) and round(a·0.017453292·scale) of the 4096-entry sine table that
+	/// SinTable_Init (US 0x4708d0 / TPI 0x4dc860) fills with (float)sin(i / 4096 · 6.2831855), scale = 4096 · 0.15915494
+	/// (table US 0x7b0968 / TPI 0xa4390c). The 2π constant is the float just above 2π, so the half-turn entry is −8.742278e−8,
+	/// not 0: cos 90° and sin 180° come out as that value.
 	/// </summary>
-	public static (float Cos, float Sin) CosSin( int angle ) => ((angle % 360 + 360) % 360) switch
+	public static (float Cos, float Sin) CosSin( int angle )
 	{
-		90 => (0, 1),
-		180 => (-1, 0),
-		270 => (0, -1),
-		_ => (1, 0),
-	};
+		float radians = (float)(angle * 0.017453292);
+		float cos = SineTable[(int)MathF.Round( (radians - -1.5707964f) * SineScale, MidpointRounding.ToEven ) & (SineEntries - 1)];
+		float sin = SineTable[(int)MathF.Round( SineScale * radians, MidpointRounding.ToEven ) & (SineEntries - 1)];
+		return (cos, sin);
+	}
+
+	private const int SineEntries = 4096; // SinTable_Init's argument at both call sites
+	private static readonly float SineScale = SineEntries * 0.15915494f;
+	private static readonly float[] SineTable = Enumerable.Range( 0, SineEntries )
+		.Select( i => (float)Math.Sin( (double)i / SineEntries * 6.2831855f ) ).ToArray();
 }

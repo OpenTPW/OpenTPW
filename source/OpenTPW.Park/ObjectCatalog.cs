@@ -4,14 +4,17 @@ using System.Text.RegularExpressions;
 namespace OpenTPW.Park;
 
 /// <summary>
-/// The <c>Info.*</c> keys of an object's <c>.sam</c> that placement uses. Both games share the keyword table
-/// (US 0x744b6c / TPI 0x9a2cfc: type, name, value; Theme Park Inc adds <c>Info.Type</c> after <c>Info.Id</c>), so values
-/// are looked up by key name and the extra key needs no parameter.
+/// The <c>Info.*</c> keys of an object's <c>.sam</c> that placement uses. Both games describe the definition with a keyword
+/// table (US 0x744b30 / TPI 0x9a2cc0; 0x3C-byte entries: type, name, defaults; Theme Park Inc adds <c>Info.Type</c> after
+/// <c>Info.Id</c>), so values are looked up by key name and the extra key needs no parameter.
 /// </summary>
 /// <remarks>
-/// ParkObject_CreateMesh (US 0x4dd500 / TPI 0x5df740) reads the definition at +0x18/+0x20/+0x24/+0x38 (TPI +0x1c/+0x24/+0x28/+0x3c,
-/// one word later for the extra key). Those offsets are Shape, EngineMapOffsetOverrideX/Y and DontApplyOffset when the table's
-/// entries are laid out four bytes each from +0x10; the generic loader that stores them (US 0x401030) is not fully traced.
+/// SamLoader_BindFields (US 0x401030) gives the n-th value key (types 4 to 11, n from 1) the address base + 4n, the base
+/// being the loader's second virtual: definition +0xC for object definitions (loader at +4, ObjectDef_Construct
+/// US 0x412c20 / TPI 0x43c210; virtual US 0x5b0d60 / TPI 0x43c2d0 returns loader +8). That puts Shape at +0x18,
+/// EngineMapOffsetOverrideX/Y at +0x20/+0x24, EngineFootprintWidth/HeightOverride at +0x28/+0x2C and DontApplyOffset at +0x38
+/// (Theme Park Inc one word later), the offsets ParkObject_CreateMesh (US 0x4dd500 / TPI 0x5df740) reads
+/// (<c>shared\blocks\park-placement\evidence\descriptor_offsets.py</c>).
 /// </remarks>
 public sealed record SamInfo( int Id, string Name, FootprintShape? Shape, int EngineMapOffsetOverrideX, int EngineMapOffsetOverrideZ,
 	int EngineFootprintWidthOverride, int EngineFootprintHeightOverride, bool DontApplyOffset )
@@ -21,8 +24,9 @@ public sealed record SamInfo( int Id, string Name, FootprintShape? Shape, int En
 	private static readonly Regex ShapeBlock = new( @"^Info\.Shape[^\r\n]*\r?\n---[ \t]*\r?\n(.*?)\r?\n---", RegexOptions.Multiline | RegexOptions.Singleline );
 
 	/// <summary>Reads the keys from <c>.sam</c> text; null when it declares no <c>Info.Id</c> (not an object definition).</summary>
-	/// <exception cref="InvalidDataException">A numeric key has a value that is not an integer.</exception>
-	public static SamInfo? Parse( string text )
+	/// <param name="shapeCharacters">The game's shape character table.</param>
+	/// <exception cref="InvalidDataException">A numeric key has a value that is not an integer, or the shape grid is invalid.</exception>
+	public static SamInfo? Parse( string text, ShapeCharacters shapeCharacters )
 	{
 		var values = new Dictionary<string, string>( StringComparer.OrdinalIgnoreCase );
 		foreach ( Match match in Key.Matches( text ) )
@@ -38,7 +42,7 @@ public sealed record SamInfo( int Id, string Name, FootprintShape? Shape, int En
 		string name = values.TryGetValue( "Name", out var quoted ) && quoted.IndexOf( '"' ) is int open and >= 0 && quoted.IndexOf( '"', open + 1 ) is int close and > 0
 			? quoted[(open + 1)..close] : "";
 		var shape = ShapeBlock.Match( text ) is { Success: true } block
-			? new FootprintShape( block.Groups[1].Value.Replace( "\r", "" ).Split( '\n' ) ) : null;
+			? new FootprintShape( block.Groups[1].Value.Replace( "\r", "" ).Split( '\n' ), shapeCharacters ) : null;
 		return new SamInfo( Number( "Id" ), name, shape, Number( "EngineMapOffsetOverrideX" ), Number( "EngineMapOffsetOverrideY" ),
 			Number( "EngineFootprintWidthOverride" ), Number( "EngineFootprintHeightOverride" ), Number( "DontApplyOffset" ) != 0 );
 	}
@@ -59,7 +63,12 @@ public sealed record ObjectType( SamInfo Info, string Source, string Model, int 
 /// Object types by id. ObjectTypes_FindById (US 0x412e90 / TPI 0x43c700) searches the registered definitions in order, so the
 /// first registration of an id wins; later duplicates are kept out (<see cref="Duplicates"/>) rather than replacing it.
 /// </summary>
-/// <remarks>Which archives are registered and in which order is the host's scan; the game's registration order is not established.</remarks>
+/// <remarks>
+/// Which archives are registered and in which order is the host's scan. The game appends definitions as
+/// ObjectTypes_ScanSources (US 0x413930) enumerates its sources through the virtual file system (ObjectTypes_Add,
+/// US 0x413c10); that enumeration order has not been traced. It cannot change a result for the retail data: no level of
+/// either game declares an id twice.
+/// </remarks>
 public sealed class ObjectCatalog
 {
 	private readonly Dictionary<int, ObjectType> types = new();

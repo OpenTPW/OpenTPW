@@ -21,6 +21,8 @@ public interface IParkSave
 {
 	IReadOnlyList<SavedObject> Objects { get; }
 	IEnumerable<QueueCell> QueueCells { get; }
+	/// <summary>Every map cell's saved tile, for <see cref="TerrainCells.Apply"/>.</summary>
+	IEnumerable<MapTile> MapTiles { get; }
 }
 
 /// <summary>Places saved park objects (ParkObject_CreateMesh, US 0x4dd500 / TPI 0x5df740).</summary>

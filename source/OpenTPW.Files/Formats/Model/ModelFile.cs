@@ -36,7 +36,7 @@ public partial class ModelFile : BaseFormat
 
 	/// <summary>
 	/// A grid of cells with heights at their corners, from the structure at header offset 0x6C, as
-	/// Terrain_LoadBase (US address pending) reads it. Theme Park Inc's game.exe loads the same structure
+	/// Terrain_LoadBase (US 0x4504c0) reads it. Theme Park Inc's game.exe loads the same structure
 	/// (TPI 0x4a4dd0), so both games use this reader.
 	/// </summary>
 	public class HeightfieldData
@@ -68,14 +68,17 @@ public partial class ModelFile : BaseFormat
 		public float[] Heights { get; set; } = [];
 
 		/// <summary>
-		/// Cell attributes, Width * Depth, row by row along Z. Byte 0 bit 0: water;
-		/// byte 2: ground texture, an index into <see cref="TextureNames"/>.
+		/// Cell attributes, Width * Depth, row by row along Z. Bits 0–15 are flags (bit 0: the terrain does not draw the
+		/// cell, set on water in the level files; bit 1: split along the (x, z)–(x+1, z+1) diagonal; 0x08/0x10/0x20/0x40:
+		/// texture turn and mirror, see OpenTPW.Park.TerrainCells); bits 16–31: ground texture, an index into
+		/// <see cref="TextureNames"/>. Terrain_DrawCells (US 0x56f670 / TPI 0x6d0ee0) reads both halves as 16-bit words.
 		/// </summary>
 		public uint[] Cells { get; set; } = [];
 
 		public float HeightAt( int x, int z ) => Heights[z * (Width + 1) + x];
+		/// <summary>Bit 0: the terrain skips the cell (Terrain_DrawCells); the level files set it on water.</summary>
 		public bool IsWater( int x, int z ) => (Cells[z * Width + x] & 1) != 0;
-		public int TextureAt( int x, int z ) => (int)((Cells[z * Width + x] >> 16) & 0xFF);
+		public int TextureAt( int x, int z ) => (int)(Cells[z * Width + x] >> 16);
 	}
 
 	public ModelFile( Stream stream )

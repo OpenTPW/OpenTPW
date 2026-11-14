@@ -6,6 +6,7 @@ The retail UI core shared by Theme Park World and Theme Park Inc: both games' ex
 - **Elements**: `UiElement` keeps type, flags, identifier, rectangle, hit shape (rectangle, circle, ellipse or polygon), model-name hash and the values pages store; `HitTest`, `Find` and `SetEnabled` follow the retail rules.
 - **Model names**: `UiModelName.Hash` is the retail root-name hash (multiplier 47) that tables use to refer to control models.
 - **Input**: `UiInput` routes pointer moves and buttons (enter, leave, move, down, up), and runs the button behaviour: the six control states, clicks, toggles and auto-repeat. `UiInputOptions` holds the one difference between the two games' button handlers.
+- **Startup images & movies**: `StartupImages` and `StartupMovies` port `StartupImages_Prepare` (US `0x587380` / TPI `0x6f89b0`), `StartupMovie_Play` (US `0x54df20` / TPI `0x6a1780`) and `StartupMovie_PlayRandom` (US `0x54e070` / TPI `0x6a1930`), parameterised by `StartupImageOptions` and `StartupMovieOptions` for both games.
 
 ```csharp
 var table = UiTable.Read( words, UiTableDialect.ThemeParkInc );

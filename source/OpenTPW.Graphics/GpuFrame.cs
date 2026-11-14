@@ -210,8 +210,16 @@ public sealed unsafe class GpuFrame
 		GpuPipeline? bound = null;
 		var uniforms = CollectionsMarshal.AsSpan( slot.Uniforms );
 		var bindings = stackalloc SDL_GPUTextureSamplerBinding[MaxSamplers];
+		GpuViewport? lastViewport = null;
 		foreach ( var draw in pass.Draws )
 		{
+			if ( lastViewport != draw.Viewport )
+			{
+				var area = draw.Viewport;
+				var viewport = new SDL_GPUViewport { x = area.X, y = area.Y, w = area.Width, h = area.Height, min_depth = 0, max_depth = 1 };
+				SDL_SetGPUViewport( render, &viewport );
+				lastViewport = area;
+			}
 			if ( draw.Pipeline != bound ) SDL_BindGPUGraphicsPipeline( render, (bound = draw.Pipeline).Handle );
 			if ( draw.Pipeline.Description.VertexLayout.Stride != 0 )
 			{
@@ -294,4 +302,4 @@ internal sealed class PassRecord
 internal readonly record struct DrawRecord( GpuPipeline Pipeline, IntPtr VertexBuffer, uint VertexOffsetBytes,
 	bool Indexed, IntPtr IndexBuffer, uint IndexOffsetBytes, SDL_GPUIndexElementSize IndexSize,
 	uint Count, uint Instances, uint First, int VertexOffset, int TextureStart, int TextureCount,
-	int VertexUniformStart, int VertexUniformLength, int FragmentUniformStart, int FragmentUniformLength );
+	int VertexUniformStart, int VertexUniformLength, int FragmentUniformStart, int FragmentUniformLength, GpuViewport Viewport );

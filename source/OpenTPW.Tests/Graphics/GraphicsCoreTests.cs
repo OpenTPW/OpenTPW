@@ -152,6 +152,29 @@ public sealed unsafe class GraphicsCoreTests
 	}
 
 	[TestMethod]
+	public void ViewportsAreClippedAndSnapshottedPerDraw()
+	{
+		using var red = Texture( 1, 1, 0xff0000ff );
+		using var green = Texture( 1, 1, 0x00ff00ff );
+		using var target = new RenderTarget( device, 16, 8, Rgba, depth: false );
+		var pipeline = Pipeline( target, ui );
+		for ( int i = 0; i < 30; i++ )
+		{
+			var pixels = Render( target, GpuClear.ToColor( 0, 0, 0, 1 ), (frame, pass) =>
+			{
+				var vertices = frame.Upload( FullScreen );
+				var whole = pass.Viewport;
+				pass.Viewport = new( 0, 0, 8, 8 );
+				pass.Draw( pipeline, vertices, 6, [new( red, device.GetSampler( SamplerPreset.Point ) )] );
+				pass.Viewport = new( 8, 0, 8, 8 );
+				pass.Draw( pipeline, vertices, 6, [new( green, device.GetSampler( SamplerPreset.Point ) )] );
+				pass.Viewport = whole;
+			} );
+			AssertPixel( Pixel( pixels, target, 3, 3 ), 1, 0, 0, 1, $"left viewport {i}" );
+			AssertPixel( Pixel( pixels, target, 12, 3 ), 0, 1, 0, 1, $"right viewport {i}" );
+		}
+	}
+	[TestMethod]
 	public void BlendModesMatchTheMaterialFlagFormulas()
 	{
 		using var texture = Texture( 1, 1, 0xff000080 );

@@ -10,14 +10,30 @@ public sealed class GpuRenderPass
 	private readonly GpuFrame frame;
 	private readonly PassRecord record;
 	private bool ended;
+	private GpuViewport viewport;
 
 	internal GpuRenderPass( GpuFrame frame, PassRecord record )
 	{
 		this.frame = frame;
 		this.record = record;
+		viewport = new( 0, 0, record.Target.Width, record.Target.Height );
 	}
 
 	public RenderTarget Target => record.Target;
+
+	/// <summary>Viewport captured by subsequent draws; changing it cannot redirect previously recorded geometry.</summary>
+	public GpuViewport Viewport
+	{
+		get => viewport;
+		set
+		{
+			frame.EnsureRecording();
+			if ( ended ) throw new InvalidOperationException( "This pass has ended." );
+			if ( !float.IsFinite( value.X ) || !float.IsFinite( value.Y ) || !float.IsFinite( value.Width ) || !float.IsFinite( value.Height ) || value.Width <= 0 || value.Height <= 0 )
+				throw new ArgumentOutOfRangeException( nameof(value) );
+			viewport = value;
+		}
+	}
 
 	/// <summary>Draws <paramref name="vertexCount"/> vertices. Uniform bytes go to slot 0 of each stage (b0,space1 and b0,space3).</summary>
 	public void Draw( GpuPipeline pipeline, BufferSlice vertices, uint vertexCount, ReadOnlySpan<TextureBinding> textures = default,
@@ -63,7 +79,7 @@ public sealed class GpuRenderPass
 		var (fragmentStart, fragmentLength) = frame.AddUniforms( fragmentUniforms );
 		record.Draws.Add( new DrawRecord( pipeline, GpuFrame.Handle( vertices ), vertices.Offset,
 			indices.HasValue, indices.HasValue ? GpuFrame.Handle( indices.Value ) : IntPtr.Zero, indices?.Offset ?? 0, indexSize,
-			count, instances, first, vertexOffset, textureStart, textureCount, vertexStart, vertexLength, fragmentStart, fragmentLength ) );
+			count, instances, first, vertexOffset, textureStart, textureCount, vertexStart, vertexLength, fragmentStart, fragmentLength, viewport ) );
 	}
 }
 

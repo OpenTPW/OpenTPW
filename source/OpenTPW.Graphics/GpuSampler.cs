@@ -23,6 +23,10 @@ public enum SamplerPreset
 	PointWrap,
 	/// <summary>Nearest minification and mipmaps, linear magnification, clamped.</summary>
 	PointMinLinearMag,
+	/// <summary>Linear minification and mipmaps, nearest magnification, repeating.</summary>
+	LinearMinPointMagWrap,
+	/// <summary>Linear filtering, repeating.</summary>
+	LinearWrap,
 }
 
 /// <summary>A sampler object, created once per preset and owned by its device.</summary>
@@ -47,12 +51,13 @@ public sealed unsafe class GpuSampler
 		var (min, mag, mip) = preset switch
 		{
 			SamplerPreset.Point or SamplerPreset.PointWrap => (nearest, nearest, SDL_GPUSamplerMipmapMode.SDL_GPU_SAMPLERMIPMAPMODE_NEAREST),
+			SamplerPreset.LinearMinPointMagWrap => (linear, nearest, SDL_GPUSamplerMipmapMode.SDL_GPU_SAMPLERMIPMAPMODE_LINEAR),
 			SamplerPreset.PointMinLinearMag => (nearest, linear, SDL_GPUSamplerMipmapMode.SDL_GPU_SAMPLERMIPMAPMODE_NEAREST),
 			_ => (linear, linear, SDL_GPUSamplerMipmapMode.SDL_GPU_SAMPLERMIPMAPMODE_LINEAR),
 		};
 		var address = preset switch
 		{
-			SamplerPreset.AnisotropicWrap or SamplerPreset.PointWrap => SDL_GPUSamplerAddressMode.SDL_GPU_SAMPLERADDRESSMODE_REPEAT,
+			SamplerPreset.AnisotropicWrap or SamplerPreset.PointWrap or SamplerPreset.LinearMinPointMagWrap or SamplerPreset.LinearWrap => SDL_GPUSamplerAddressMode.SDL_GPU_SAMPLERADDRESSMODE_REPEAT,
 			SamplerPreset.AnisotropicRepeat => SDL_GPUSamplerAddressMode.SDL_GPU_SAMPLERADDRESSMODE_MIRRORED_REPEAT,
 			_ => SDL_GPUSamplerAddressMode.SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE,
 		};

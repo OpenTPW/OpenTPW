@@ -147,6 +147,8 @@ public sealed unsafe class GraphicsCoreTests
 		AssertPixel( Pixel( point, target, 57, 57 ), 1, 1, 1, 1, "bottom right" );
 		// Pixel 31's centre is exactly the texture centre, where bilinear filtering averages all four texels.
 		AssertPixel( Pixel( Draw( SamplerPreset.Linear ), target, 31, 31 ), 0.5, 0.5, 0.5, 1, "linear centre" );
+		AssertPixel( Pixel( Draw( SamplerPreset.LinearWrap ), target, 31, 31 ), 0.5, 0.5, 0.5, 1, "wrapped linear magnification" );
+		AssertPixel( Pixel( Draw( SamplerPreset.LinearMinPointMagWrap ), target, 5, 5 ), 1, 0, 0, 1, "wrapped point magnification" );
 	}
 
 	[TestMethod]

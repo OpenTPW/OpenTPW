@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 
 namespace OpenTPW;
 
@@ -7,15 +7,18 @@ internal sealed class BFSTReader : BaseFormat
 	private ExpandedMemoryStream memoryStream;
 	public byte[] buffer;
 
-	private static BFMUReader LookupTable = new BFMUReader( GameLanguage.Path( "MBToUni.dat" ) );
+	private readonly BFMUReader LookupTable;
 
 	public BFSTReader( string path )
 	{
+		LookupTable = new BFMUReader( GameLanguage.Path( "MBToUni.dat" ) );
 		ReadFromFile( path );
 	}
 
-	public BFSTReader( Stream stream )
+	public BFSTReader( Stream stream, BFMUReader? lookup = null )
 	{
+		// A process can read more than one language pack; a static first-language lookup corrupts later reads.
+		LookupTable = lookup ?? new BFMUReader( GameLanguage.Path( "MBToUni.dat" ) );
 		ReadFromStream( stream );
 	}
 	public void Dispose()

@@ -112,6 +112,29 @@ public sealed unsafe class GraphicsCoreTests
 	}
 
 	[TestMethod]
+	public void OddWidthTextureUploadsRenderEveryRowAcrossThirtyFrames()
+	{
+		using var texture = GpuTexture.Create2D( device, 151, 52 );
+		using var target = new RenderTarget( device, 151, 52 );
+		using var buffer = GpuBuffer.Create<MeshVertex>( device, GpuBufferUsage.Vertex, FullScreen );
+		var pipeline = Pipeline( target, ui );
+		for ( int frameNumber = 0; frameNumber < 30; frameNumber++ )
+		{
+			var expected = new byte[151 * 52 * 4];
+			for ( int y = 0; y < 52; y++ ) for ( int x = 0; x < 151; x++ )
+			{
+				int offset = (y * 151 + x) * 4;
+				expected[offset] = (byte)(x + frameNumber); expected[offset + 1] = (byte)(y + frameNumber);
+				expected[offset + 2] = (byte)(x ^ y); expected[offset + 3] = 255;
+			}
+			texture.Upload( expected );
+			var actual = Render( target, GpuClear.ToColor( 0, 0, 0, 0 ), (_, pass) =>
+				pass.Draw( pipeline, buffer, 6, [new TextureBinding( texture, device.GetSampler( SamplerPreset.Point ) )] ) );
+			CollectionAssert.AreEqual( expected, actual, $"Odd-width texture frame {frameNumber}." );
+		}
+	}
+
+	[TestMethod]
 	public void DeviceSelectsABackendAndShaderFormat()
 	{
 		Assert.IsTrue( device.Driver is "direct3d12" or "vulkan", device.Driver );

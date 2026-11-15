@@ -39,6 +39,7 @@
 	  <ProjectReference Include="..\OpenTPW.Audio\OpenTPW.Audio.csproj" />
 	  <ProjectReference Include="..\OpenTPW.Scripting\OpenTPW.Scripting.csproj" />
 	  <ProjectReference Include="..\OpenTPW.Graphics\OpenTPW.Graphics.csproj" />
+	  <ProjectReference Include="..\OpenTPW.UI\OpenTPW.UI.csproj" />
 	</ItemGroup>
 
 </Project>

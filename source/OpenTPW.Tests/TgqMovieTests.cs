@@ -58,6 +58,25 @@ public sealed class TgqMovieTests
 	}
 
 	[TestMethod]
+	public void ColourConversionFollowsTheRetailTables()
+	{
+		// The bf.tgq background and the blue of its logo; the retail TPI capture shows (219,217,219) and
+		// (14,68,155) there, within the rounding of the game's 16-bit surface.
+		Assert.AreEqual( "218,216,219", Pixel( 233, 128, 128 ) );
+		Assert.AreEqual( "15,66,158", Pixel( 76, 182, 94 ) );
+		// Neutral chroma still lands on the odd table value 1, so black and white keep a small blue/red tint.
+		Assert.AreEqual( "2,0,3", Pixel( 0, 128, 128 ) );
+		Assert.AreEqual( "240,238,241", Pixel( 255, 128, 128 ) );
+	}
+
+	private static string Pixel( byte y, byte u, byte v )
+	{
+		var frame = new TgqVideoFrame( 2, 2, [y, y, y, y], [u], [v] );
+		var rgba = frame.ToRgba();
+		return $"{rgba[0]},{rgba[1]},{rgba[2]}";
+	}
+
+	[TestMethod]
 	public void EmptyStreamThrowsInvalidData()
 	{
 		Assert.ThrowsExactly<InvalidDataException>( () => TgqMovieFile.Read( ReadOnlySpan<byte>.Empty ) );

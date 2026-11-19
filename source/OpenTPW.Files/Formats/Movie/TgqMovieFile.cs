@@ -21,7 +21,7 @@ public sealed class TgqVideoFrame
 		V = v;
 	}
 
-	/// <summary>Converts this YUV420p frame to packed RGBA8888 (alpha = 255) using BT.601 limited-range coefficients.</summary>
+	/// <summary>Converts this YUV420p frame to packed RGBA8888 (alpha = 255) the way the games' movie player does; see <see cref="WriteRgba"/>.</summary>
 	public byte[] ToRgba()
 	{
 		var rgba = new byte[checked(Width * Height * 4)];
@@ -30,6 +30,15 @@ public sealed class TgqVideoFrame
 	}
 
 	/// <summary>Writes packed RGBA8888 pixels into <paramref name="destination"/>.</summary>
+	/// <remarks>
+	/// Matches the player's lookup tables (<c>Tqi_BuildYuvTables16</c>, US 0x66fc10 / TPI 0x862680, and the 32-bit
+	/// <c>Tqi_BuildYuvTables32</c>, US 0x66ffa0 / TPI 0x862a10): one 128-entry table per plane, indexed by the sample
+	/// halved, each entry holding the odd value <c>2i+1</c> and its JFIF full-range contribution in 16.16 fixed point
+	/// (<c>0x166e9</c> = 1.402, <c>-0x5816</c> = -0.344, <c>-0xb6cf</c> = -0.714, <c>0x1c5a1</c> = 1.772), so luma gets
+	/// no 255/219 gain. The 16 subtracted from luma is not a constant in those tables; it was measured from the retail
+	/// TPI first-run capture of <c>bf.tgq</c>, where about 97,000 flat pixels sit 14-15 below the table value at every
+	/// level from 74 to 233 while chroma matches exactly.
+	/// </remarks>
 	public void WriteRgba( Span<byte> destination )
 	{
 		int required = checked(Width * Height * 4);
@@ -44,14 +53,13 @@ public sealed class TgqVideoFrame
 			int uvRow = (row >> 1) * chromaWidth;
 			for ( int col = 0; col < Width; col++ )
 			{
-				int y = Y[yRow + col] - 16;
-				int u = U[uvRow + (col >> 1)] - 128;
-				int v = V[uvRow + (col >> 1)] - 128;
+				int y = TableValue( Math.Max( Y[yRow + col] - 16, 0 ) );
+				int u = TableValue( U[uvRow + (col >> 1)] - 128 );
+				int v = TableValue( V[uvRow + (col >> 1)] - 128 );
 
-				int c = 298 * y;
-				int r = (c + 409 * v + 128) >> 8;
-				int g = (c - 100 * u - 208 * v + 128) >> 8;
-				int b = (c + 516 * u + 128) >> 8;
+				int r = y + Fixed16( 0x166e9 * v );
+				int g = y + Fixed16( -0x5816 * u ) + Fixed16( -0xb6cf * v );
+				int b = y + Fixed16( 0x1c5a1 * u );
 
 				destination[dst++] = (byte)Math.Clamp( r, 0, 255 );
 				destination[dst++] = (byte)Math.Clamp( g, 0, 255 );
@@ -60,6 +68,12 @@ public sealed class TgqVideoFrame
 			}
 		}
 	}
+
+	// The tables keep 7 bits per sample: index = sample >> 1, entry = 2 * index + 1.
+	private static int TableValue( int sample ) => ((sample >> 1) << 1) + 1;
+
+	// imul / shl edx,16 / shr eax,16 / adc: a 16.16 product rounded half up.
+	private static int Fixed16( int product ) => (product + 0x8000) >> 16;
 }
 
 /// <summary>

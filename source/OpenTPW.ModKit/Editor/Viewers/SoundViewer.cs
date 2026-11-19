@@ -1,5 +1,4 @@
-﻿using ImGuiNET;
-using Veldrid;
+using ImGuiNET;
 
 namespace OpenTPW.ModKit;
 
@@ -28,8 +27,4 @@ internal class SoundViewer : IFileViewer
 		}
 	}
 
-	public TextureView GetIcon()
-	{
-		throw new NotImplementedException();
-	}
 }

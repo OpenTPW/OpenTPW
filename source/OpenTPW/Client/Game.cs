@@ -84,6 +84,7 @@ internal static class Game
 		//
 		// Run game loop
 		//
+		Render.PreviewSound = path => audio.PlayFile( path );
 		Render.OnUpdate += level.Update;
 		Render.PrepareResources += () =>
 		{

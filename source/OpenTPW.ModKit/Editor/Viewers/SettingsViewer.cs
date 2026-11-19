@@ -1,5 +1,4 @@
-﻿using ImGuiNET;
-using Veldrid;
+using ImGuiNET;
 
 namespace OpenTPW.ModKit;
 
@@ -43,8 +42,4 @@ internal class SettingsViewer : IFileViewer
 		ImGui.EndTable();
 	}
 
-	public TextureView GetIcon()
-	{
-		throw new NotImplementedException();
-	}
 }

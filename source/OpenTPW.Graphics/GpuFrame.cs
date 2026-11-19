@@ -4,6 +4,9 @@ using static SDL.SDL3;
 
 namespace OpenTPW.Graphics;
 
+/// <summary>A pixel rectangle limiting a draw, in target coordinates with the origin at the top left.</summary>
+public readonly record struct GpuScissor( int X, int Y, int Width, int Height );
+
 /// <summary>A texture and the sampler bound with it at one fragment sampler slot.</summary>
 public readonly record struct TextureBinding( GpuTexture Texture, GpuSampler Sampler );
 
@@ -208,6 +211,7 @@ public sealed unsafe class GpuFrame
 		var render = SDL_BeginGPURenderPass( commands, &color, 1, pass.Depth != IntPtr.Zero ? &depth : null );
 		if ( render == null ) throw GraphicsException.FromSdl( nameof(SDL_BeginGPURenderPass) );
 		GpuPipeline? bound = null;
+		GpuScissor? scissor = null;
 		var uniforms = CollectionsMarshal.AsSpan( slot.Uniforms );
 		var bindings = stackalloc SDL_GPUTextureSamplerBinding[MaxSamplers];
 		GpuViewport? lastViewport = null;
@@ -219,6 +223,14 @@ public sealed unsafe class GpuFrame
 				var viewport = new SDL_GPUViewport { x = area.X, y = area.Y, w = area.Width, h = area.Height, min_depth = 0, max_depth = 1 };
 				SDL_SetGPUViewport( render, &viewport );
 				lastViewport = area;
+			}
+			if ( draw.Scissor != scissor )
+			{
+				// A scissor set on the render pass persists until changed, so a draw without one must restore the whole target.
+				scissor = draw.Scissor;
+				var area = scissor ?? new GpuScissor( 0, 0, pass.Width, pass.Height );
+				var rect = new SDL_Rect { x = area.X, y = area.Y, w = area.Width, h = area.Height };
+				SDL_SetGPUScissor( render, &rect );
 			}
 			if ( draw.Pipeline != bound ) SDL_BindGPUGraphicsPipeline( render, (bound = draw.Pipeline).Handle );
 			if ( draw.Pipeline.Description.VertexLayout.Stride != 0 )
@@ -284,6 +296,7 @@ public sealed unsafe class GpuFrame
 internal sealed class PassRecord
 {
 	public readonly IntPtr Color, Multisampled, Depth;
+	public readonly int Width, Height;
 	public readonly GpuClear Clear;
 	public readonly RenderTarget Target;
 	public readonly List<DrawRecord> Draws = new();
@@ -292,6 +305,8 @@ internal sealed class PassRecord
 	{
 		Target = target;
 		Clear = clear;
+		Width = (int)target.Color.Width;
+		Height = (int)target.Color.Height;
 		// Handles are taken now so a resize later in the frame cannot redirect an earlier pass.
 		Color = (IntPtr)target.Color.Handle;
 		Multisampled = target.Multisampled != null ? (IntPtr)target.Multisampled.Handle : IntPtr.Zero;
@@ -302,4 +317,4 @@ internal sealed class PassRecord
 internal readonly record struct DrawRecord( GpuPipeline Pipeline, IntPtr VertexBuffer, uint VertexOffsetBytes,
 	bool Indexed, IntPtr IndexBuffer, uint IndexOffsetBytes, SDL_GPUIndexElementSize IndexSize,
 	uint Count, uint Instances, uint First, int VertexOffset, int TextureStart, int TextureCount,
-	int VertexUniformStart, int VertexUniformLength, int FragmentUniformStart, int FragmentUniformLength, GpuViewport Viewport );
+	int VertexUniformStart, int VertexUniformLength, int FragmentUniformStart, int FragmentUniformLength, GpuViewport Viewport, GpuScissor? Scissor );

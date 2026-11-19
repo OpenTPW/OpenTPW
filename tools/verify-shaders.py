@@ -87,7 +87,7 @@ def spirv(path):
                 for member in range(len(types[pointee][1])):
                     md = member_decorations[(pointee, member)]
                     result['offsets'][members[pointee, member]] = md[35][0]
-                    if member < 3: assert md[7] == [16], (path, md)
+                    if members[pointee, member].startswith('g_m'): assert md[7] == [16], (path, md)
             else:
                 assert storage == 0 and types[pointee][0] == 27, (path, 'expected combined image sampler')
     return result
@@ -100,6 +100,27 @@ def tsv(rows, columns):
     return buffer.getvalue()
 
 
+def check_native(args, name):
+    """ImGui program: vertex uniform at set 1 binding 0 and one fragment texture at set 2 binding 0."""
+    for suffix, execution, entry in [('vert', 0, 'VSMain'), ('frag', 4, 'PSMain')]:
+        key = f'{name}.{suffix}'
+        info = spirv(args.compiled/f'{key}.spv')
+        assert info['entries'] == [(execution, entry)], key
+        expected = {(1, 0)} if suffix == 'vert' else {(2, 0)}
+        assert {(r['set'], r['binding']) for r in info['resources']} == expected, (key, info['resources'])
+        if suffix == 'vert': assert info['offsets'] == {'g_vScaleTranslate': 0}, info['offsets']
+        dump = subprocess.check_output([args.dxc, '-dumpbin', str(args.compiled/f'{key}.dxil')], text=True, encoding='utf-8')
+        assert f'EntryFunctionName: {entry}' in dump, key
+        bindings = dump.split('; Resource Bindings:', 1)[1].split('target datalayout', 1)[0]
+        dx = {(kind, int(slot), int(space)) for kind, slot, space in re.findall(r'\b(cb|s|t)(\d+),space(\d+)\s+1', bindings)}
+        assert dx == ({('cb', 0, 1)} if suffix == 'vert' else {('t', 0, 2), ('s', 0, 2)}), (key, dx)
+    vertex = spirv(args.compiled/f'{name}.vert.spv')
+    assert set(vertex['inputs']) == {0, 1, 2}, vertex['inputs']
+    fragment = spirv(args.compiled/f'{name}.frag.spv')
+    for location, item in fragment['inputs'].items():
+        assert item['shape'] == vertex['outputs'][location]['shape'], (name, location)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--dxc', default='dxc')
@@ -110,7 +131,9 @@ def main():
     if args.report_dir: args.report_dir.mkdir(parents=True, exist_ok=True)
     names = sorted(p.stem for p in SHADERS.glob('*.shader'))
     assert names == sorted(p.stem for p in SHADERS.glob('*.hlsl'))
-    binary_names = {f'{name}.{stage}.{ext}' for name in names for stage in ('vert', 'frag') for ext in ('spv', 'dxil')}
+    # native/ shaders (ImGui) have no original GLSL; they get their own interface check below.
+    native_names = sorted(p.stem for p in (SHADERS/'native').glob('*.hlsl'))
+    binary_names = {f'{name}.{stage}.{ext}' for name in names + native_names for stage in ('vert', 'frag') for ext in ('spv', 'dxil')}
     assert {p.name for p in args.compiled.iterdir() if p.is_file()} == binary_names | {'SHA256SUMS'}
     checksums = (args.compiled/'SHA256SUMS').read_text().splitlines()
     assert len(checksums) == len(binary_names)
@@ -190,6 +213,9 @@ def main():
             locations = {int(n) for n in re.findall(r'layout\s*\(\s*location\s*=\s*(\d+)\s*\)\s*in\s+',text)}
             assert set(pair['vertex']['inputs']) <= locations
 
+    for name in native_names:
+        check_native(args, name)
+
     columns = ['shader','stage','glsl_set','glsl_binding','glsl_type','glsl_name','members',
                'hlsl_register','sdl_slot','spirv_set','spirv_binding','note']
     table = tsv(mapping, columns)
@@ -198,7 +224,7 @@ def main():
     else: assert path.read_text(encoding='utf-8') == table, 'binding-map.tsv is stale'
     if args.report_dir:
         (args.report_dir/'reflection.json').write_text(json.dumps(reports,indent=2)+'\n',encoding='utf-8')
-    print(f'PASS: {len(names)} shaders / {len(binary_names)} binaries / {len(mapping)} original bindings; '
+    print(f'PASS: {len(names)} shaders + {len(native_names)} native / {len(binary_names)} binaries / {len(mapping)} original bindings; '
           'SDL GPU slots, combined samplers, uniform offsets, stage interfaces and checksums match.')
 
 

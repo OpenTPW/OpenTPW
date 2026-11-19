@@ -1,16 +1,18 @@
-﻿using ImGuiNET;
-using OpenTPW.ModKit;
-using StbImageWriteSharp;
+using System.Numerics;
 using System.Reflection;
-using Veldrid;
+using System.Runtime.InteropServices;
+using ImGuiNET;
+using OpenTPW.Graphics;
+using OpenTPW.ModKit;
+using SDL;
+using static SDL.SDL3;
 
 namespace OpenTPW;
 public partial class Editor
 {
 	public static Editor Instance { get; private set; }
 
-	public ImGuiRenderer imguiRenderer { get; private set; }
-	public GraphicsDevice graphicsDevice { get; private set; }
+	public ImGuiGpuRenderer Renderer { get; private set; }
 
 	private List<BaseTab> tabs = new();
 
@@ -19,12 +21,10 @@ public partial class Editor
 	public static ImFontPtr MonospaceFont { get; private set; }
 	public static ImFontPtr SansSerifFont { get; private set; }
 
-	public Editor( ImGuiRenderer imguiRenderer, GraphicsDevice graphicsDevice )
+	public Editor( ImGuiGpuRenderer renderer )
 	{
 		Instance ??= this;
-
-		this.imguiRenderer = imguiRenderer;
-		this.graphicsDevice = graphicsDevice;
+		Renderer = renderer;
 
 		InitIO();
 
@@ -32,48 +32,12 @@ public partial class Editor
 			new DemoWindow(),
 			new FileBrowser()
 		} );
-
-		tabs.ForEach( x => x.ImGuiRenderer = this.imguiRenderer );
-	}
-
-	private static void SetKeyMappings( ImGuiIOPtr io )
-	{
-		io.KeyMap[(int)ImGuiKey.Tab] = (int)Key.Tab;
-		io.KeyMap[(int)ImGuiKey.LeftArrow] = (int)Key.Left;
-		io.KeyMap[(int)ImGuiKey.RightArrow] = (int)Key.Right;
-		io.KeyMap[(int)ImGuiKey.UpArrow] = (int)Key.Up;
-		io.KeyMap[(int)ImGuiKey.DownArrow] = (int)Key.Down;
-		io.KeyMap[(int)ImGuiKey.PageUp] = (int)Key.PageUp;
-		io.KeyMap[(int)ImGuiKey.PageDown] = (int)Key.PageDown;
-		io.KeyMap[(int)ImGuiKey.Home] = (int)Key.Home;
-		io.KeyMap[(int)ImGuiKey.End] = (int)Key.End;
-		io.KeyMap[(int)ImGuiKey.Delete] = (int)Key.Delete;
-		io.KeyMap[(int)ImGuiKey.Backspace] = (int)Key.BackSpace;
-		io.KeyMap[(int)ImGuiKey.Enter] = (int)Key.Enter;
-		io.KeyMap[(int)ImGuiKey.Escape] = (int)Key.Escape;
-		io.KeyMap[(int)ImGuiKey.A] = (int)Key.A;
-		io.KeyMap[(int)ImGuiKey.C] = (int)Key.C;
-		io.KeyMap[(int)ImGuiKey.V] = (int)Key.V;
-		io.KeyMap[(int)ImGuiKey.X] = (int)Key.X;
-		io.KeyMap[(int)ImGuiKey.Y] = (int)Key.Y;
-		io.KeyMap[(int)ImGuiKey.Z] = (int)Key.Z;
 	}
 
 	private void InitIO()
 	{
-		var io = ImGui.GetIO();
-
-		io.ConfigFlags |= ImGuiConfigFlags.DockingEnable | ImGuiConfigFlags.IsSRGB;
-		ImGui.LoadIniSettingsFromDisk( ImGui.GetIO().IniFilename ); // https://github.com/mellinoe/veldrid/issues/410
-
-		// io.Fonts.Clear();
-		// io.Fonts.AddFontFromFileTTF( "C:\\Windows\\Fonts\\segoeui.ttf", 16f );
-		// io.Fonts.Build();
-		// imguiRenderer.RecreateFontDeviceTexture( graphicsDevice );
-
-		SetKeyMappings( io );
+		ImGui.GetIO().ConfigFlags |= ImGuiConfigFlags.DockingEnable;
 	}
-
 	private void DrawMenuBar()
 	{
 		ImGui.BeginMainMenuBar();
@@ -104,9 +68,10 @@ public partial class Editor
 		ImGui.EndMainMenuBar();
 	}
 
-	public void UpdateFrom( InputSnapshot inputSnapshot )
+	/// <summary>Starts the editor's ImGui frame from the host's input and builds every visible panel.</summary>
+	public void UpdateFrom( EditorInput input, Vector2 displaySize, float deltaSeconds )
 	{
-		imguiRenderer.Update( 1 / 60f, inputSnapshot );
+		Renderer.NewFrame( input, displaySize, deltaSeconds );
 
 		DrawMenuBar();
 
@@ -135,7 +100,8 @@ public partial class Editor
 
 			var pixelData = ResizeThumbnail( t.Data, t.Width, t.Height );
 			using var writeStream = CacheFileSystem.OpenWrite( thumbnailPath );
-			new ImageWriter().WritePng( pixelData, 16, 16, ColorComponents.RedGreenBlueAlpha, writeStream );
+			var png = EncodePng( pixelData, 16, 16 );
+			writeStream.Write( png );
 
 			Log.Info( $"Cached to {thumbnailPath}" );
 		} );
@@ -168,9 +134,36 @@ public partial class Editor
 		return result;
 	}
 
-	public void Render( CommandList commandList ) 
+	/// <summary>Records the panels built by <see cref="UpdateFrom"/> into the host's frame.</summary>
+	public void Render( GpuFrame frame, GpuRenderPass pass ) => Renderer.Render( frame, pass );
+
+	/// <summary>Encodes RGBA8 pixels as a PNG with SDL's surface writer, which the game already ships.</summary>
+	internal static unsafe byte[] EncodePng( byte[] rgba, int width, int height )
 	{
-		imguiRenderer.Render( graphicsDevice, commandList );
-	}
+		if ( width <= 0 || height <= 0 || (long)width * height * 4 != rgba.Length )
+			throw new ArgumentException( "Invalid RGBA image dimensions or pixel data." );
+		// ABGR8888 is SDL's RGBA32: bytes R,G,B,A in memory on little-endian hosts. SDL_SavePNG_IO needs a stream and cannot grow a memory one. A thumbnail is at most 16x16, so this holds
+		// raw pixels plus any PNG overhead many times over; a full buffer makes SDL fail rather than truncate.
+		var output = new byte[64 * 1024];
+		long length;
+		fixed ( byte* pixels = rgba )
+		fixed ( byte* destination = output )
+		{
+			var surface = SDL_CreateSurfaceFrom( width, height, SDL_PixelFormat.SDL_PIXELFORMAT_ABGR8888, (IntPtr)pixels, width * 4 );
+			if ( surface == null ) throw new InvalidOperationException( $"SDL_CreateSurfaceFrom failed: {SDL_GetError()}" );
+			try
+			{
+				var stream = SDL_IOFromMem( (IntPtr)destination, (nuint)output.Length );
+				if ( stream == null ) throw new InvalidOperationException( $"SDL_IOFromMem failed: {SDL_GetError()}" );
+				try
+				{
+					if ( !SDL_SavePNG_IO( surface, stream, false ) ) throw new InvalidOperationException( $"SDL_SavePNG_IO failed: {SDL_GetError()}" );
+					length = SDL_TellIO( stream );
+				}
+				finally { SDL_CloseIO( stream ); }
+			}
+			finally { SDL_DestroySurface( surface ); }
+		}
+		return output[..(int)length];	}
 }
 

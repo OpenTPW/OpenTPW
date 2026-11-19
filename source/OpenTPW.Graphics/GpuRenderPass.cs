@@ -35,23 +35,23 @@ public sealed class GpuRenderPass
 		}
 	}
 
-	/// <summary>Draws <paramref name="vertexCount"/> vertices. Uniform bytes go to slot 0 of each stage (b0,space1 and b0,space3).</summary>
+	/// <summary>Draws <paramref name="vertexCount"/> vertices; <paramref name="scissor"/> limits the draw to a pixel rectangle, null draws into the whole target. Uniform bytes go to slot 0 of each stage (b0,space1 and b0,space3).</summary>
 	public void Draw( GpuPipeline pipeline, BufferSlice vertices, uint vertexCount, ReadOnlySpan<TextureBinding> textures = default,
-		ReadOnlySpan<byte> vertexUniforms = default, ReadOnlySpan<byte> fragmentUniforms = default, uint firstVertex = 0, uint instances = 1 )
+		ReadOnlySpan<byte> vertexUniforms = default, ReadOnlySpan<byte> fragmentUniforms = default, uint firstVertex = 0, uint instances = 1, GpuScissor? scissor = null )
 	{
 		Check( pipeline );
 		if ( pipeline.Description.VertexLayout.Stride != 0 ) frame.CheckSlice( vertices, GpuBufferUsage.Vertex, nameof(vertices) );
-		Add( pipeline, vertices, null, default, vertexCount, instances, firstVertex, 0, textures, vertexUniforms, fragmentUniforms );
+		Add( pipeline, vertices, null, default, vertexCount, instances, firstVertex, 0, textures, vertexUniforms, fragmentUniforms, scissor );
 	}
 
 	public void DrawIndexed( GpuPipeline pipeline, BufferSlice vertices, BufferSlice indices, SDL_GPUIndexElementSize indexSize, uint indexCount,
 		ReadOnlySpan<TextureBinding> textures = default, ReadOnlySpan<byte> vertexUniforms = default, ReadOnlySpan<byte> fragmentUniforms = default,
-		uint firstIndex = 0, int vertexOffset = 0, uint instances = 1 )
+		uint firstIndex = 0, int vertexOffset = 0, uint instances = 1, GpuScissor? scissor = null )
 	{
 		Check( pipeline );
 		frame.CheckSlice( vertices, GpuBufferUsage.Vertex, nameof(vertices) );
 		frame.CheckSlice( indices, GpuBufferUsage.Index, nameof(indices) );
-		Add( pipeline, vertices, indices, indexSize, indexCount, instances, firstIndex, vertexOffset, textures, vertexUniforms, fragmentUniforms );
+		Add( pipeline, vertices, indices, indexSize, indexCount, instances, firstIndex, vertexOffset, textures, vertexUniforms, fragmentUniforms, scissor );
 	}
 
 	public void End()
@@ -72,14 +72,14 @@ public sealed class GpuRenderPass
 	}
 
 	private void Add( GpuPipeline pipeline, BufferSlice vertices, BufferSlice? indices, SDL_GPUIndexElementSize indexSize, uint count, uint instances,
-		uint first, int vertexOffset, ReadOnlySpan<TextureBinding> textures, ReadOnlySpan<byte> vertexUniforms, ReadOnlySpan<byte> fragmentUniforms )
+		uint first, int vertexOffset, ReadOnlySpan<TextureBinding> textures, ReadOnlySpan<byte> vertexUniforms, ReadOnlySpan<byte> fragmentUniforms, GpuScissor? scissor )
 	{
 		var (textureStart, textureCount) = frame.AddTextures( textures );
 		var (vertexStart, vertexLength) = frame.AddUniforms( vertexUniforms );
 		var (fragmentStart, fragmentLength) = frame.AddUniforms( fragmentUniforms );
 		record.Draws.Add( new DrawRecord( pipeline, GpuFrame.Handle( vertices ), vertices.Offset,
 			indices.HasValue, indices.HasValue ? GpuFrame.Handle( indices.Value ) : IntPtr.Zero, indices?.Offset ?? 0, indexSize,
-			count, instances, first, vertexOffset, textureStart, textureCount, vertexStart, vertexLength, fragmentStart, fragmentLength, viewport ) );
+			count, instances, first, vertexOffset, textureStart, textureCount, vertexStart, vertexLength, fragmentStart, fragmentLength, viewport, scissor ) );
 	}
 }
 

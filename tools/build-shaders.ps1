@@ -24,24 +24,27 @@ $legacy = @(Get-ChildItem -LiteralPath $shaderDirectory -Filter '*.shader' | For
 if ( !$shaders.Count -or (Compare-Object $legacy @($shaders.BaseName | Sort-Object)) ) {
 	throw 'HLSL sources must cover every legacy .shader exactly once.'
 }
+# native/ holds shaders without original GLSL (ImGui); they are compiled the same way but not matched to .shader files.
+$native = @(Get-ChildItem -LiteralPath (Join-Path $shaderDirectory 'native') -Filter '*.hlsl' | Sort-Object Name)
+$sources = @($shaders | ForEach-Object { @{ Source = $_.Name; Name = $_.BaseName } }) + @($native | ForEach-Object { @{ Source = 'native/' + $_.Name; Name = $_.BaseName } })
 [IO.Directory]::CreateDirectory( $temporary ) | Out-Null
 
 Push-Location $shaderDirectory
 try {
-	foreach ( $shader in $shaders ) {
+	foreach ( $shader in $sources ) {
 		foreach ( $stage in @(
 			@{ Suffix = 'vert'; Profile = 'vs_6_0'; Entry = 'VSMain'; Define = 'STAGE_VERTEX=1' },
 			@{ Suffix = 'frag'; Profile = 'ps_6_0'; Entry = 'PSMain'; Define = 'STAGE_FRAGMENT=1' }
 		) ) {
 			foreach ( $format in @('spv', 'dxil') ) {
-				$output = Join-Path $temporary ($shader.BaseName + '.' + $stage.Suffix + '.' + $format)
-				$arguments = @($shader.Name, '-E', $stage.Entry, '-T', $stage.Profile,
+				$output = Join-Path $temporary ($shader.Name + '.' + $stage.Suffix + '.' + $format)
+				$arguments = @($shader.Source, '-E', $stage.Entry, '-T', $stage.Profile,
 					'-D', $stage.Define, '-HV', '2021', '-Ges', '-WX', '-O3', '-Zpc', '-Fo', $output)
 				if ( $format -eq 'spv' ) {
 					$arguments += @('-spirv', '-D', 'SPIRV=1', '-fspv-target-env=vulkan1.0', '-fvk-use-gl-layout')
 				}
 				& $compiler @arguments
-				if ( $LASTEXITCODE -ne 0 ) { throw "DXC failed for $($shader.Name) $($stage.Entry) $format" }
+				if ( $LASTEXITCODE -ne 0 ) { throw "DXC failed for $($shader.Source) $($stage.Entry) $format" }
 			}
 		}
 	}
@@ -60,11 +63,11 @@ try {
 				throw "Compiled shader differs: $($file.Name)"
 			}
 		}
-		Write-Host "Verified $($shaders.Count * 4) shader binaries and SHA256SUMS against a clean rebuild."
+		Write-Host "Verified $($sources.Count * 4) shader binaries and SHA256SUMS against a clean rebuild."
 	} else {
 		[IO.Directory]::CreateDirectory( $OutputDirectory ) | Out-Null
 		foreach ( $file in $files ) { Copy-Item -LiteralPath $file.FullName -Destination (Join-Path $OutputDirectory $file.Name) -Force }
-		Write-Host "Compiled $($shaders.Count) shaders, $($shaders.Count * 4) binaries to $OutputDirectory"
+		Write-Host "Compiled $($sources.Count) shaders, $($sources.Count * 4) binaries to $OutputDirectory"
 	}
 } finally {
 	Pop-Location

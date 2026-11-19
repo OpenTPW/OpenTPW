@@ -13,6 +13,9 @@ public sealed partial class Renderer : IDisposable
 	internal GpuFrame Frame { get; private set; } = null!;
 	internal GpuRenderPass Pass { get; private set; } = null!;
 	public Action? PreUpdate, OnUpdate, PostUpdate, OnRender, PrepareResources;
+	/// <summary>Plays a game file for the editor's sound preview; set by the host that owns the audio output.</summary>
+	public Func<string, long>? PreviewSound { get; set; }
+	private EditorHost? editor;
 	public unsafe Renderer()
 	{
 		Window = new( Settings.Default.GameWindowSize.X, Settings.Default.GameWindowSize.Y, "Theme Park World", true );
@@ -42,17 +45,19 @@ public sealed partial class Renderer : IDisposable
 		var input = Window.PumpEvents();
 		if ( !Window.Exists ) return;
 		Time.Update( delta ); Input.UpdateFrom( input );
-		if ( Input.Pressed( InputButton.EditorToggle ) ) Log.Warning( "The ModKit renderer is awaiting the SDL GPU backend migration." );
+		if ( Input.Pressed( InputButton.EditorToggle ) ) ( editor ??= new EditorHost( Device ) ).Toggle( PreviewSound );
 		PreUpdate?.Invoke();
 		double updated = Mark(); OnUpdate?.Invoke();
 		if ( !Window.Exists ) return;
 		PrepareResources?.Invoke();
+		// Panels build their ImGui frame, and upload any textures, before the frame starts recording.
+		if ( editor is { Visible: true } ) editor.Update( input, new( Target.Color.Width, Target.Color.Height ), delta );
 		AddUpdate( Mark() - updated );
 		double wait = Mark(); Frame = Device.BeginFrame(); AddWait( Mark() - wait );
 		Pass = Frame.BeginPass( Target, GpuClear.ToColor( 0, 0, 0, 1 ) );
 		try
 		{
-			double draw = Mark(); OnRender?.Invoke(); AddRender( Mark() - draw );
+			double draw = Mark(); OnRender?.Invoke(); if ( editor is { Visible: true } ) editor.Render( Frame, Pass ); AddRender( Mark() - draw );
 			Pass.End(); Frame.Present( Target.Color );
 			double present = Mark(); Frame.Submit(); AddPresent( Mark() - present );
 		}
@@ -64,6 +69,7 @@ public sealed partial class Renderer : IDisposable
 	public void Dispose()
 	{
 		Device.WaitForIdle();
+		editor?.Dispose();
 		foreach ( var mesh in Asset.All.OfType<Model>() ) mesh.Geometry.Dispose();
 		foreach ( var texture in Asset.All.OfType<Texture>().Select( t => t.NativeTexture ).Distinct() ) texture.Dispose();
 		Shader.ReleasePrograms(); Target.Dispose(); Device.Dispose();

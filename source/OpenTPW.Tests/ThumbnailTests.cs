@@ -1,6 +1,5 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using StbImageSharp;
-using StbImageWriteSharp;
 using System.IO;
 
 namespace OpenTPW.Tests;
@@ -24,13 +23,20 @@ public class ThumbnailTests
 		}
 		var thumbnail = Editor.ResizeThumbnail( pixels, 32, 32 );
 		using var stream = new MemoryStream();
-		new ImageWriter().WritePng( thumbnail, 16, 16, StbImageWriteSharp.ColorComponents.RedGreenBlueAlpha, stream );
+		var png = Editor.EncodePng( thumbnail, 16, 16 );
+		stream.Write( png );
 		stream.Position = 0;
 		var decoded = ImageResult.FromStream( stream, StbImageSharp.ColorComponents.RedGreenBlueAlpha );
 		Assert.AreEqual( 16, decoded.Width );
 		Assert.AreEqual( 16, decoded.Height );
 		CollectionAssert.AreEqual( new byte[] { 0, 0, 80, 255 }, decoded.Data[..4] );
 		CollectionAssert.AreEqual( new byte[] { 30, 30, 80, 255 }, decoded.Data[^4..] );
+	}
+
+	[TestMethod]
+	public void PngEncodingRejectsMismatchedPixelData()
+	{
+		Assert.ThrowsExactly<System.ArgumentException>( () => Editor.EncodePng( new byte[15], 2, 2 ) );
 	}
 
 	[TestMethod]

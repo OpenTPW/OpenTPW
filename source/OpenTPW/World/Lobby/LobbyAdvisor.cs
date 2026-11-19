@@ -3,12 +3,12 @@ namespace OpenTPW;
 /// <summary>The lobby response queue (Lobby_QueueSpeech (US 0x5d6110)), global speech and gesture playback.</summary>
 public sealed class LobbyAdvisor
 {
-	// Response rows at Advisor_ResponseTable (US address pending): response ID, speech ID, lip ID, default gesture selector -1.
+	// Response rows at Advisor_ResponseTable (US 0x768fb8): response ID, speech ID, lip ID, default gesture selector -1.
 	private sealed record ResponseEntry( uint Speech, uint Lip, int CueMilliseconds = 0 );
 	private static readonly Dictionary<int, ResponseEntry> Responses = new()
 	{
 		[0x186] = new( 465, 465 ), [0x187] = new( 466, 466 ), [0x18e] = new( 471, 471 ),
-		// Selector 28 (Advisor_GestureTable (US address pending), position pending) contains a 17000 ms cue and no gestures; Advisor_SelectGesture (US address pending) falls back to the default sequence.
+		// Selector 28 (Advisor_GestureTable (US address pending), position pending) contains a 17000 ms cue and no gestures; Advisor_SelectGesture (US 0x598bf0) falls back to the default sequence.
 		[0x189] = new( 468, 468, 17000 ), [0x18a] = new( 469, 469 ), [0x23a] = new( 588, 588 ),
 		[0x250] = new( 611, 611 ), [0x251] = new( 612, 612 ), [0x252] = new( 613, 613 ),
 		[0x253] = new( 614, 614 ), [0x254] = new( 615, 615 ), [0x255] = new( 616, 616 ),
@@ -71,7 +71,7 @@ public sealed class LobbyAdvisor
 	public void Say( int response, bool replace = false )
 	{
 		if ( !Responses.ContainsKey( response ) ) throw new ArgumentOutOfRangeException( nameof(response), $"Unimplemented advisor response {response:X}" );
-		// Advisor_StartSpeech (US address pending) rejects playback while the player's AdvisorOn byte is clear.
+		// Advisor_StartSpeech (US 0x599050) rejects playback while the player's AdvisorOn byte is clear.
 		if ( !Enabled ) return;
 		if ( !prepared.ContainsKey( response ) )
 		{
@@ -85,7 +85,7 @@ public sealed class LobbyAdvisor
 			var entry = sound.Definitions[0].Samples[0];
 			// Decode in the background now; playback starts after the response delay.
 			_ = audio.Assets.PcmAsync( audio.Assets.Sample( "global/speech", map, entry ) );
-			// Advisor_StartSpeech (US address pending) permits an absent LIP resource; row 0x257 explicitly uses lip ID zero.
+			// Advisor_StartSpeech (US 0x599050) permits an absent LIP resource; row 0x257 explicitly uses lip ID zero.
 			byte[] boundaries = row.Lip == 0 ? BitConverter.GetBytes( -1 ) : FileSystem.ReadAllBytes( $"global/speech/lips/sp_{row.Lip:000}.lip" );
 			_ = new LobbyAdvisorLips( boundaries );
 			prepared.Add( response, new( id, checked((int)entry.DurationMilliseconds), boundaries ) );
@@ -124,7 +124,7 @@ public sealed class LobbyAdvisor
 			cueSent = false;
 		}
 		int elapsed = Math.Max( 0, (int)((seconds - started) * 1000) );
-		// Advisor_StartSpeech (US address pending) starts at now-200, then offsets both speech and lip clock by 1000.
+		// Advisor_StartSpeech (US 0x599050) starts at now-200, then offsets both speech and lip clock by 1000.
 		if ( !voiceStarted && elapsed >= 800 )
 		{
 			voice = audio.Play( "global/speech", "cat_speech", sample );
@@ -139,7 +139,7 @@ public sealed class LobbyAdvisor
 			ResponseCue?.Invoke( Response.Value );
 			if ( sequence == null ) return;
 		}
-		// Animation completion advances one segment per game update (FUN_00599880 (US 0x599880), position pending).
+		// Animation completion advances one segment per game update (FUN_00599880+0x157 (US 0x5999d7)).
 		int duration = durations[sequence.Segments[segment]];
 		if ( elapsed - segmentStart >= duration && segment + 1 < sequence.Segments.Length )
 		{

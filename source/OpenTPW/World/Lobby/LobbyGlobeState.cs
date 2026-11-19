@@ -5,7 +5,7 @@ namespace OpenTPW;
 /// <summary>Globe page A (visit parks with players) or B (select a park with room).</summary>
 public enum LobbyGlobeMode { Visit, Select }
 
-/// <summary>The fields read from a city object by GlobePage_CreatePlaceMarker (US address pending) and the A/B predicates.</summary>
+/// <summary>The fields read from a city object by GlobePage_CreatePlaceMarker (US 0x5dc3e0) and the A/B predicates.</summary>
 public sealed record LobbyGlobePlace( string Name, N.Vector3 Position, int Count, int State, int Capacity )
 {
 	public string ModelName => Name.Equals( "North Pole", StringComparison.OrdinalIgnoreCase ) ? "bullfrog" : "hpin";
@@ -14,7 +14,7 @@ public sealed record LobbyGlobePlace( string Name, N.Vector3 Position, int Count
 	public bool VisibleIn( LobbyGlobeMode mode ) => mode == LobbyGlobeMode.Visit ? Count > 0 : State == 0 && Count < Capacity;
 }
 
-/// <summary>Globe camera and hit testing, GlobePage_Construct (US 0x5dc580)/GlobePage_Update (US address pending)/Globe_SelectCameraParameters (US 0x5dd3d0).</summary>
+/// <summary>Globe camera and hit testing, GlobePage_Construct (US 0x5dc580)/GlobePage_Update (US 0x5dc860)/Globe_SelectCameraParameters (US 0x5dd3d0).</summary>
 public sealed class LobbyGlobeState
 {
 	private readonly float far, near;

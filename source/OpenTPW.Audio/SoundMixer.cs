@@ -115,8 +115,8 @@ public class SoundMixer
 		for ( int i = offset; i < offset + count; ++i ) buffer[i] = 0;
 		lock ( sync )
 		{
-			// Audio_RankOutputCandidates (US address pending)/Audio_RankOutputCandidatesInternal (US address pending) rank output candidates without destroying logical instances.
-			// Audio_InsertInstance (US address pending) inserts new instances at the head, so newer equal-priority instances are visited first.
+			// Audio_RankOutputCandidates (US 0x6b62b0)/Audio_RankOutputCandidatesInternal (US 0x6b6bc0) rank output candidates without destroying logical instances.
+			// Audio_InsertInstance (US 0x6b6a80) inserts new instances at the head, so newer equal-priority instances are visited first.
 			var ranked = voices.OrderByDescending( entry => entry.Value.Priority );
 			var ordered = (policy.NewestFirst ? ranked.ThenByDescending( entry => entry.Key ) : ranked.ThenBy( entry => entry.Key )).ToArray();
 			for ( int i = 0; i < count; i += Channels )

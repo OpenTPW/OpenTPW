@@ -17,7 +17,7 @@ public class ModelAnimation : BaseFormat
 	/// </summary>
 	public const float FramesPerSecond = 30f;
 
-	/// <summary>Segment hiding is an instance binding choice (TP.exe Animation_SetHiddenNodes (US address pending)), separate from visibility tracks.</summary>
+	/// <summary>Segment hiding is an instance binding choice (TP.exe Animation_SetHiddenNodes (US 0x472d70)), separate from visibility tracks.</summary>
 	public enum SegmentHiding { Disabled, NodeIndex, NodeId }
 
 	[Flags]
@@ -137,7 +137,7 @@ public class ModelAnimation : BaseFormat
 	public uint StartFrame { get; private set; }
 	public uint EndFrame { get; private set; }
 	public List<Track> Tracks { get; private set; } = [];
-	/// <summary>Nodes hidden for this segment, independently of per-frame visibility tracks (TP.exe Animation_SetHiddenNodes (US address pending)).</summary>
+	/// <summary>Nodes hidden for this segment, independently of per-frame visibility tracks (TP.exe Animation_SetHiddenNodes (US 0x472d70)).</summary>
 	public ushort[] HiddenNodes { get; private set; } = [];
 
 	public float Length => EndFrame - StartFrame;

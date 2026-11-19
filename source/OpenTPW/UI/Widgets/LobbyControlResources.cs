@@ -2,14 +2,14 @@ using System.Text;
 
 namespace OpenTPW;
 
-/// <summary>Ordinary UI models register their root node names, not their file names (UiModel_LoadAndRegister (US 0x489060), position pending).</summary>
+/// <summary>Ordinary UI models register their root node names, not their file names (UiModel_LoadAndRegister+0x12c (US 0x48918c)).</summary>
 public static class LobbyControlResources
 {
 	public static uint NameHash( string name )
 	{
 		if ( name.Any( character => character > 255 ) ) throw new ArgumentException( "UI root names must be byte strings", nameof(name) );
 		uint hash = 0;
-		// Resource_HashName (US 0x6588b6), position pending sign-extends each stored char before XOR and multiplication.
+		// Resource_HashName+0x19 (US 0x6588cf) sign-extends each stored char before XOR and multiplication.
 		foreach ( byte value in Encoding.Latin1.GetBytes( name ) ) hash = unchecked((hash ^ (uint)(sbyte)value) * 47);
 		return hash;
 	}

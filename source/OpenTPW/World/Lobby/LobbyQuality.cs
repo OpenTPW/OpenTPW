@@ -14,7 +14,7 @@ public sealed class LobbyQuality
 	public int TextureQuality { get; private set; }
 	public int SkyLayers { get; private set; }
 	public bool WeatherEnabled { get; private set; }
-	/// <summary>GraphicalOptions.LIGHTING; 0 makes Graphics_ApplyOptions (US address pending), position pending set gRenderFlags (US address pending) bits 0x1800, and Lighting_ComputeVertexColors (US address pending) then leaves vertices white.</summary>
+	/// <summary>GraphicalOptions.LIGHTING; 0 makes Graphics_ApplyOptions+0xdd (US 0x44d9cd) set gRenderFlags (US address pending) bits 0x1800, and Lighting_ComputeVertexColors (US 0x574660) then leaves vertices white.</summary>
 	public bool LightingEnabled { get; private set; }
 	public bool UseSmallTextures => TextureQuality <= 1;
 

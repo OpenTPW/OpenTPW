@@ -1,6 +1,6 @@
 namespace OpenTPW;
 
-/// <summary>Page-scoped island music/SFX handles (TP.exe Lobby_StartIslandAudio (US address pending), position pending/Lobby_StartIslandAudio and resume paths).</summary>
+/// <summary>Page-scoped island music/SFX handles (TP.exe Lobby_StartIslandAudio+0x62 (US 0x5e1502)/Lobby_StartIslandAudio+0x86 (US 0x5e1526) and resume paths).</summary>
 public sealed class LobbyAudio : IDisposable
 {
 	private readonly AudioSystem audio;

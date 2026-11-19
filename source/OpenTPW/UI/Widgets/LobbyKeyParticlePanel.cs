@@ -62,7 +62,7 @@ internal sealed class LobbyKeyParticlePanel : Panel
 		hoverStarted = Time.Now;
 		for ( int i = 0; i < hoverEmitterCount; i++ ) state.Start( 35, 0, 0 );
 	}
-	// Ui_Function_TW_4b6a30 (US address pending) uses the integer centre of element 0x1e0ea (554,170)-(990,437).
+	// Ui_Function_TW_4b6a30 (US 0x4b8fd0) uses the integer centre of element 0x1e0ea (554,170)-(990,437).
 	internal void EnterIsland() => state.Start( 98, 50000, (170 + (437 - 170) / 2) * 75000 / 1536 );
 	internal void SetAffordable( bool value )
 	{

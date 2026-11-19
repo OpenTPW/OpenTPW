@@ -5,7 +5,7 @@ namespace OpenTPW;
 /// <summary>
 /// Player page: four slot buttons, Quit and the naming dialog, driving <see cref="LobbyPlayerFlow"/> and <see cref="LobbyPlayerStore"/>.
 /// Rectangles are the retail UI table values (PlayerPage_Table (US 0x753c68)) in 2048x1536 units.
-/// This page shows no hover help: every element of the US table (PlayerPage_Table (US 0x753c68)–NamingPage_Table (US 0x753f50), position pending, slots 31252–31259 and Quit 31260)
+/// This page shows no hover help: every element of the US table (PlayerPage_Table (US 0x753c68)–NamingPage_Table+0x18 (US 0x753f68), slots 31252–31259 and Quit 31260)
 /// has key 0x11 (and 0x12) = −1, so <see cref="LobbyHelpBar"/> stays hidden here.
 /// </summary>
 internal sealed class LobbyPlayerPanel : Panel

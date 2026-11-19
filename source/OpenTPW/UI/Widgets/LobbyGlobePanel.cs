@@ -2,7 +2,7 @@ using OpenTPW.UI;
 
 namespace OpenTPW;
 
-/// <summary>Shared globe controls from GlobePage_Table (US address pending) and the dispatch at GlobeControls_HandleTableMessage (US 0x4c53f0).</summary>
+/// <summary>Shared globe controls from GlobePage_Table (US 0x7596b0) and the dispatch at GlobeControls_HandleTableMessage (US 0x4c53f0).</summary>
 internal sealed class LobbyGlobePanel : Panel
 {
 	private readonly Level level;
@@ -55,7 +55,7 @@ internal sealed class LobbyGlobePanel : Panel
 		sound2 = level.Audio?.Play( "global/sound", "cat_globallobbysfx", 2 ) ?? 0;
 		sound3 = level.Audio?.Play( "global/sound", "cat_globallobbysfx", 3 ) ?? 0;
 		rightDown = Input.Mouse.Right;
-		// Session_RequestCities (US address pending)/Session_StateUpdate (US address pending) request City::GetCityList even on the deferred connection path.
+		// Session_RequestCities (US 0x5bc7d0)/Session_StateUpdate (US 0x5bc710) request City::GetCityList even on the deferred connection path.
 		// No local city records are shipped by this path, so do not manufacture map markers.
 		status.Text = Localization.Parse( "#Disconnected" );
 		Log.Info( "Globe opened offline; online city and park lists are unavailable." );
@@ -96,7 +96,7 @@ internal sealed class LobbyGlobePanel : Panel
 				if ( id == 0x16006 ) CameraState.ToggleZoom();
 				heldButton = id; lastRepeat = float.NegativeInfinity;
 			}
-			// UiButton_SetRepeatTiming (US 0x668f35) sets delay=0/interval=10 ms; Ui_Function_TW_663259 (US address pending) emits at most one repeat per update.
+			// UiButton_SetRepeatTiming (US 0x668f35) sets delay=0/interval=10 ms; Ui_Function_TW_663259 (US 0x668dd9) emits at most one repeat per update.
 			if ( heldButton != id || !Input.Mouse.Left || Time.Now - lastRepeat <= 0.01f ) continue;
 			lastRepeat = Time.Now;
 			if ( id == 0x16001 ) CameraState.Turn( 0, -1 );

@@ -169,7 +169,7 @@ public sealed class LobbyWeather : ModelEntity
 	internal static int CalculateRainAmount( float meanSquaredDistance, int rainyIslands )
 	{
 		if ( rainyIslands == 0 ) return 0;
-		// Lobby_UpdateCameraAndWeather (US 0x5e0470), position pending..Lobby_UpdateCameraAndWeather squares the mean twice before the reverse divide.
+		// Lobby_UpdateCameraAndWeather+0xa4f (US 0x5e0ebf)..Lobby_UpdateCameraAndWeather+0xa60 (US 0x5e0ed0) squares the mean twice before the reverse divide.
 		float squared = meanSquaredDistance * meanSquaredDistance;
 		float amount = 1e17f / (squared * squared);
 		return amount < 20 ? 0 : (int)Math.Min( 400, amount );

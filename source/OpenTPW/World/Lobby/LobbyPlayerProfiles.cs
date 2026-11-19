@@ -20,7 +20,7 @@ public static class LobbyPlayerProfiles
 		foreach ( string directory in directories )
 		{
 			string name = Path.GetFileName( directory.TrimEnd( '/', '\\' ) );
-			// PlayerProfiles_EnumerateSlots (US 0x5c7590), position pending..PlayerProfiles_EnumerateSlots accepts a numeric prefix 1..4, strips exactly
+			// PlayerProfiles_EnumerateSlots+0x197 (US 0x5c7727)..PlayerProfiles_EnumerateSlots+0x253 (US 0x5c77e3) accepts a numeric prefix 1..4, strips exactly
 			// that character, and assigns its suffix to that slot, including gaps.
 			if ( name.Length < 2 || name[0] < '1' || name[0] > '4' ) continue;
 			int slot = name[0] - '1';

@@ -22,7 +22,7 @@ internal sealed class LobbyUiText : Panel
 	/// <summary>Horizontal scroll in 640x480 pixels, used by the name box to keep the caret visible.</summary>
 	public float Scroll { get; set; }
 	/// <summary>
-	/// Draw as a UI-table text element (created by Ui_CreateTextControl (US 0x491920), drawn by TextElement_Draw (US address pending)): a shadow pass first.
+	/// Draw as a UI-table text element (created by Ui_CreateTextControl (US 0x491920), drawn by TextElement_Draw (US 0x491ab0)): a shadow pass first.
 	/// Menu items (LobbyMenu_AddTextItem (US 0x492f60)) and edit boxes draw without it.
 	/// </summary>
 	public bool Shadow { get; set; }
@@ -34,7 +34,7 @@ internal sealed class LobbyUiText : Panel
 	/// </summary>
 	public bool WordWrap { get; set; }
 
-	// TextElement_Draw (US address pending) draws every text element twice: a shadow with texel (0x80, 0x80, 0x80, 0x80) 2 pixels
+	// TextElement_Draw (US 0x491ab0) draws every text element twice: a shadow with texel (0x80, 0x80, 0x80, 0x80) 2 pixels
 	// left and 2 down, then the text with (0xFF, 0xFF, 0xFF, 0xFF); both are tinted by the element colour.
 	internal const int ShadowOffset = 2;
 	private const byte ShadowLevel = 0x80;
@@ -60,7 +60,7 @@ internal sealed class LobbyUiText : Panel
 			element.prepared = key;
 		}
 	}
-	/// <summary>RGBA image of a text element with its shadow (TextElement_Draw (US address pending)); the text sits at (ShadowOffset, 0).</summary>
+	/// <summary>RGBA image of a text element with its shadow (TextElement_Draw (US 0x491ab0)); the text sits at (ShadowOffset, 0).</summary>
 	internal static TextureData RenderElement( FontFile font, string text, uint color )
 	{
 		var mask = font.RenderString( text );

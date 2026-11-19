@@ -22,7 +22,7 @@ public class Level
 	internal LobbyOptionsPanel? Options { get; private set; }
 	internal LobbyPlayerProfile? SelectedPlayer => selectedPlayer;
 	public bool FogEnabled => GlobeMenu?.Active != true;
-	/// <summary>Scene lighting: the globe page has its own ambient and light (GlobePage_ActivateCommon (US 0x5dcfe0)), every other page the islands' (IslandPage_ConfigureLighting (US address pending)).</summary>
+	/// <summary>Scene lighting: the globe page has its own ambient and light (GlobePage_ActivateCommon (US 0x5dcfe0)), every other page the islands' (IslandPage_ConfigureLighting (US 0x5e1380)).</summary>
 	internal LobbyLighting Lighting => GlobeMenu?.Active == true ? LobbyLighting.Globe : LobbyLighting.Islands;
 	/// <summary>Raised when the entry flight completes. No park loader consumes it yet; without a handler the island page is restored.</summary>
 	public event Action<LobbyPlayerProfile, LobbyIslandConfig>? ParkEntryRequested;
@@ -49,7 +49,7 @@ public class Level
 	{
 		SunLight = new Sun() { Position = new( 0, 100, 100 ) };
 
-		// Lobby_LoadWorld (US 0x5d84a0) -> Terrain_LoadBase (US address pending) loads the authored lobby Base, including both sea meshes and their UVs.
+		// Lobby_LoadWorld (US 0x5d84a0) -> Terrain_LoadBase (US 0x4504c0) loads the authored lobby Base, including both sea meshes and their UVs.
 		_ = new LobbyModel( Vector3.Zero, "lobby/terrain/Base.md2", "lobby/terrain/textures" );
 		var sky = new Sky();
 		EnvironmentSky = sky;
@@ -148,7 +148,7 @@ public class Level
 	}
 	internal void HandleEscape()
 	{
-		// LobbyPageManager_Input (US address pending) first asks the active page to consume Escape. Naming/globe/modals
+		// LobbyPageManager_Input (US 0x5e41c0) first asks the active page to consume Escape. Naming/globe/modals
 		// keep their own cancellation; an entering island consumes it before the shared menu.
 		if ( Hud.Modal != null || GlobeMenu?.Active == true || !(PlayerMenu!.Browsing || Navigation!.Active) ) return;
 		if ( Navigation!.Entering ) Navigation.CancelEntry();

@@ -36,10 +36,10 @@ public sealed class LobbyPlayerFlow
 {
 	public const int SlotCount = LobbyPlayerProfiles.SlotCount;
 
-	// TextEdit_BindBuffer (US 0x6662b7) stores a capacity of 0x10; TextEdit_CopyUtf16 (US 0x666308), position pending indexes the buffer in 16-bit units.
+	// TextEdit_BindBuffer (US 0x6662b7) stores a capacity of 0x10; TextEdit_CopyUtf16+0x13e (US 0x666446) indexes the buffer in 16-bit units.
 	public const int MaxNameLength = 16;
 
-	// Naming_SetForbiddenCharacters (US address pending)( Naming_ForbiddenCharacters (US address pending) ) gives the name box the characters "\/*?:|<>"" it refuses to accept.
+	// Naming_SetForbiddenCharacters (US 0x66781a)( Naming_ForbiddenCharacters (US 0x752588) ) gives the name box the characters "\/*?:|<>"" it refuses to accept.
 	private static readonly char[] ForbiddenCharacters = { '\\', '/', '*', '?', ':', '|', '<', '>', '"' };
 
 	private readonly LobbyPlayerProfile?[] slots;
@@ -77,7 +77,7 @@ public sealed class LobbyPlayerFlow
 
 	public bool CanConfirm => State == LobbyPlayerFlowState.Naming && ResolveName().Length > 0;
 
-	/// <summary>Clicking a slot button (LobbyUi_Dispatch (US address pending) message 0x10006).</summary>
+	/// <summary>Clicking a slot button (LobbyUi_Dispatch (US 0x4a6000) message 0x10006).</summary>
 	public bool Select( int slot )
 	{
 		if ( State != LobbyPlayerFlowState.Browsing || !IsValidSlot( slot ) )

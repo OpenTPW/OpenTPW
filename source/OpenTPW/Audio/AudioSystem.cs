@@ -8,7 +8,7 @@ public sealed class AudioSystem : IDisposable
 	public SoundMixer Mixer { get; } = new();
 	public SoundAssets Assets { get; } = new();
 	private readonly SoundSelection random;
-	/// <summary>A flag-4 sound that picks its next sample when the current voice ends (Audio_SelectLinkedDefinition (US address pending), position pending).</summary>
+	/// <summary>A flag-4 sound that picks its next sample when the current voice ends (Audio_SelectLinkedDefinition (US 0x6c3e00), position pending).</summary>
 	private sealed record Repeating( string Directory, string Category, SoundCategoryMap Map, SoundCategoryMap.Sound Sound,
 		SoundCategoryMap.Definition Definition, int SampleIndex, long Voice );
 	private readonly Dictionary<long, Repeating> repeating = new();
@@ -60,11 +60,11 @@ public sealed class AudioSystem : IDisposable
 		var sample = random.ChooseSample( definition );
 		if ( sample == null || sample.Bank == 0 ) return 0;
 		var asset = Assets.Sample( directory, map, sample );
-		// Audio_OptimizeLoop (US address pending) collapses a one-definition, one-sample repeat with no links/delay into a direct loop.
+		// Audio_OptimizeLoop (US 0x6c0550) collapses a one-definition, one-sample repeat with no links/delay into a direct loop.
 		bool directLoop = (sound.Flags & 8) != 0 || ((sound.Flags & 6) == 6 && sound.Definitions.Count == 1 &&
 			definition.Samples.Count == 1 && definition.Relations.Count == 0 && definition.DelayMin == 0 && definition.DelayMax == 0);
 		float gain = random.Range( definition.VolumeMin, definition.VolumeMax ) / 100f;
-		// Audio_ComputeVoicePriority (US address pending) scores a voice as (priority << 16) plus a distance weight; lobby sounds have no position, so 0xffff.
+		// Audio_ComputeVoicePriority (US 0x6bb9f0) scores a voice as (priority << 16) plus a distance weight; lobby sounds have no position, so 0xffff.
 		long handle = Mixer.Play( Assets.PcmAsync( asset ), gain * ChannelVolume( category ),
 			directLoop, random.Range( definition.DelayMin, definition.DelayMax ), unchecked((sound.Priority << 16) + 0xffff) );
 		gains.Add( handle, new( category, gain ) );
@@ -88,7 +88,7 @@ public sealed class AudioSystem : IDisposable
 		{
 			if ( Mixer.IsPlaying( entry.Voice ) ) continue;
 			var definition = entry.Definition;
-			// Audio_SelectLinkedDefinition (US address pending), position pending..Audio_SelectLinkedDefinition: eligible links select using the destination definition weights.
+			// Audio_SelectLinkedDefinition (US 0x6c3e00), position pending..Audio_SelectLinkedDefinition: eligible links select using the destination definition weights.
 			var links = definition.Relations.Where( link => ((link.Parameters >> 16) & 255) == 0 ).ToArray();
 			if ( links.Length != 0 )
 			{

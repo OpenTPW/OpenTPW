@@ -1,6 +1,6 @@
 namespace OpenTPW;
 
-/// <summary>Default speech gestures built by TP.exe Advisor_BuildGestures (US address pending); indices are zero based.</summary>
+/// <summary>Default speech gestures built by TP.exe Advisor_BuildGestures (US 0x598b20); indices are zero based.</summary>
 public sealed record LobbyAdvisorSequence( int[] Segments, int DurationMilliseconds )
 {
 	public static LobbyAdvisorSequence Create( int speechMilliseconds, IReadOnlyList<int> durations, Func<int> nextRandom )

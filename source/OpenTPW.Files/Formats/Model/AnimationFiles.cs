@@ -2,7 +2,7 @@ namespace OpenTPW;
 
 /// <summary>
 /// The twelve animation slots of a model, in the retail order of the slot letter table at
-/// TP.exe Model_AnimationSlotLetters (US address pending) (letters at 8-byte intervals). Slot 0xC means none
+/// TP.exe Model_AnimationSlotLetters (US 0x6fe6bc) (letters at 8-byte intervals). Slot 0xC means none
 /// (TP.exe Animation_SelectSlot (US 0x472f60)).
 /// </summary>
 public enum AnimationSlot
@@ -26,10 +26,10 @@ public enum AnimationSlot
 /// caller uses one rule and a missing file is an error rather than a silent no-op.
 /// <para>
 /// Retail rule (TP.exe Model_FindNodeAndLoadAnimations (US 0x461f10), the loader that fills a model's slot tables): for each slot letter
-/// it formats "%s%s%c%d.md2" (format string at Model_AnimationPathFormat (US address pending)) with the model path without its extension
-/// and the number <c>segment + 1</c> (Model_FindNodeAndLoadAnimations (US 0x461f10), position pending: the stored count plus one), and keeps going while the
+/// it formats "%s%s%c%d.md2" (format string at Model_AnimationPathFormat (US 0x74d2b4)) with the model path without its extension
+/// and the number <c>segment + 1</c> (Model_FindNodeAndLoadAnimations+0x486 (US 0x462396): the stored count plus one), and keeps going while the
 /// file exists. Only if "&lt;model&gt;&lt;letter&gt;1.md2" is missing does it try the unnumbered
-/// "%s%s%c.md2" (Model_UnnumberedAnimationFormat (US address pending); Model_FindNodeAndLoadAnimations (US 0x461f10), position pending..Model_FindNodeAndLoadAnimations), which then becomes the slot's only segment.
+/// "%s%s%c.md2" (Model_UnnumberedAnimationFormat (US 0x74d2a8); Model_FindNodeAndLoadAnimations+0x5d0 (US 0x4624e0)..Model_FindNodeAndLoadAnimations+0x5dc (US 0x4624ec)), which then becomes the slot's only segment.
 /// Segment N of a slot is therefore "&lt;model&gt;&lt;letter&gt;N+1.md2", e.g. segment 0 of slot M is
 /// "...M1.md2". Playback selects segments by this zero-based index (Animation_SelectSlot (US 0x472f60) reads
 /// <c>slotTable[index]</c>; lobby flocks call Lobby_PlayModelAnimation (US 0x5d83f0)( 0, 1 ) = slot M, segment 0, looped).

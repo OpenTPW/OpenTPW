@@ -2,7 +2,7 @@ using System.Buffers.Binary;
 
 namespace OpenTPW;
 
-/// <summary>Alternating speech boundaries in microseconds (TP.exe FUN_00599880 (US 0x599880), position pending), not mouth indices.</summary>
+/// <summary>Alternating speech boundaries in microseconds (TP.exe FUN_00599880+0x214 (US 0x599a94)), not mouth indices.</summary>
 public sealed class LobbyAdvisorLips
 {
 	private readonly int[] boundaries;

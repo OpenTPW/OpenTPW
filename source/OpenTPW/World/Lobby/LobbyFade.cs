@@ -1,6 +1,6 @@
 namespace OpenTPW;
 
-/// <summary>Camera fade accumulator: LobbyCamera_UpdateView (US address pending), position pending..LobbyCamera_UpdateView, once per rendered frame.</summary>
+/// <summary>Camera fade accumulator: LobbyCamera_UpdateView (US 0x5d8cb0), position pending..LobbyCamera_UpdateView, once per rendered frame.</summary>
 internal sealed class LobbyFade
 {
 	public int Value { get; private set; }

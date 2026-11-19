@@ -22,7 +22,7 @@ public sealed class LobbyGate : Entity
 		// Lobby_CreateModel (US 0x5d8870) creates an instance without starting slot M.
 	}
 
-	/// <summary>Plays M1 once when the camera has aligned with the entrance (Lobby_UpdateCameraAndWeather (US 0x5e0470), position pending).</summary>
+	/// <summary>Plays M1 once when the camera has aligned with the entrance (Lobby_UpdateCameraAndWeather+0x269 (US 0x5e06d9)).</summary>
 	public void StartEntering() => playback.Request( 0, model.AnimationFinished );
 
 	/// <summary>Plays M2 once when an entrance transition is cancelled (LobbyCamera_CancelEntry (US 0x5e1350)).</summary>

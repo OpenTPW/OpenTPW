@@ -15,11 +15,11 @@ internal class PurpleButton : Panel
 	// Label style, set for every lobby label by the lobby setup (TP.exe Lobby_CreateUi (US 0x4a6580)):
 	// font slot 5 (Font_GetSlot (US 0x485a70)), which is TITLEMED.bf4 at 640x480 (the font loader Text_LoadStartupResources (US 0x419710) fills
 	// set 1, the set the game uses at that resolution, with resource 0x40d = TITLEMED.bf4 in
-	// residx.dat), and the colour at TitleLabel_ColorComponents (US address pending)..TitleLabel_ColorComponents (US address pending), position pending (0xEC, 0xA2, 0x04, alpha 0xFF).
+	// residx.dat), and the colour at TitleLabel_ColorComponents (US 0x7540c0)..TitleLabel_ColorComponents+0x8 (US 0x7540c8) (0xEC, 0xA2, 0x04, alpha 0xFF).
 	private static string FontPath => GameLanguage.Path( "TITLEMED.bf4" );
 	private const uint LabelColor = 0xECA204FF;
 
-	// Labels are UI-table text elements: drawn with their shadow (LobbyUiText.RenderElement, TextElement_Draw (US address pending)).
+	// Labels are UI-table text elements: drawn with their shadow (LobbyUiText.RenderElement, TextElement_Draw (US 0x491ab0)).
 	private const int ShadowOffset = LobbyUiText.ShadowOffset;
 
 	private readonly List<Model> bars = new();

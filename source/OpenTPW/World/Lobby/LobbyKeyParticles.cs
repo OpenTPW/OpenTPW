@@ -2,7 +2,7 @@ using System.Buffers.Binary;
 
 namespace OpenTPW;
 
-/// <summary>Screen-space key effects from FUN_00599880 (US 0x599880), Ui_Function_TW_4b6a30 (US address pending) and FUN_004b90f0 (US 0x4b90f0).</summary>
+/// <summary>Screen-space key effects from FUN_00599880 (US 0x599880), Ui_Function_TW_4b6a30 (US 0x4b8fd0) and FUN_004b90f0 (US 0x4b90f0).</summary>
 internal sealed class LobbyKeyParticles
 {
 	/// <summary>Screen-space particle state in retail integer units, updated by Particle_Spawn (US 0x520560)/Particle_Integrate (US 0x5214a0).</summary>
@@ -56,7 +56,7 @@ internal sealed class LobbyKeyParticles
 	}
 
 	private int Next() => random = unchecked(random * 0x343fd + 0x269ec3);
-	// Particle_RandomSigned (US address pending) uses SAR/IDIV; Particle_RandomMasked (US address pending) additionally masks to 15 bits.
+	// Particle_RandomSigned (US 0x521810) uses SAR/IDIV; Particle_RandomMasked (US 0x521850) additionally masks to 15 bits.
 	private int Signed( int range ) => range == 0 ? 0 : (Next() >> 16) % range;
 	private int Positive( int range ) => range == 0 ? 0 : ((Next() >> 16) & 0x7fff) % range;
 	private int Scale( int count ) => count == 0 ? 0 : Math.Clamp( density * count >> 10, 1, int.MaxValue );

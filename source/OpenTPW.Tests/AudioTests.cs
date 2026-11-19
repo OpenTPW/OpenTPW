@@ -2,6 +2,8 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.IO;
 using System.Linq;
+using SoundChannelPolicy = OpenTPW.Audio.SoundChannelPolicy;
+using SoundSelection = OpenTPW.Audio.SoundSelection;
 
 namespace OpenTPW.Tests;
 

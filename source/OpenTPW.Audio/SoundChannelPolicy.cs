@@ -1,11 +1,15 @@
 using System.Globalization;
 
-namespace OpenTPW;
+namespace OpenTPW.Audio;
 
-/// <summary>Quality-to-output budget at Audio_GetQualityBudget (US address pending), capped by the scheduler at Audio_GetOutputCandidateLimit (US address pending).</summary>
+/// <summary>
+/// Shared quality-to-output budget at Audio_GetQualityBudget (US 0x51b810 / TPI 0x651df0),
+/// capped by the scheduler at Audio_GetOutputCandidateLimit (US 0x6b6140 / TPI 0x8ac3e0).
+/// </summary>
 public static class SoundChannelPolicy
 {
 	public const int MaximumChannels = 30;
+
 	public static int Limit( SettingsFile settings, int quality, int availableChannels = MaximumChannels )
 	{
 		if ( quality < 0 || quality > 100 || availableChannels < 1 ) throw new ArgumentOutOfRangeException( nameof(quality) );

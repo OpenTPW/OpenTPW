@@ -1,3 +1,5 @@
+using SoundChannelPolicy = OpenTPW.Audio.SoundChannelPolicy;
+
 namespace OpenTPW;
 
 /// <summary>TPW policy from SoundChannelPolicy: 30 candidates, newest equal-priority voice first, virtual voices keep advancing.</summary>

@@ -15,10 +15,9 @@ public enum StartupImageLayout
 	SteppedByWidth,
 
 	/// <summary>
-	/// Theme Park Inc (TPI 0x6f89b0, <c>StartupImages_Step</c> TPI 0x6f99b0): State 9 shows <c>splash_&lt;lang&gt;</c>
-	/// for 3000 ms (TPI 0x6f9a43), then switches to <c>welcome</c> composited with <c>legal_&lt;lang&gt;</c>,
-	/// <c>welcome_&lt;lang&gt;</c> and <c>bull_&lt;lang&gt;</c> at proportional coordinates (TPI 0x6f9045..0x6f90d5) for
-	/// 3000 ms (<c>StartupImages_WaitAndRelease</c>, TPI 0x6f92e0).
+	/// Theme Park Inc (TPI 0x6f89b0): each call advances a stage, see <see cref="StartupLoadScreens"/>. The first
+	/// welcome screen composites <c>legal_&lt;lang&gt;</c>, <c>welcome_&lt;lang&gt;</c> and <c>bull_&lt;lang&gt;</c> onto
+	/// <c>welcome</c> at proportional coordinates (TPI 0x6f9045..0x6f90d5); later load screens leave out the legal text.
 	/// </summary>
 	ProportionalCombined,
 }
@@ -46,10 +45,14 @@ public sealed record StartupImageOptions
 	/// <summary>Overlay composition and stage layout rule.</summary>
 	public required StartupImageLayout Layout { get; init; }
 
-	/// <summary>Minimum milliseconds the splash screen stays up before transitioning (US 0x587990: 2500; TPI 0x6f9a43: 3000).</summary>
+	/// <summary>
+	/// Theme Park World: minimum milliseconds the splash stays up (busy wait at US 0x587990: 2500). Theme Park Inc:
+	/// milliseconds of loading after which the splash is replaced by the welcome screen (TPI 0x6f9a43 tests
+	/// <c>2999 &lt; elapsed</c>, so 3000); a shorter load never shows the welcome screen.
+	/// </summary>
 	public required int SplashDurationMs { get; init; }
 
-	/// <summary>Minimum milliseconds the welcome screen stays up before release (US 0x5879c0 / TPI 0x6f92e0: 3000).</summary>
+	/// <summary>Minimum milliseconds the first welcome screen stays up before it is replaced or released (US 0x5879c0 / TPI 0x6f92e0: 3000).</summary>
 	public int WelcomeDurationMs { get; init; } = 3000;
 
 	public static StartupImageOptions ThemeParkWorld { get; } = new()
@@ -142,8 +145,9 @@ public sealed class StartupImagePlan
 	}
 
 	/// <summary>
-	/// Builds the subsequent level-load welcome screen (<c>DAT_008c478c != 0</c> at US 0x5878d6 in TPW; identical to
-	/// <see cref="InitialWelcomeScreen"/> in TPI).
+	/// Builds the subsequent level-load welcome screen: TPW <c>welcome_&lt;lang&gt;</c> at a width-switched Y offset
+	/// (<c>DAT_008c478c != 0</c> at US 0x5878d6); TPI stage 3 (TPI 0x6f89b0 <c>case 3</c>) <c>welcome_&lt;lang&gt;</c>
+	/// at (0, 0) and <c>bull_&lt;lang&gt;</c>, without the legal text. Neither has a minimum duration.
 	/// </summary>
 	public StartupImageScreen LoadWelcomeScreen( int baseWidth, int baseHeight )
 	{
@@ -155,7 +159,13 @@ public sealed class StartupImagePlan
 				0 );
 		}
 
-		return InitialWelcomeScreen( baseWidth, baseHeight );
+		return new StartupImageScreen(
+			WelcomeBasePath,
+			[
+				new StartupImageOverlay( WelcomeOverlayPath, 0, 0 ),
+				new StartupImageOverlay( BullOverlayPath!, 0, StartupImages.ProportionalBullOffsetY( baseHeight ) ),
+			],
+			0 );
 	}
 }
 
@@ -239,4 +249,90 @@ public sealed class StartupImages( StartupImageOptions options )
 	/// </summary>
 	public static int ProportionalBullOffsetY( int baseHeight )
 		=> (int)(baseHeight * (1.0f / 480.0f) * 336.0f);
+}
+
+/// <summary>What a Theme Park Inc load screen shows (<see cref="StartupLoadScreens"/>).</summary>
+public enum StartupScreenKind
+{
+	/// <summary>Nothing prepared yet, or released.</summary>
+	None,
+	/// <summary>Stage 0: the screen is cleared (TPI 0x6f84e0 twice); no picture.</summary>
+	Clear,
+	/// <summary>Stage 1: <c>splash_&lt;lang&gt;</c>.</summary>
+	Splash,
+	/// <summary>Stage 2: <see cref="StartupImagePlan.InitialWelcomeScreen"/>.</summary>
+	Welcome,
+	/// <summary>Stage 3 and later: <see cref="StartupImagePlan.LoadWelcomeScreen"/> with the progress bar.</summary>
+	LoadWelcome,
+}
+
+/// <summary>
+/// Theme Park Inc's load screens. <c>StartupImages_Prepare</c> (TPI 0x6f89b0) advances a global stage (TPI 0xbeac88)
+/// on every call: the first call, from <c>Game_Initialize</c> (TPI 0x6a1400) before the startup movies, only clears
+/// the screen; the second, at the start of state 9 (TPI 0x6a3150), shows the splash; the third shows the first welcome
+/// screen; every later call (park loads) shows the load welcome screen, on which <c>StartupImages_Step</c> also draws
+/// a progress bar (TPI 0x6f9380: at 370/640 W, 420/480 H, 240/640 W by 10/480 H, red to yellow; not modelled here).
+/// <c>StartupImages_Step</c> (TPI 0x6f99b0) runs once per loading step and replaces the splash with the welcome
+/// screen when <see cref="StartupImageOptions.SplashDurationMs"/> have passed since the first step; so a load that
+/// ends sooner never shows the welcome screen, as the retail game's Intro load does. Once shown, the first welcome
+/// screen stays at least <see cref="StartupImageOptions.WelcomeDurationMs"/>: the next <c>Prepare</c> and
+/// <c>StartupImages_WaitAndRelease</c> (TPI 0x6f92e0) busy-wait out the rest (timestamp TPI 0xbeac8c).
+/// Times are the caller's milliseconds (retail: <c>timeGetTime</c>).
+/// </summary>
+public sealed class StartupLoadScreens( StartupImageOptions options )
+{
+	private int nextStage;
+	private long? firstStepMs;
+	private long? welcomeSinceMs;
+
+	public StartupImageOptions Options { get; } = options;
+	public StartupScreenKind Current { get; private set; } = StartupScreenKind.None;
+
+	/// <summary>
+	/// <c>StartupImages_Prepare</c>: moves to the next stage at <paramref name="nowMs"/>. Returns how long the caller
+	/// must wait first (the rest of the first welcome screen's minimum); the new screen starts after that wait.
+	/// </summary>
+	public long Prepare( long nowMs )
+	{
+		long wait = RemainingHold( nowMs );
+		welcomeSinceMs = null;
+		firstStepMs = null;
+		int stage = nextStage;
+		nextStage = Math.Min( stage + 1, 3 );
+		Current = stage switch
+		{
+			0 => StartupScreenKind.Clear,
+			1 => StartupScreenKind.Splash,
+			2 => StartupScreenKind.Welcome,
+			_ => StartupScreenKind.LoadWelcome,
+		};
+		// The timestamp is taken after the wait and the composition, at the end of stage 2.
+		if ( Current == StartupScreenKind.Welcome ) welcomeSinceMs = nowMs + wait;
+		return wait;
+	}
+
+	/// <summary>
+	/// <c>StartupImages_Step</c>: one loading step at <paramref name="nowMs"/>. Returns true when it switched from the
+	/// splash to the welcome screen (by calling <see cref="Prepare"/>).
+	/// </summary>
+	public bool Step( long nowMs )
+	{
+		// The first step after a Prepare starts the clock (TPI 0x6f99b0 when its step counter is 0).
+		firstStepMs ??= nowMs;
+		if ( Current != StartupScreenKind.Splash || nowMs - firstStepMs.Value < Options.SplashDurationMs ) return false;
+		Prepare( nowMs );
+		return true;
+	}
+
+	/// <summary><c>StartupImages_WaitAndRelease</c>: returns how long to wait before the screen is released.</summary>
+	public long Release( long nowMs )
+	{
+		long wait = RemainingHold( nowMs );
+		welcomeSinceMs = null;
+		Current = StartupScreenKind.None;
+		return wait;
+	}
+
+	private long RemainingHold( long nowMs ) =>
+		welcomeSinceMs is long since ? Math.Max( 0, since + Options.WelcomeDurationMs - nowMs ) : 0;
 }

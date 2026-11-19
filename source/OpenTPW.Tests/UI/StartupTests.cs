@@ -99,6 +99,57 @@ public class StartupTests
 	}
 
 	[TestMethod]
+	public void ThemeParkIncLaterLoadScreensLeaveOutTheLegalText()
+	{
+		var plan = new StartupImages( StartupImageOptions.ThemeParkInc ).Select( 1024, "American" );
+		var load = plan.LoadWelcomeScreen( 1024, 768 );
+		Assert.AreEqual( 0, load.MinDurationMs );
+		CollectionAssert.AreEqual(
+			new[] { new StartupImageOverlay( plan.WelcomeOverlayPath, 0, 0 ), new StartupImageOverlay( plan.BullOverlayPath!, 0, 537 ) },
+			new List<StartupImageOverlay>( load.Overlays ) );
+	}
+
+	/// <summary>
+	/// StartupImages_Prepare / _Step / _WaitAndRelease (TPI 0x6f89b0 / 0x6f99b0 / 0x6f92e0): the stage advances per
+	/// call, the splash gives way to the welcome screen only after 3000 ms of loading, and the welcome screen holds 3000 ms.
+	/// </summary>
+	[TestMethod]
+	public void ThemeParkIncLoadScreensFollowTheCallCountAndTheLoadLength()
+	{
+		var screens = new StartupLoadScreens( StartupImageOptions.ThemeParkInc );
+		// Game_Initialize: only clears.
+		Assert.AreEqual( 0, screens.Prepare( 0 ) );
+		Assert.AreEqual( StartupScreenKind.Clear, screens.Current );
+
+		// State 9 for the Intro: a load that ends within 3000 ms keeps the splash and releases at once.
+		Assert.AreEqual( 0, screens.Prepare( 20_000 ) );
+		Assert.AreEqual( StartupScreenKind.Splash, screens.Current );
+		Assert.IsFalse( screens.Step( 20_100 ) );
+		Assert.IsFalse( screens.Step( 22_900 ) );
+		Assert.AreEqual( 0, screens.Release( 23_000 ) );
+		Assert.AreEqual( StartupScreenKind.None, screens.Current );
+
+		// A second, long load: the welcome screen appears after 3000 ms from the first step and holds 3000 ms.
+		var longLoad = new StartupLoadScreens( StartupImageOptions.ThemeParkInc );
+		longLoad.Prepare( 0 );
+		longLoad.Prepare( 1_000 );
+		Assert.IsFalse( longLoad.Step( 1_500 ) );
+		Assert.IsFalse( longLoad.Step( 4_499 ) );
+		Assert.IsTrue( longLoad.Step( 4_500 ) );
+		Assert.AreEqual( StartupScreenKind.Welcome, longLoad.Current );
+		Assert.IsFalse( longLoad.Step( 9_000 ) );
+		Assert.AreEqual( 2_000, longLoad.Release( 5_500 ) );
+
+		// Later loads show the load welcome screen and never switch.
+		Assert.AreEqual( 0, longLoad.Prepare( 60_000 ) );
+		Assert.AreEqual( StartupScreenKind.LoadWelcome, longLoad.Current );
+		Assert.IsFalse( longLoad.Step( 60_000 ) );
+		Assert.IsFalse( longLoad.Step( 70_000 ) );
+		longLoad.Prepare( 80_000 );
+		Assert.AreEqual( StartupScreenKind.LoadWelcome, longLoad.Current );
+	}
+
+	[TestMethod]
 	public void StartupMovieSelectionAndStateMachineFollowRetailRules()
 	{
 		var tpwMovies = new StartupMovies( StartupMovieOptions.ThemeParkWorld );

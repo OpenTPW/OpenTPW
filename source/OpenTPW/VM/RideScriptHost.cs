@@ -5,7 +5,11 @@ internal sealed class RideScriptHost : IRideVMHost
 {
 	private readonly HashSet<Opcode> reported = [];
 	public int Now => (int)(Time.Now * 1000);
-	public uint Random() => (uint)System.Random.Shared.Next();
+	// Every ride draws from the park's one random stream, as RAND does in the game; there is no park object to own it
+	// yet, so the stream is shared here, seeded from the clock like the game's world set-up.
+	private static readonly ParkRandom park = ParkRandom.FromClock();
+
+	public uint Random() => park.Next();
 
 	public int? Call( RideVM vm, Opcode opcode, uint[] operands )
 	{

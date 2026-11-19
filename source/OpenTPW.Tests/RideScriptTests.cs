@@ -65,7 +65,7 @@ public class RideScriptTests
 		Assert.IsFalse( anims.IsEmpty );
 
 		byte[] rse = FileSystem.ReadAllBytes( scriptPath );
-		var runner = new ObjectRunner( rse, anims, 1 ) { Riders = 4 };
+		var runner = new ObjectRunner( rse, anims, 1, new ParkRandom( 1 ) ) { Riders = 4 };
 		Assert.AreEqual( 31, runner.TickMs );
 		runner.Update( 92 );
 		Assert.AreEqual( 62, runner.ClockMs );
@@ -89,5 +89,18 @@ public class RideScriptTests
 		Assert.AreSame( clipA, player.Sample( 31 ).Clip );
 		player.Flush();
 		Assert.AreEqual( clipA.StartFrame + clipA.Length, player.Sample( durationMs + 500 ).Frame, 0.01f );
+	}
+
+	/// <summary>World_Random (US 0x516330 / TPI 0x6493e0): LCG step, rotate right 13, stored rotated, returned as its absolute value.</summary>
+	[TestMethod]
+	public void ParkRandomFollowsWorldRandom()
+	{
+		var random = new ParkRandom( 1 );
+		(uint State, uint Value)[] expected = [(0xcb61e442, 0x349e1bbe), (0xb5cede5e, 0x4a3121a2), (0x912cddbd, 0x6ed32243), (0x1fc11c24, 0x1fc11c24)];
+		foreach ( var (state, value) in expected )
+		{
+			Assert.AreEqual( value, random.Next() );
+			Assert.AreEqual( state, random.State );
+		}
 	}
 }

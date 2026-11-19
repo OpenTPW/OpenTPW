@@ -19,7 +19,7 @@ public sealed class ObjectRunner : IRideVMHost
 	private readonly Func<RideVM, Opcode, uint[], int?>? onCall;
 	private int clock;
 	private uint tick;
-	private uint seed;
+	private readonly ParkRandom random;
 
 	public int TickMs { get; }
 
@@ -31,15 +31,17 @@ public sealed class ObjectRunner : IRideVMHost
 
 	public bool IsRunning => !vm.IsStopped;
 
-	public ObjectRunner( byte[] rseBytes, AnimSet anims, uint id, int tickMs = DefaultTickMs, Func<RideVM, Opcode, uint[], int?>? onCall = null )
+	/// <param name="random">The park's random stream, shared by every runner of the park (<see cref="ParkRandom"/>).</param>
+	public ObjectRunner( byte[] rseBytes, AnimSet anims, uint id, ParkRandom random, int tickMs = DefaultTickMs, Func<RideVM, Opcode, uint[], int?>? onCall = null )
 	{
 		ArgumentNullException.ThrowIfNull( rseBytes );
 		ArgumentNullException.ThrowIfNull( anims );
+		ArgumentNullException.ThrowIfNull( random );
 		if ( tickMs <= 0 ) throw new ArgumentOutOfRangeException( nameof(tickMs) );
 		this.anims = anims;
 		TickMs = tickMs;
 		this.onCall = onCall;
-		seed = 12345u + id * 7919u;
+		this.random = random;
 		using var stream = new MemoryStream( rseBytes, writable: false );
 		vm = new RideVM( stream, this, (int)id );
 	}
@@ -67,7 +69,7 @@ public sealed class ObjectRunner : IRideVMHost
 
 	int IRideVMHost.Now => clock;
 
-	uint IRideVMHost.Random() => seed = unchecked(seed * 1103515245u + 12345u);
+	uint IRideVMHost.Random() => random.Next();
 
 	int? IRideVMHost.Call( RideVM vm, Opcode opcode, uint[] operands ) => opcode switch
 	{

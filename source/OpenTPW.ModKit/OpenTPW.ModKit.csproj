@@ -14,6 +14,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="OpenTPW" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\OpenTPW.Common\OpenTPW.Common.csproj" />
     <ProjectReference Include="..\OpenTPW.Files\OpenTPW.Files.csproj" />
     <ProjectReference Include="..\OpenTPW.Graphics\OpenTPW.Graphics.csproj" />

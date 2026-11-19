@@ -21,6 +21,9 @@ internal sealed class EditorHost : IDisposable
 	public EditorHost( GpuDevice device ) => this.device = device;
 
 	public bool Visible => editor?.shouldRender == true;
+#if DEBUG
+	internal Editor? Editor => editor;
+#endif
 
 	public void Toggle( Func<string, long>? previewSound )
 	{

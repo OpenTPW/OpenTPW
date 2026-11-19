@@ -16,6 +16,10 @@ public sealed partial class Renderer : IDisposable
 	/// <summary>Plays a game file for the editor's sound preview; set by the host that owns the audio output.</summary>
 	public Func<string, long>? PreviewSound { get; set; }
 	private EditorHost? editor;
+	internal bool EditorVisible => editor is { Visible: true };
+#if DEBUG
+	internal EditorHost? EditorHost => editor;
+#endif
 	public unsafe Renderer()
 	{
 		Window = new( Settings.Default.GameWindowSize.X, Settings.Default.GameWindowSize.Y, "Theme Park World", true );

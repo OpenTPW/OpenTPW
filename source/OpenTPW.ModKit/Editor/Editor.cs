@@ -18,6 +18,8 @@ public partial class Editor
 
 	public bool shouldRender = false;
 
+	internal T? FindTab<T>() where T : BaseTab => tabs.OfType<T>().FirstOrDefault();
+
 	public static ImFontPtr MonospaceFont { get; private set; }
 	public static ImFontPtr SansSerifFont { get; private set; }
 

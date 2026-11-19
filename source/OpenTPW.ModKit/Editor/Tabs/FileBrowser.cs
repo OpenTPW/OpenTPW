@@ -181,6 +181,14 @@ internal sealed class FileBrowser : BaseTab
 		CurrentFileViewer = null;
 	}
 
+	internal static bool ThumbnailsBusy => ThumbnailsToCache != ThumbnailsCachedTotal;
+
+	internal void SelectFile( FileSystemFile file )
+	{
+		CurrentFile = file;
+		ClearFileViewer();
+	}
+
 	public FileBrowser()
 	{
 		BasePath = "";
@@ -303,6 +311,8 @@ internal sealed class FileBrowser : BaseTab
 	{
 		var margin = 24f;
 
+		ImGui.SetNextWindowPos( new System.Numerics.Vector2( 60, 48 ), ImGuiCond.FirstUseEver );
+		ImGui.SetNextWindowSize( new System.Numerics.Vector2( 1060, 620 ), ImGuiCond.FirstUseEver );
 		if ( ImGui.Begin( "File Browser", ref visible ) )
 		{
 			if ( ImGui.Button( "^" ) )

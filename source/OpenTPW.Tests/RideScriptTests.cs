@@ -1,5 +1,6 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
+using System.IO;
 using System.Linq;
 
 namespace OpenTPW.Tests;
@@ -45,5 +46,48 @@ public class RideScriptTests
 
 		Console.WriteLine( $"{scripts.Count} scripts" );
 		Assert.AreEqual( 0, stopped.Count, string.Join( ", ", stopped ) );
+	}
+
+	[TestMethod]
+	public void SharedAnimSetPlayerAndRunnerDriveRetailTpwRideInThirtyOneMillisecondTicks()
+	{
+		GameData.Require();
+		const string wadDir = "levels/jungle/rides/bouncy";
+		var entries = FileSystem.GetFiles( wadDir )
+			.ToDictionary( p => Path.GetFileName( p ), p => p, StringComparer.OrdinalIgnoreCase );
+		Assert.IsTrue( entries.TryGetValue( "bouncy.MD2", out var modelPath ) );
+		Assert.IsTrue( entries.TryGetValue( "bouncy.RSE", out var scriptPath ) );
+
+		using var modelStream = new MemoryStream( FileSystem.ReadAllBytes( modelPath ), writable: false );
+		var model = new ModelFile( modelStream );
+		var anims = AnimSet.Load( "bouncy", name => entries.TryGetValue( name, out var path ) ? FileSystem.ReadAllBytes( path ) : null );
+		Assert.AreEqual( "CDILSMEUWBRO", anims.SlotLetters );
+		Assert.IsFalse( anims.IsEmpty );
+
+		byte[] rse = FileSystem.ReadAllBytes( scriptPath );
+		var runner = new ObjectRunner( rse, anims, 1 ) { Riders = 4 };
+		Assert.AreEqual( 31, runner.TickMs );
+		runner.Update( 92 );
+		Assert.AreEqual( 62, runner.ClockMs );
+		runner.Update( 93 );
+		Assert.AreEqual( 93, runner.ClockMs );
+
+		var activePose = runner.Pose( model, 10_000 );
+		Assert.IsNotNull( activePose );
+
+		var player = new AnimPlayer();
+		Assert.AreEqual( 1000, player.Play( null, false, 1f, 0 ), "Missing clip must return retail 1000 ms sentinel." );
+		var clipA = Enumerable.Range( 0, anims.SlotLetters.Length )
+			.Select( slot => anims.Find( slot, 0 ) )
+			.First( clip => clip != null && clip.Length > 0 )!;
+		int durationMs = player.Play( clipA, loop: false, speed: 1f, nowMs: 0 );
+		Assert.IsTrue( durationMs > 0 );
+		var secondClip = Enumerable.Range( 0, anims.SlotLetters.Length )
+			.Select( slot => anims.Find( slot, 0 ) )
+			.FirstOrDefault( clip => clip != null && !ReferenceEquals( clip, clipA ) ) ?? clipA;
+		player.Play( secondClip, loop: true, speed: 1f, nowMs: 31 );
+		Assert.AreSame( clipA, player.Sample( 31 ).Clip );
+		player.Flush();
+		Assert.AreEqual( clipA.StartFrame + clipA.Length, player.Sample( durationMs + 500 ).Frame, 0.01f );
 	}
 }

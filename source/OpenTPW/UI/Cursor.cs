@@ -58,9 +58,9 @@ public class Cursor : Panel, Singleton<Cursor>
 		var rect = new Rectangle( position, size );
 		var uvRect = new Rectangle( uv0, uv1 - uv0 );
 
-		using ( _ = new Graphics.Scope( Screen.Size ) )
+		using ( _ = new Graphics2D.Scope( Screen.Size ) )
 		{
-			Graphics.Quad( rect, uvRect, material );
+			Graphics2D.Quad( rect, uvRect, material );
 		}
 	}
 }

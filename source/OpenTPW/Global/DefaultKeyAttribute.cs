@@ -1,9 +1,9 @@
-﻿[System.AttributeUsage( AttributeTargets.Field, Inherited = false, AllowMultiple = false )]
+[System.AttributeUsage( AttributeTargets.Field, Inherited = false, AllowMultiple = false )]
 sealed class DefaultKeyAttribute : Attribute
 {
-	public Veldrid.Key[] Keys;
+	public OpenTPW.Key[] Keys;
 
-	public DefaultKeyAttribute( params Veldrid.Key[] keys )
+	public DefaultKeyAttribute( params OpenTPW.Key[] keys )
 	{
 		Keys = keys;
 	}

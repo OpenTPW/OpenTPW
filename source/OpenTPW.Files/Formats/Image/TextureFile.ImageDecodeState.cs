@@ -9,8 +9,8 @@ public partial class TextureFile
 
 		public ImageDecodeState( int size )
 		{
-			DequantizationBuffer = Enumerable.Repeat( 0f, size * size * size ).ToList();
-			RowDecodeBuffer = Enumerable.Repeat( 0f, size * size * size ).ToList();
+			DequantizationBuffer = Enumerable.Repeat( 0f, checked(size * size) ).ToList();
+			RowDecodeBuffer = Enumerable.Repeat( 0f, checked(size * size) ).ToList();
 		}
 	}
 }

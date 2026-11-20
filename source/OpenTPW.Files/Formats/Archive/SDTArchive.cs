@@ -33,7 +33,7 @@ public class SdtArchive : IArchive
 		var fileLength = (int)tempStreamReader.BaseStream.Length;
 
 		buffer = new byte[fileLength];
-		tempStreamReader.BaseStream.Read( buffer, 0, fileLength );
+		tempStreamReader.BaseStream.ReadExactly( buffer, 0, fileLength );
 		tempStreamReader.Close();
 		memoryStream = new ExpandedMemoryStream( buffer );
 		mp2Reader = new SoundFile( new MemoryStream(buffer) );
@@ -86,8 +86,9 @@ public class SdtArchive : IArchive
 
 	public ArchiveFile GetFile( string name )
 	{
-		int index = soundFiles.FindIndex( x => x.Name.StartsWith( name ) );
-		return soundFiles[index];
+		// Names differ only in case between releases (TW "SP_465.mp2", US "sp_465.mp2").
+		int index = soundFiles.FindIndex( x => x.Name.StartsWith( name, StringComparison.OrdinalIgnoreCase ) );
+		return index >= 0 ? soundFiles[index] : throw new FileNotFoundException( $"No sound '{name}' in SDT archive" );
 	}
 
 	public byte[] GetData( int offset, int length )

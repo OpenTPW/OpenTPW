@@ -5,10 +5,37 @@ using Veldrid;
 
 namespace OpenTPW;
 
+/// <summary>
+/// Render pass an entity belongs to. Passes are drawn in ascending order, so the
+/// interface always lands on top of the 3D scene no matter when either was created.
+/// </summary>
+public enum RenderLayer
+{
+	Background = -1,
+	World = 0,
+	Ui = 1
+}
+
 public class Entity
 {
 	public Level Level { get; set; }
 	public static List<Entity> All { get; set; } = Assembly.GetCallingAssembly().GetTypes().OfType<Entity>().ToList();
+
+	/// <summary>
+	/// Which render pass draws this entity. Defaults to the 3D world.
+	/// </summary>
+	public RenderLayer Layer { get; protected set; } = RenderLayer.World;
+
+	/// <summary>
+	/// Returns <paramref name="entities"/> in draw order: grouped by <see cref="RenderLayer"/>
+	/// (World before Ui), keeping creation order inside each layer. The result is a snapshot,
+	/// so entities spawned while rendering do not disturb the current frame.
+	/// </summary>
+	public static List<Entity> InRenderOrder( IEnumerable<Entity> entities )
+	{
+		// OrderBy is a stable sort, which preserves creation order within a layer.
+		return entities.OrderBy( entity => entity.Layer ).ToList();
+	}
 
 	/// <summary>
 	/// Right, Up, Forward (FLU)

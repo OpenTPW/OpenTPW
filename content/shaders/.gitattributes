@@ -1,0 +1,5 @@
+*.hlsl text eol=lf
+includes/*.hlsli text eol=lf
+compiled/*.spv binary
+compiled/*.dxil binary
+compiled/SHA256SUMS text eol=lf

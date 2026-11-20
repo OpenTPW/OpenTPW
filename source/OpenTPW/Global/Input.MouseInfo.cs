@@ -1,5 +1,4 @@
 ﻿using Newtonsoft.Json.Linq;
-using Veldrid.Sdl2;
 
 namespace OpenTPW;
 

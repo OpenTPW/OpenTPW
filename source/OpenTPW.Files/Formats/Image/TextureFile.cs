@@ -37,7 +37,7 @@ public partial class TextureFile : BaseFormat
 		//
 		var fileData = new TextureFileData()
 		{
-			Flags = (TextureFlags)binaryReader.ReadByte(),
+			Type = (WctType)binaryReader.ReadByte(),
 			HasAlphaChannel = binaryReader.ReadByte() == 0x01,
 			BitsPerPixel = binaryReader.ReadByte(),
 			Version = binaryReader.ReadByte(),
@@ -53,6 +53,8 @@ public partial class TextureFile : BaseFormat
 
 			Checksum = binaryReader.ReadInt32()
 		};
+		if ( fileData.Type is not (WctType.ZlibPacked or WctType.LzssInterleaved) )
+			throw new InvalidDataException( $"Unsupported WCT type: {(byte)fileData.Type:X2}" );
 
 		//
 		// Read blocks
@@ -87,14 +89,16 @@ public partial class TextureFile : BaseFormat
 		var outputCr = Enumerable.Repeat( 0f, size * size ).ToList();
 		var outputA = Enumerable.Repeat( 255f, size * size ).ToList();
 
-		var isHalfScale = !fileData.Flags.HasFlag( TextureFlags.FullScale );
 		var state = new ImageDecodeState( size );
-		DecodeChannel( ref state, size, ref colorData, ref outputY, ComputeDequantizationScaleY( fileData.YChannelQuantizationScale ), isHalfScale );
-		DecodeChannel( ref state, size / 2, ref colorData, ref outputCb, ComputeDequantizationScaleCbCr( fileData.CbChannelQuantizationScale ), isHalfScale );
-		DecodeChannel( ref state, size / 2, ref colorData, ref outputCr, ComputeDequantizationScaleCbCr( fileData.CrChannelQuantizationScale ), isHalfScale );
+		// Texture_DispatchCompression (US 0x592060) dispatches 0x12 to Texture_DecodePackedRows (US 0x593ab0) (packed row coefficients),
+		// and 0x13 to Texture_DecodeInterleaved (US 0x595920) (interleaved). Both reconstruct the full native size.
+		bool packed = fileData.Type == WctType.ZlibPacked;
+		DecodeChannel( ref state, size, ref colorData, ref outputY, ComputeDequantizationScaleY( fileData.YChannelQuantizationScale ), packed );
+		DecodeChannel( ref state, size / 2, ref colorData, ref outputCb, ComputeDequantizationScaleCbCr( fileData.CbChannelQuantizationScale ), packed );
+		DecodeChannel( ref state, size / 2, ref colorData, ref outputCr, ComputeDequantizationScaleCbCr( fileData.CrChannelQuantizationScale ), packed );
 
 		if ( fileData.HasAlphaChannel )
-			DecodeChannel( ref state, size, ref alphaData, ref outputA, ComputeDequantizationScaleA( fileData.AChannelQuantizationScale ), isHalfScale, true );
+			DecodeChannel( ref state, size, ref alphaData, ref outputA, ComputeDequantizationScaleA( fileData.AChannelQuantizationScale ), packed );
 
 		uint alignedWidth = GetAlignedSize( (uint)fileData.Width );
 		uint alignedHeight = GetAlignedSize( (uint)fileData.Height );

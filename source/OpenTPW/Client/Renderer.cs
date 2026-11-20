@@ -1,250 +1,81 @@
-﻿using Veldrid;
-using Veldrid.StartupUtilities;
+using OpenTPW.Graphics;
+using SDL;
 
 namespace OpenTPW;
 
-public partial class Renderer
+/// <summary>SDL GPU frame loop; uploads during update precede frame recording, and the shared device owns all fences.</summary>
+public sealed partial class Renderer : IDisposable
 {
-	private DateTime _lastFrame;
-	public CommandList CommandList = null!;
-
-	public Window Window;
-	public ImGuiRenderer imGuiRenderer;
-
-	public Action? PreUpdate;
-	public Action? OnUpdate;
-	public Action? PostUpdate;
-
-	public Action? OnRender;
-
-	public Renderer()
+	private DateTime lastFrame = DateTime.Now;
+	public Window Window { get; }
+	public RenderTarget Target { get; }
+	public GpuTexture ResolveColorTexture => Target.Color;
+	internal GpuFrame Frame { get; private set; } = null!;
+	internal GpuRenderPass Pass { get; private set; } = null!;
+	public Action? PreUpdate, OnUpdate, PostUpdate, OnRender, PrepareResources;
+	/// <summary>Plays a game file for the editor's sound preview; set by the host that owns the audio output.</summary>
+	public Func<string, long>? PreviewSound { get; set; }
+	private EditorHost? editor;
+	internal bool EditorVisible => editor is { Visible: true };
+#if DEBUG
+	internal EditorHost? EditorHost => editor;
+#endif
+	public unsafe Renderer()
 	{
 		Window = new( Settings.Default.GameWindowSize.X, Settings.Default.GameWindowSize.Y, "Theme Park World", true );
-		Window?.OnResized = OnWindowResized;
-		Window?.Visible = true;
-
-		CreateGraphicsDevice();
-		// Swap the buffers so that the screen isn't a mangled mess
-		Device.SwapBuffers();
-		CreateMultisampledFramebuffer();
-
-		imGuiRenderer = new ImGuiRenderer( Device, Device.MainSwapchain.Framebuffer.OutputDescription, Window.Size.X, Window.Size.Y );
-		ModKit.GlobalNamespace.ImGuiManager = imGuiRenderer;
-		new Editor( imGuiRenderer, Device );
-
-		CommandList = Device.ResourceFactory.CreateCommandList();
-		_lastFrame = DateTime.Now;
-	}
-
-	private void CreateMultisampledFramebuffer()
-	{
-		var colorTextureInfo = TextureDescription.Texture2D(
-			(uint)(Screen.Size.X),
-			(uint)(Screen.Size.Y),
-			1,
-			1,
-			PixelFormat.B8_G8_R8_A8_UNorm,
-			TextureUsage.RenderTarget,
-			TextureSampleCount.Count4
-		);
-
-		var colorTexture = Device.ResourceFactory.CreateTexture( colorTextureInfo );
-
-		var depthTextureInfo = TextureDescription.Texture2D(
-			(uint)(Screen.Size.X),
-			(uint)(Screen.Size.Y),
-			1,
-			1,
-			PixelFormat.D32_Float_S8_UInt,
-			TextureUsage.DepthStencil,
-			TextureSampleCount.Count4
-		);
-
-		var depthTexture = Device.ResourceFactory.CreateTexture( depthTextureInfo );
-
-		colorTextureInfo.SampleCount = TextureSampleCount.Count1;
-		colorTextureInfo.Usage = TextureUsage.Sampled;
-
-		ResolveColorTexture = Device.ResourceFactory.CreateTexture( colorTextureInfo );
-
-		var framebufferAttachmentInfo = new FramebufferAttachmentDescription( colorTexture, 0 );
-		var depthAttachmentInfo = new FramebufferAttachmentDescription( depthTexture, 0 );
-		var framebufferDescription = new FramebufferDescription()
+		GpuDevice? created = null;
+		try
 		{
-			ColorTargets = [framebufferAttachmentInfo],
-			DepthTarget = depthAttachmentInfo
-		};
-
-		MultisampledFramebuffer = Device.ResourceFactory.CreateFramebuffer( framebufferDescription );
-	}
-
-	public Framebuffer MultisampledFramebuffer;
-	public Veldrid.Texture ResolveColorTexture;
-
-	private Pipeline _blitPipeline;
-	private ResourceSet _blitResourceSet;
-	private ResourceLayout _blitResourceLayout;
-
-	public void Run()
-	{
-		var layoutDescription = new ResourceLayoutDescription(
-			new ResourceLayoutElementDescription( "g_tInput", ResourceKind.TextureReadOnly, ShaderStages.Fragment ),
-			new ResourceLayoutElementDescription( "g_sSampler", ResourceKind.Sampler, ShaderStages.Fragment )
-		);
-
-		_blitResourceLayout = Device.ResourceFactory.CreateResourceLayout( layoutDescription );
-
-		// Create shader
-		var shader = new Shader( "content/shaders/blit.shader" );
-		var blitShader = shader.ShaderProgram;
-
-		var pipelineDescription = new GraphicsPipelineDescription(
-			BlendStateDescription.SingleAlphaBlend,
-			DepthStencilStateDescription.Disabled,
-			RasterizerStateDescription.CullNone,
-			PrimitiveTopology.TriangleList,
-			new ShaderSetDescription(
-				Array.Empty<VertexLayoutDescription>(),
-				shader.ShaderProgram
-			),
-			[_blitResourceLayout],
-			Device.MainSwapchain.Framebuffer.OutputDescription
-		);
-
-		_blitPipeline = Device.ResourceFactory.CreateGraphicsPipeline( pipelineDescription );
-
-		_blitResourceSet = Device.ResourceFactory.CreateResourceSet( new ResourceSetDescription(
-			_blitResourceLayout,
-			ResolveColorTexture,
-			Device.LinearSampler
-		) );
-
-		OnWindowResized( Window.Size );
-
-		while ( Window.SdlWindow.Exists )
-		{
-			Update();
+			Device = created = GpuDevice.Create();
+			Device.AttachWindow( Window.Handle );
+			var format = SDL_GPUTextureFormat.SDL_GPU_TEXTUREFORMAT_B8G8R8A8_UNORM;
+			var maximum = Device.MaxSampleCount( format );
+			var samples = maximum >= SDL_GPUSampleCount.SDL_GPU_SAMPLECOUNT_4 ? SDL_GPUSampleCount.SDL_GPU_SAMPLECOUNT_4 : maximum;
+			Target = new( Device, (uint)Window.Size.X, (uint)Window.Size.Y, format, samples );
+			Window.OnResized = OnWindowResized;
+			Window.Visible = true;
+			Log.Info( $"SDL GPU renderer: {Device.Driver}, {Device.ShaderFormat}, {Window.Size.X}x{Window.Size.Y} physical pixels" );
 		}
+		// A failed claim or target creation must release the device before destroying its window.
+		catch { created?.Dispose(); Window.Dispose(); throw; }
 	}
-
-	private void PreRender()
-	{
-		foreach ( var shader in Asset.All.OfType<Shader>().Where( x => x.IsDirty ) )
-		{
-			shader.Recompile();
-		}
-
-		CommandList.Begin();
-	}
-
-	private void PostRender()
-	{
-		CommandList.SetFramebuffer( MultisampledFramebuffer ); // Use MSAA framebuffer
-		CommandList.SetViewport( 0, new Viewport( 0, 0, MultisampledFramebuffer.Width, MultisampledFramebuffer.Height, 0, 1 ) );
-		CommandList.SetFullViewports();
-		CommandList.SetFullScissorRects();
-		CommandList.ClearDepthStencil( 1 );
-		CommandList.ClearColorTarget( 0, RgbaFloat.Black );
-
-		// Render level to MSAA buffer
-		CommandList.PushDebugGroup( "Main Render" );
-		OnRender?.Invoke();
-		CommandList.PopDebugGroup();
-
-		// Resolve MSAA to non-MSAA texture
-		CommandList.ResolveTexture( MultisampledFramebuffer.ColorTargets[0].Target, ResolveColorTexture );
-
-		// Blit to screen
-		CommandList.SetFramebuffer( Device.MainSwapchain.Framebuffer );
-		CommandList.SetViewport( 0, new Viewport( 0, 0, Device.MainSwapchain.Framebuffer.Width, Device.MainSwapchain.Framebuffer.Height, 0, 1 ) );
-
-		CommandList.SetPipeline( _blitPipeline );
-		CommandList.SetGraphicsResourceSet( 0, _blitResourceSet );
-		CommandList.Draw( 3, 1, 0, 0 );
-
-		Editor.Instance?.Render( CommandList );
-
-		CommandList.End();
-
-		Device.SubmitCommands( CommandList );
-		Device.SwapBuffers();
-	}
-
+	public void Run() { lastFrame = DateTime.Now; while ( Window.Exists ) Update(); }
 	private void Update()
 	{
-		float deltaTime = (float)(DateTime.Now - _lastFrame).TotalSeconds;
-		_lastFrame = DateTime.Now;
-
-		InputSnapshot inputSnapshot = Window.SdlWindow.PumpEvents();
-
-		Time.Update( deltaTime );
-		Input.UpdateFrom( inputSnapshot );
-
-		if ( Input.Pressed( InputButton.EditorToggle ) )
-			Editor.Instance.shouldRender = !Editor.Instance.shouldRender;
-		if ( Editor.Instance.shouldRender )
-			Editor.Instance.UpdateFrom( inputSnapshot );
-
-		PreRender();
-		PreUpdate?.Invoke();
-
-		OnUpdate?.Invoke();
-
-		PostRender();
-		PostUpdate?.Invoke();
-
+		double begin = FrameBegin();
+		float delta = (float)(DateTime.Now - lastFrame).TotalSeconds;
+		lastFrame = DateTime.Now;
 		ProcessDeletionQueue();
-	}
-
-	private void CreateGraphicsDevice()
-	{
-		var options = new GraphicsDeviceOptions()
+		var input = Window.PumpEvents();
+		if ( !Window.Exists ) return;
+		Time.Update( delta ); Input.UpdateFrom( input );
+		if ( Input.Pressed( InputButton.EditorToggle ) ) ( editor ??= new EditorHost( Device ) ).Toggle( PreviewSound );
+		PreUpdate?.Invoke();
+		double updated = Mark(); OnUpdate?.Invoke();
+		if ( !Window.Exists ) return;
+		PrepareResources?.Invoke();
+		// Panels build their ImGui frame, and upload any textures, before the frame starts recording.
+		if ( editor is { Visible: true } ) editor.Update( input, new( Target.Color.Width, Target.Color.Height ), delta );
+		AddUpdate( Mark() - updated );
+		double wait = Mark(); Frame = Device.BeginFrame(); AddWait( Mark() - wait );
+		Pass = Frame.BeginPass( Target, GpuClear.ToColor( 0, 0, 0, 1 ) );
+		try
 		{
-			PreferStandardClipSpaceYDirection = true,
-			PreferDepthRangeZeroToOne = true,
-			SwapchainDepthFormat = null,
-			SwapchainSrgbFormat = false,
-			SyncToVerticalBlank = true,
-			HasMainSwapchain = true
-		};
-
-		var swapchainSource = VeldridStartup.GetSwapchainSource( Window.SdlWindow );
-		Device = GraphicsDevice.CreateVulkan( swapchainDescription: new SwapchainDescription( swapchainSource, (uint)(Window.Size.X), (uint)(Window.Size.Y), options.SwapchainDepthFormat, options.SyncToVerticalBlank, options.SwapchainSrgbFormat ), options: options );
+			double draw = Mark(); OnRender?.Invoke(); if ( editor is { Visible: true } ) editor.Render( Frame, Pass ); AddRender( Mark() - draw );
+			Pass.End(); Frame.Present( Target.Color );
+			double present = Mark(); Frame.Submit(); AddPresent( Mark() - present );
+		}
+		// Discard CPU-side draw records on a scene failure so shutdown cannot replace the original exception.
+		catch { Frame.Cancel(); throw; }
+		Submissions++; FrameEnd( begin ); PostUpdate?.Invoke();
 	}
-
-	public void OnWindowResized( Point2 newSize )
+	public void OnWindowResized( Point2 size ) { if ( size.X > 0 && size.Y > 0 ) Target.Resize( (uint)size.X, (uint)size.Y ); }
+	public void Dispose()
 	{
-		var dpiScale = 1.0f;
-		Device.MainSwapchain.Resize( (uint)(newSize.X * dpiScale), (uint)(newSize.Y * dpiScale) );
-
-		// Cleanup old MSAA resources
-		MultisampledFramebuffer?.Dispose();
-		ResolveColorTexture?.Dispose();
-
-		// Recreate MSAA resources
-		CreateMultisampledFramebuffer();
-
-		// Recreate blit resources since they depend on the framebuffer
-		_blitResourceSet?.Dispose();
-		_blitResourceSet = Device.ResourceFactory.CreateResourceSet( new ResourceSetDescription(
-			_blitResourceLayout,
-			ResolveColorTexture,
-			Device.LinearSampler
-		) );
-
-		imGuiRenderer?.WindowResized( newSize.X, newSize.Y );
-	}
-
-	public void ImmediateSubmit( Action<CommandList> action )
-	{
-		var commandList = Device.ResourceFactory.CreateCommandList();
-		commandList.Begin();
-
-		action( commandList );
-
-		commandList.End();
-		Device.SubmitCommands( commandList );
-
-		ScheduleDelete( commandList.Dispose );
+		Device.WaitForIdle();
+		editor?.Dispose();
+		foreach ( var mesh in Asset.All.OfType<Model>() ) mesh.Geometry.Dispose();
+		foreach ( var texture in Asset.All.OfType<Texture>().Select( t => t.NativeTexture ).Distinct() ) texture.Dispose();
+		Shader.ReleasePrograms(); Target.Dispose(); Device.Dispose();
 	}
 }

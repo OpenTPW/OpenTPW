@@ -9,18 +9,10 @@ namespace OpenTPW.Tests;
 [TestClass]
 public class FileSystemTests
 {
-	public FileSystemTests()
+	[TestInitialize]
+	public void Init()
 	{
-		Init();
-	}
-
-	private static void Init()
-	{
-		Log = new();
-
-		FileSystem = new BaseFileSystem( "C:\\Program Files (x86)\\Bullfrog\\Theme Park World\\Data" );
-		FileSystem.RegisterArchiveHandler<WadArchive>( ".wad" );
-		FileSystem.RegisterArchiveHandler<SdtArchive>( ".sdt" );
+		GameData.Require();
 	}
 
 	[TestMethod]

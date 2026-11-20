@@ -1,5 +1,4 @@
-﻿﻿using System.Numerics;
-using Veldrid;
+﻿using System.Numerics;
 
 namespace OpenTPW;
 
@@ -16,8 +15,6 @@ internal class BaseTab
 			Text = text;
 		}
 	}
-
-	public ImGuiRenderer ImGuiRenderer { get; set; }
 
 	public bool visible = false;
 

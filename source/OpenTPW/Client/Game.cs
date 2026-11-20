@@ -1,4 +1,4 @@
-﻿namespace OpenTPW;
+namespace OpenTPW;
 
 /// <summary>
 /// Handles the creation and management of various systems, including the game
@@ -11,24 +11,40 @@ internal static class Game
 		Log = new();
 
 		//
-		// Check if the game data directory exists
+		// Find the game data directory (throws if there is none)
 		//
-		if ( !Path.Exists( $"{Settings.Default.GamePath}/data/" ) )
-			throw new DirectoryNotFoundException( "Theme Park World not found" );
+		var gamePath = GameDir.GamePath;
+		Log.Info( $"Game data: {gamePath}" );
+		// Shell launchers can supply their own working directory. Resolve engine assets once
+		// before shaders, icons and the editor cache use relative paths.
+		Directory.SetCurrentDirectory( EngineContent.Find( Environment.CurrentDirectory, AppContext.BaseDirectory ) );
 
 		// Register game data directory
-		FileSystem = new BaseFileSystem( $"{Settings.Default.GamePath}/data/" );
+		FileSystem = new BaseFileSystem( $"{gamePath}/data/" );
 		FileSystem.RegisterArchiveHandler<WadArchive>( ".wad" );
 		FileSystem.RegisterArchiveHandler<SdtArchive>( ".sdt" );
+		LobbyOptionsSettings.Initialize();
+		// A language pack's data is searched before the game's, as if copied over it (retail install step).
+		string[]? packLanguages = null;
+		if ( !string.IsNullOrWhiteSpace( Settings.Default.LanguagePack ) )
+		{
+			var packData = GameLanguage.PackDataFolder( Settings.Default.LanguagePack );
+			FileSystem.AddOverlay( packData );
+			packLanguages = GameLanguage.PackLanguages( packData );
+			Log.Info( $"Language pack: {packData}" );
+		}
+		// Before any string table or font is read: they all come from this folder.
+		GameLanguage.Select( GameLanguage.Resolve( GameLanguage.Available( FileSystem ), Settings.Default.Language, packLanguages ) );
+		Log.Info( $"Language: {GameLanguage.Name}" );
 
 		//
 		// Check if the save data directory exists (create if not)
 		//
-		if ( !Path.Exists( $"{Settings.Default.GamePath}/save/" ) )
-			Directory.CreateDirectory( $"{Settings.Default.GamePath}/save/" );
+		if ( !Path.Exists( $"{gamePath}/save/" ) )
+			Directory.CreateDirectory( $"{gamePath}/save/" );
 
 		// Register save data directory
-		SaveFileSystem = new BaseFileSystem( $"{Settings.Default.GamePath}/save/" );
+		SaveFileSystem = new BaseFileSystem( $"{gamePath}/save/" );
 
 		//
 		// Custom OpenTPW cache directory (mainly for editor-related stuff)
@@ -39,17 +55,76 @@ internal static class Game
 		// Init renderer
 		//
 		Render = new();
+		using var window = Render.Window;
+		using var renderer = Render;
 
 		//
 		// Create level
 		//
-		var level = new Level( "jungle" );
+#if DEBUG
+		// Debug options: --verify-lobby <dir> runs scene transitions through production callbacks
+		// without injecting OS input; --lobby-view <file> pins the camera for retail comparison;
+		// --capture-frames <dir> saves 30 consecutive frames after a 20 second warm-up.
+		var options = DebugOptions( args );
+		LobbyCameraMode.FixedViewPath = options.GetValueOrDefault( "--lobby-view" );
+#endif
+		using var audio = new AudioSystem( unchecked((uint)DateTimeOffset.UtcNow.ToUnixTimeSeconds()) );
+		audio.ConfigureQuality( LobbyOptionsSettings.Current.AudioQuality );
+		if ( LobbyOptionsSettings.Current.Preferences is { } preferences ) audio.ConfigurePreferences( preferences );
+		var level = new Level( "jungle", audio );
+#if DEBUG
+		LobbyAcceptance? acceptance = options.TryGetValue( "--verify-lobby", out var output ) ? new( level, output ) : null;
+		LobbyOptionsAcceptance? optionsAcceptance = options.TryGetValue( "--verify-options", out var optionsOutput ) ? new( level, optionsOutput ) : null;
+		EditorAcceptance? editorAcceptance = options.TryGetValue( "--verify-editor", out var editorOutput ) ? new( Render, editorOutput ) : null;
+		// --capture-after and --capture-count move and size the window, e.g. onto the advisor's welcome gestures.
+		FrameCapture? frames = options.TryGetValue( "--capture-frames", out var framesOutput ) ? new( framesOutput,
+			options.TryGetValue( "--capture-after", out var after ) ? double.Parse( after, System.Globalization.CultureInfo.InvariantCulture ) : 20,
+			options.TryGetValue( "--capture-count", out var frameCount ) ? int.Parse( frameCount, System.Globalization.CultureInfo.InvariantCulture ) : 30 ) : null;
+#endif
 
 		//
 		// Run game loop
 		//
+		Render.PreviewSound = path => audio.PlayFile( path );
 		Render.OnUpdate += level.Update;
+		Render.PrepareResources += () =>
+		{
+			level.IslandMenu?.PrepareText();
+			level.EnvironmentSky?.PrepareTexture();
+			LobbyUiText.PrepareFrame();
+		};
+#if DEBUG
+		if ( acceptance != null ) Render.OnUpdate += acceptance.Update;
+		if ( optionsAcceptance != null ) Render.OnUpdate += optionsAcceptance.Update;
+		if ( editorAcceptance != null ) Render.OnUpdate += editorAcceptance.Update;
+		if ( frames != null ) Render.OnUpdate += frames.Update;
+#endif
 		Render.OnRender += level.Render;
-		Render.Run();
+		try { Render.Run(); }
+		finally
+		{
+			Device.WaitForIdle();
+		}
+		Log.Info( "Render loop stopped" );
+		// A closed SDL window does not stop the audio callback. Drain it before reporting completion.
+		audio.Dispose();
+		Log.Info( "Audio output disposed" );
+#if DEBUG
+		acceptance?.VerifyCompleted();
+		editorAcceptance?.VerifyCompleted();
+#endif
 	}
+
+#if DEBUG
+	private static Dictionary<string, string> DebugOptions( string[] args )
+	{
+		var options = new Dictionary<string, string>();
+		for ( int i = 0; i < args.Length; i += 2 )
+		{
+			if ( args[i] is not ("--verify-lobby" or "--verify-editor" or "--lobby-view" or "--capture-frames" or "--capture-after" or "--capture-count" or "--verify-options") || i + 1 >= args.Length || !options.TryAdd( args[i], args[i + 1] ) )
+				throw new ArgumentException( $"Expected --verify-lobby <dir>, --verify-editor <dir>, --verify-options <dir>, --lobby-view <file>, --capture-frames <dir> [--capture-after <seconds>] [--capture-count <frames>], got: {string.Join( ' ', args )}" );
+		}
+		return options;
+	}
+#endif
 }

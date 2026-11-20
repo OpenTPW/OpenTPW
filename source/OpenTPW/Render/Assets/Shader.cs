@@ -1,71 +1,30 @@
-﻿using Veldrid;
-using Vortice.Direct3D11;
-using Vortice.Win32;
+using OpenTPW.Graphics;
 
 namespace OpenTPW;
 
-public class Shader : Asset
+/// <summary>Precompiled SDL GPU shader pair; resource counts follow content/shaders/README.md.</summary>
+public sealed class Shader : Asset
 {
-	private ShaderInfo shaderInfo;
-
-	public VertexElementDescription[] VertexElements => shaderInfo.Reflection.VertexElements;
-	public ResourceLayoutDescription[] ResourceLayouts => shaderInfo.Reflection.ResourceLayouts;
-	public Veldrid.Shader[] ShaderProgram => shaderInfo.ShaderProgram;
-	public bool IsDirty { get; private set; }
-	public Action OnRecompile { get; set; }
-
-	private FileSystemWatcher watcher;
-
+	private static readonly Dictionary<string, ShaderProgram> programs = new( StringComparer.Ordinal );
+	public ShaderProgram Program { get; }
+	public uint SamplerCount { get; }
+	public bool VertexUniform { get; }
+	public bool FragmentUniform { get; }
 	internal Shader( string path )
 	{
 		Path = path;
+		string name = System.IO.Path.GetFileNameWithoutExtension( path );
+		VertexUniform = name is "3d" or "water" or "lobby-model" or "test" or "unlit" or "lobby-sky";
+		FragmentUniform = name is "3d" or "water" or "lobby-model" or "test";
+		SamplerCount = name is "lobby-model" or "test" ? 16u : 1u;
+		if ( !programs.TryGetValue( name, out var program ) )
+		{
+			program = ShaderProgram.Load( Device, "content/shaders/compiled", name,
+				new( UniformBuffers: VertexUniform ? 1u : 0u ), new( Samplers: SamplerCount, UniformBuffers: FragmentUniform ? 1u : 0u ) );
+			programs.Add( name, program );
+		}
+		Program = program;
 		All.Add( this );
-
-		Recompile();
-
-		var directoryName = System.IO.Path.GetDirectoryName( Path );
-		var fileName = System.IO.Path.GetFileName( Path );
-
-		watcher = new FileSystemWatcher( directoryName, fileName );
-
-		watcher.NotifyFilter = NotifyFilters.Attributes
-							 | NotifyFilters.CreationTime
-							 | NotifyFilters.DirectoryName
-							 | NotifyFilters.FileName
-							 | NotifyFilters.LastAccess
-							 | NotifyFilters.LastWrite
-							 | NotifyFilters.Security
-							 | NotifyFilters.Size;
-
-		watcher.EnableRaisingEvents = true;
-		watcher.Changed += OnWatcherChanged;
 	}
-
-	public static bool IsFileReady( string path )
-	{
-		try
-		{
-			using ( FileStream inputStream = File.OpenRead( path ) )
-				return inputStream.Length > 0;
-		}
-		catch ( Exception )
-		{
-			return false;
-		}
-	}
-
-	private void OnWatcherChanged( object sender, FileSystemEventArgs e )
-	{
-		IsDirty = true;
-	}
-
-	public void Recompile()
-	{
-		if ( !IsFileReady( Path ) )
-			return;
-
-		shaderInfo = ShaderCompiler.CompileShader( Path );
-		OnRecompile?.Invoke();
-		IsDirty = false;
-	}
+	internal static void ReleasePrograms() { foreach ( var program in programs.Values ) program.Dispose(); programs.Clear(); }
 }

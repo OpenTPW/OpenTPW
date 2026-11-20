@@ -25,6 +25,7 @@ public class Water : ModelEntity
 
 		public Vector3 g_vCameraPos; // 12
 		public float g_flTime;
+		public System.Numerics.Vector4 g_vFogColor;
 	}
 
 	public override void Spawn()
@@ -53,7 +54,8 @@ public class Water : ModelEntity
 
 			_padding0 = 0,
 			_padding1 = 0,
-			g_flTime = Time.Now
+			g_flTime = Time.Now,
+			g_vFogColor = new System.Numerics.Vector4( (Level.EnvironmentSky?.Color ?? new Vector3( 0.301f, 0.84f, 1 )).GetSystemVector3(), 1 )
 		};
 
 		Model.Material.Set( "ObjectUniformBuffer", uniformBuffer );

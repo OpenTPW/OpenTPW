@@ -1,16 +1,10 @@
-﻿global using static Global;
+global using static Global;
 using OpenTPW;
-using Veldrid;
+using OpenTPW.Graphics;
 
+/// <summary>Active game renderer and its shared SDL GPU device.</summary>
 public static class Global
 {
-	/// <summary>
-	/// The device currently being used for rendering.
-	/// </summary>
-	internal static GraphicsDevice Device { get; set; } = null!;
-
-	/// <summary>
-	/// The current active renderer.
-	/// </summary>
+	internal static GpuDevice Device { get; set; } = null!;
 	internal static Renderer Render { get; set; } = null!;
 }

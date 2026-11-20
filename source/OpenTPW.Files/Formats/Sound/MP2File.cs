@@ -26,8 +26,8 @@ public sealed class MP2File : ArchiveFile
 		Header = header;
 		Name = name;
 		SoundData = soundData;
-		SampleRate = 22050;
-		BitsPerSample = 16;
+		SampleRate = sampleRate;
+		BitsPerSample = bitsPerSample;
 		SoundType = (SoundTypes)soundType;
 		Samples = samples;
 		Data = data;

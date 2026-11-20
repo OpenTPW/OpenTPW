@@ -1,0 +1,3 @@
+# Preserve the upstream header and CC0 license verbatim.
+* -text
+LICENSE whitespace=-blank-at-eof

@@ -1,0 +1,88 @@
+using OpenTPW.UI;
+
+namespace OpenTPW;
+
+/// <summary>The advisor is registered in screen space independently of the world camera (Advisor_ConfigureScreenModel (US 0x429ba0)).</summary>
+internal sealed class LobbyAdvisorPanel : Panel
+{
+	/// <summary>
+	/// Depth test, depth write and back-face culling all on. Retail never culls in hardware (Render_InitializeD3dState+0xa1 (US 0x5668e1)
+	/// sets CULLMODE 1) but drops back faces in software (<see cref="LobbyAdvisorGeometry.FacesViewer"/>), which the GPU's clockwise
+	/// front face reproduces. Model primitives keep ZENABLE: Render_SetD3dState (US 0x567620) turns it off only for primitive flag
+	/// 0x8000, which no model path sets, and Render_ConvertMaterialFlags (US 0x581790) turns ZWRITEENABLE off (0x800) only for mesh
+	/// flag 2, which no advisor mesh carries. The hands overlap themselves in screen space, so without the depth buffer
+	/// their faces would show in index order instead of nearest first.
+	/// </summary>
+	internal const MaterialFlags DrawFlags = MaterialFlags.None;
+	private sealed record Part( int Mesh, Model Model, Vertex[] Vertices );
+	private readonly List<Part> parts = new();
+	private readonly Dictionary<int, int> mouths = new();
+	private readonly LobbyAdvisor advisor;
+
+	public LobbyAdvisorPanel( LobbyAdvisor advisor )
+	{
+		this.advisor = advisor;
+		string[] names = [ "mouth - normal", "mouth - aah", "mouth - eee", "mouth - ooh", "mouth - sss" ];
+		var shader = new Shader( "content/shaders/ui-lit.shader" );
+		var textures = new Dictionary<string, Texture>( StringComparer.OrdinalIgnoreCase );
+		var model = advisor.Geometry.Model;
+		for ( int i = 0; i < names.Length; i++ )
+		{
+			// Advisor_SelectAnimation (US address pending) calls the case-insensitive CRT comparison at Ui_Function_TW_677f10 (US address pending).
+			int mesh = model.Meshes.FindIndex( candidate => candidate.Name.Equals( names[i], StringComparison.OrdinalIgnoreCase ) );
+			if ( mesh < 0 ) throw new InvalidDataException( $"Missing advisor mouth: {names[i]}" );
+			mouths.Add( mesh, i + 1 );
+		}
+		for ( int meshIndex = 0; meshIndex < model.Meshes.Count; meshIndex++ )
+		{
+			var mesh = model.Meshes[meshIndex];
+			for ( int m = 0; m < mesh.Materials.Length; m++ )
+			{
+				var indices = new List<uint>();
+				for ( int i = 0; i < mesh.Indices.Length; i += 3 )
+				{
+					if ( mesh.Vertices[mesh.Indices[i]].TextureIndex == m ) indices.AddRange( mesh.Indices.Skip( i ).Take( 3 ) );
+				}
+				if ( indices.Count == 0 ) continue;
+				string name = mesh.Materials[m].Name?.TrimEnd( '\0' ) ?? throw new InvalidDataException( "Advisor material has no texture" );
+				if ( !textures.TryGetValue( name, out var texture ) )
+					textures.Add( name, texture = new Texture( AnimationFiles.ResolveFile( $"global/advisor/textures/{name}.wct", "Advisor texture" ) ) );
+				var material = new Material<ObjectUniformBuffer>( shader, DrawFlags );
+				material.Set( "Color", texture );
+				var vertices = new Vertex[mesh.Vertices.Length];
+				parts.Add( new( meshIndex, new Model( vertices, indices.ToArray(), material ), vertices ) );
+			}
+		}
+	}
+
+	// Playback is advanced by Level, outside modal input routing (System_UpdateStateMachine (US 0x54e360)).
+	// This panel only projects the current pose; updating here would pause it in dialogs.
+	protected override void OnDelete() => advisor.Cancel();
+	protected override void OnRender()
+	{
+		if ( !advisor.Active ) return;
+		var pose = advisor.Geometry.Pose( advisor.Animation, advisor.Frame );
+		// LIGHTING=0 leaves vertices white like the scene models (Graphics_ApplyOptions (US address pending), position pending).
+		bool lit = LobbyQuality.Load().LightingEnabled;
+		var ambient = (Level.Current?.Lighting ?? LobbyLighting.Islands).Ambient;
+		foreach ( var part in parts )
+		{
+			// Mouth meshes are selected by LIP state; all other nodes follow segment hiding.
+			int index = part.Mesh;
+			if ( mouths.TryGetValue( index, out int mouth ) ? mouth != advisor.Mouth : pose.Hidden[index] ) continue;
+			var mesh = advisor.Geometry.Model.Meshes[index];
+			var light = lit ? LobbyAdvisorGeometry.LocalLight( pose.WorldTransforms[index] ) : default;
+			for ( int i = 0; i < part.Vertices.Length; i++ )
+			{
+				var source = pose.Positions[index]?[i] ?? mesh.Vertices[i].Position;
+				var point = System.Numerics.Vector3.Transform( source.GetSystemVector3(), pose.WorldTransforms[index] );
+				// Animated hands move their vertices but keep the authored normals, as in retail (see Colour).
+				var colour = lit ? LobbyAdvisorGeometry.Colour( ambient, light, mesh.Normals[i].GetSystemVector3() ) : System.Numerics.Vector3.One;
+				part.Vertices[i] = new Vertex( LobbyAdvisorGeometry.Project( point ), pose.TexCoords[index]?[i] ?? mesh.TexCoords[i] )
+					{ Normal = new Vector3( colour.X, colour.Y, colour.Z ) };
+			}
+			part.Model.UpdateVertices( part.Vertices );
+			part.Model.Draw();
+		}
+	}
+}

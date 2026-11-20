@@ -190,7 +190,7 @@ public partial struct Rotation : IEquatable<Rotation>
 
 		if ( Math.Abs( dot - (-1.0f) ) < 0.000001f )
 		{
-			return new Rotation( upDir.X, upDir.Y, upDir.Z, MathF.PI );
+			return new Rotation() { _internalQuaternion = Quaternion.CreateFromAxisAngle( upDir.Normal.GetSystemVector3(), MathF.PI ) };
 		}
 
 		if ( Math.Abs( dot - (1.0f) ) < 0.000001f )

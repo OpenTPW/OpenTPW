@@ -1,8 +1,10 @@
-﻿using System.Runtime.InteropServices;
-using Veldrid;
+using System.Runtime.InteropServices;
+using OpenTPW.Graphics;
+using SDL;
 
 namespace OpenTPW;
 
+/// <summary>Interleaved model vertex, retaining the original position/normal/UV/index/flag byte layout.</summary>
 [StructLayout( LayoutKind.Sequential )]
 public struct Vertex
 {
@@ -12,14 +14,13 @@ public struct Vertex
 	public int TexIndex { get; set; }
 	public uint MatFlags { get; set; }
 
-	public static VertexElementDescription[] VertexElementDescriptions = new[]
-	{
-		new VertexElementDescription( "vPosition", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float3 ),
-		new VertexElementDescription( "vNormal", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float3 ),
-		new VertexElementDescription( "vTexCoords", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Float2 ),
-		new VertexElementDescription( "iTexIndex", VertexElementSemantic.TextureCoordinate, VertexElementFormat.Int1 ),
-		new VertexElementDescription( "iMatFlags", VertexElementSemantic.TextureCoordinate, VertexElementFormat.UInt1 ),
-	};
+	/// <summary>MeshInput locations from content/shaders/includes/sdl-gpu.hlsli; packed byte offsets stay unchanged.</summary>
+	public static GpuVertexLayout Layout { get; } = new( 40,
+		new( 0, SDL_GPUVertexElementFormat.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3, 0 ),
+		new( 1, SDL_GPUVertexElementFormat.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3, 12 ),
+		new( 2, SDL_GPUVertexElementFormat.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2, 24 ),
+		new( 3, SDL_GPUVertexElementFormat.SDL_GPU_VERTEXELEMENTFORMAT_INT, 32 ),
+		new( 4, SDL_GPUVertexElementFormat.SDL_GPU_VERTEXELEMENTFORMAT_UINT, 36 ) );
 
 	public Vertex()
 	{

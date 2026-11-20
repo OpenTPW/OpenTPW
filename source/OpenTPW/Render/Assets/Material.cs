@@ -1,240 +1,61 @@
-﻿using System.Diagnostics;
-using Veldrid;
+using OpenTPW.Graphics;
 
 namespace OpenTPW;
 
+/// <summary>Game material flags mapped to the shared SDL GPU mesh render state.</summary>
 [Flags]
 public enum MaterialFlags
 {
-	None,
-
-	DisableDepthTest,
-	DisableDepthWrite,
-
-	DisableDepth = DisableDepthTest | DisableDepthWrite
+	None = 0, DisableDepthTest = 1, DisableDepthWrite = 2, DisableDepth = 3,
+	DisableCulling = 4, Additive = 8, InvertDestination = 16
 }
 
+/// <summary>Game-facing named bindings; shared MeshMaterial owns the GPU pipeline and per-draw snapshots.</summary>
 public partial class Material : Asset
 {
-	public Shader Shader { get; set; }
-
-	public Type UniformBufferType { get; } = typeof( ObjectUniformBuffer );
-	public Pipeline Pipeline { get; private set; } = null!;
-
-	private Dictionary<string, BindableResource> _boundResources = new();
-
-	private ResourceLayout[] _resourceLayouts;
-
-	public Material( string shaderPath, MaterialFlags flags = MaterialFlags.None )
+	public Shader Shader { get; }
+	public Type UniformBufferType { get; } = typeof(ObjectUniformBuffer);
+	internal MeshMaterial Native { get; }
+	public Material( string shaderPath, MaterialFlags flags = MaterialFlags.None ) : this( new Shader( shaderPath ), typeof(ObjectUniformBuffer), flags ) { }
+	protected Material( string path, Type uniforms, MaterialFlags flags ) : this( new Shader( path ), uniforms, flags ) { }
+	protected Material( Shader shader, Type uniforms, MaterialFlags flags )
 	{
-		Shader = new Shader( shaderPath );
-		Shader.OnRecompile += () => SetupResources( flags );
-
-		All.Add( this );
-		SetupResources( flags );
-	}
-
-	protected Material( string shaderPath, Type uniformBufferType, MaterialFlags flags = MaterialFlags.None )
-	{
-		Shader = new Shader( shaderPath );
-		Shader.OnRecompile += () => SetupResources( flags );
-		UniformBufferType = uniformBufferType;
-
-		All.Add( this );
-		SetupResources( flags );
-	}
-
-	private DeviceBuffer ScratchBuffer;
-
-	private static readonly Sampler[] Samplers =
-	[
-		CreateSampler( SamplerType.Anisotropic ),
-		CreateSampler( SamplerType.Linear ),
-		CreateSampler( SamplerType.Point ),
-		CreateSampler( SamplerType.AnisotropicWrap ),
-		CreateSampler( SamplerType.AnisotropicRepeat ),
-	];
-
-	private static Sampler CreateSampler( SamplerType type )
-	{
-		var samplerFilter = type switch
+		Shader = shader;
+		UniformBufferType = uniforms;
+		Native = new MeshMaterial( Device, shader.Program, Vertex.Layout, new MeshRenderState
 		{
-			SamplerType.Anisotropic or SamplerType.AnisotropicWrap or SamplerType.AnisotropicRepeat => SamplerFilter.Anisotropic,
-			SamplerType.Linear => SamplerFilter.MinLinear_MagLinear_MipLinear,
-			SamplerType.Point => SamplerFilter.MinPoint_MagPoint_MipPoint,
-			_ => throw new NotImplementedException()
-		};
-
-		var samplerAddressMode = type switch
-		{
-			SamplerType.Anisotropic or SamplerType.Linear or SamplerType.Point => SamplerAddressMode.Clamp,
-			SamplerType.AnisotropicWrap => SamplerAddressMode.Wrap,
-			SamplerType.AnisotropicRepeat => SamplerAddressMode.Mirror,
-			_ => throw new NotImplementedException()
-		};
-
-		var samplerDescription = new SamplerDescription(
-			samplerAddressMode,
-			samplerAddressMode,
-			samplerAddressMode,
-			samplerFilter,
-			ComparisonKind.Always,
-			(type == SamplerType.Anisotropic || type == SamplerType.AnisotropicWrap || type == SamplerType.AnisotropicRepeat) ? 16u : 0u,
-			0,
-			10,
-			0,
-			SamplerBorderColor.TransparentBlack
-		);
-
-		return Device.ResourceFactory.CreateSampler( samplerDescription );
-	}
-
-	private void ClearBoundResources()
-	{
-		return;
-
-		if ( _boundResources.Count > 0 )
-		{
-			_boundResources.Clear();
-		}
-	}
-
-	public void Set<T>( string name, T obj ) where T : unmanaged
-	{
-		Render.ImmediateSubmit( cmd =>
-		{
-			cmd.UpdateBuffer( ScratchBuffer, 0, [obj] );
-			_boundResources[name] = ScratchBuffer;
+			Blend = BlendState( flags ), DepthTest = !flags.HasFlag( MaterialFlags.DisableDepthTest ),
+			DepthWrite = !flags.HasFlag( MaterialFlags.DisableDepthWrite ),
+			Cull = flags.HasFlag( MaterialFlags.DisableCulling ) ? GpuCull.None : GpuCull.Back
 		} );
-
-		Render.ScheduleDelete( ClearBoundResources );
+		Native.Prepare( Render.Target );
+		All.Add( this );
 	}
-
-	public void Set( string name, Texture[] texture )
+	public void Set<T>( string name, T value ) where T : unmanaged
 	{
-		for ( int i = 0; i < texture.Length; i++ )
-		{
-			_boundResources[name + $"{i}"] = texture[i].NativeTexture;
-		}
-
-		_boundResources["s_" + name] = Samplers[(int)SamplerType.AnisotropicWrap];
-
-		Render.ScheduleDelete( ClearBoundResources );
+		if ( name != "ObjectUniformBuffer" ) throw new ArgumentException( $"Unknown uniform binding: {name}" );
+		var bytes = GpuUniforms.Bytes( in value );
+		Native.SetUniforms( Shader.VertexUniform ? bytes : default, Shader.FragmentUniform ? bytes : default );
+		Render.BufferUploads++;
 	}
-
-	public void Set( string name, Texture texture )
+	public void Set( string name, Texture texture, SamplerType? sampler = null )
 	{
-		_boundResources[name] = texture.NativeTexture;
-		_boundResources["s_" + name] = Samplers[(int)texture.SamplerType];
-
-		Render.ScheduleDelete( ClearBoundResources );
+		if ( name != "Color" || Shader.SamplerCount != 1 ) throw new ArgumentException( $"Shader {Shader.Path} needs a Color texture array." );
+		Native.SetTexture( texture.NativeTexture, Device.GetSampler( (SamplerPreset)(sampler ?? texture.SamplerType) ) );
 	}
-
-	internal ResourceLayout[] CreateResourceLayouts()
+	public void Set( string name, Texture[] textures, SamplerType sampler = SamplerType.AnisotropicWrap )
 	{
-		return Shader.ResourceLayouts.Select( x => Device.ResourceFactory.CreateResourceLayout( x ) ).ToArray();
+		if ( name != "Color" || textures.Length != Shader.SamplerCount ) throw new ArgumentException( $"Shader {Shader.Path} needs {Shader.SamplerCount} Color textures, got {textures.Length}." );
+		var gpuSampler = Device.GetSampler( (SamplerPreset)sampler );
+		Native.SetTextures( textures.Select( t => new TextureBinding( t.NativeTexture, gpuSampler ) ).ToArray() );
 	}
-
-	internal ResourceSet[] CreateResourceSets()
-	{
-		Debug.Assert( _resourceLayouts != null );
-
-		List<ResourceSetDescription> resourceSetDescriptions = new();
-
-		for ( int i = 0; i < Shader.ResourceLayouts.Length; i++ )
-		{
-			ResourceLayoutDescription resourceLayout = Shader.ResourceLayouts[i];
-			var sortedBoundResources = new List<BindableResource>();
-
-			foreach ( var resource in resourceLayout.Elements )
-			{
-				if ( _boundResources.TryGetValue( resource.Name, out var boundResource ) )
-				{
-					sortedBoundResources.Add( boundResource );
-				}
-				else
-				{
-					throw new Exception( $"{resource.Name} wasn't bound at draw time!" );
-				}
-			}
-
-			var resourceSetDescription = new ResourceSetDescription()
-			{
-				Layout = _resourceLayouts[i],
-				BoundResources = [.. sortedBoundResources]
-			};
-
-			resourceSetDescriptions.Add( resourceSetDescription );
-		}
-
-		return resourceSetDescriptions.Select( x => Device.ResourceFactory.CreateResourceSet( x ) ).ToArray();
-	}
-
-	internal void CreateEphemeralResourceSet( out ResourceSet[] resourceSets )
-	{
-		// Create a set
-		var newResourceSets = CreateResourceSets();
-		resourceSets = newResourceSets;
-
-		// Mark set for death
-		Render.ScheduleDelete( () => DestroyResourceSets( newResourceSets ) );
-	}
-
-	private static void DestroyResourceSets( ResourceSet[] resourceSets )
-	{
-		if ( resourceSets == null )
-		{
-			Log.Warning( $"Resource sets were marked for death, but are already dead - we can't kill what's already dead!" );
-			return;
-		}
-
-		foreach ( var item in resourceSets )
-		{
-			item.Dispose();
-		}
-	}
-
-	private void SetupResources( MaterialFlags flags )
-	{
-		var vertexLayout = new VertexLayoutDescription( Vertex.VertexElementDescriptions );
-
-		//
-		// Create resource layout - but only from what we're using/need
-		//
-		_resourceLayouts ??= CreateResourceLayouts();
-
-		//
-		// Create pipeline
-		//
-		var pipelineDescription = new GraphicsPipelineDescription()
-		{
-			BlendState = BlendStateDescription.SingleAlphaBlend,
-
-			DepthStencilState = new DepthStencilStateDescription(
-				!flags.HasFlag( MaterialFlags.DisableDepthTest ),
-				!flags.HasFlag( MaterialFlags.DisableDepthWrite ),
-				flags.HasFlag( MaterialFlags.DisableDepthTest | MaterialFlags.DisableDepthWrite ) ? ComparisonKind.Always : ComparisonKind.Less
-			),
-
-			RasterizerState = new RasterizerStateDescription(
-				FaceCullMode.Back,
-				PolygonFillMode.Solid,
-				FrontFace.Clockwise,
-				true,
-				false
-			),
-
-			PrimitiveTopology = PrimitiveTopology.TriangleList,
-			ResourceLayouts = [.. _resourceLayouts],
-			ShaderSet = new ShaderSetDescription( [vertexLayout], Shader.ShaderProgram ),
-			Outputs = Render.MultisampledFramebuffer.OutputDescription
-		};
-
-		Pipeline = Device.ResourceFactory.CreateGraphicsPipeline( pipelineDescription );
-
-		var bufferDescription = new BufferDescription( 16 * 128, BufferUsage.UniformBuffer | BufferUsage.Dynamic );
-		ScratchBuffer = Device.ResourceFactory.CreateBuffer( bufferDescription );
-	}
+	internal static GpuBlend BlendState( MaterialFlags flags ) => flags.HasFlag( MaterialFlags.InvertDestination ) ? GpuBlend.InvertDestination
+		: flags.HasFlag( MaterialFlags.Additive ) ? GpuBlend.Additive : GpuBlend.Alpha;
 }
 
-public class Material<T>( string shaderPath, MaterialFlags flags = MaterialFlags.None ) : Material( shaderPath, typeof( T ), flags );
+/// <summary>A material with the game's expected uniform struct type.</summary>
+public class Material<T> : Material
+{
+	public Material( string path, MaterialFlags flags = MaterialFlags.None ) : base( path, typeof(T), flags ) { }
+	public Material( Shader shader, MaterialFlags flags = MaterialFlags.None ) : base( shader, typeof(T), flags ) { }
+}

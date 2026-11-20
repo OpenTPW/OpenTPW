@@ -1,28 +1,23 @@
 ﻿using ImGuiNET;
-using NAudio.Wave;
 using Veldrid;
 
 namespace OpenTPW.ModKit;
 
+/// <summary>Previews a game sound through the host audio system.</summary>
 [HandlesExtension( ".mp2" )]
 internal class SoundViewer : IFileViewer
 {
-	private SoundFile soundFile;
+	private readonly string fileName;
 
 	public SoundViewer( string fileName )
 	{
-		soundFile = new SoundFile( fileName );
+		this.fileName = fileName;
 	}
 
-	private void PlaySound()
+	internal void PlaySound()
 	{
-		using var stream = new MemoryStream( soundFile.buffer );
-		var audioStream = new StreamMediaFoundationReader( stream );
-		var waveOut = new WaveOutEvent();
-
-		waveOut.Init( audioStream );
-		audioStream.Seek( 0, SeekOrigin.Begin );
-		waveOut.Play();
+		var preview = PreviewSound ?? throw new InvalidOperationException( "The host has not connected sound preview" );
+		preview( fileName );
 	}
 
 	public void DrawPreview()

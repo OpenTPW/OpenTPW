@@ -4,7 +4,7 @@ public partial class TextureFile
 {
 	struct TextureFileData
 	{
-		public TextureFlags Flags { get; set; }
+		public WctType Type { get; set; }
 		public bool HasAlphaChannel { get; set; }
 		public byte BitsPerPixel { get; set; }
 		public byte Version { get; set; }

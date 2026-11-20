@@ -213,7 +213,7 @@ public sealed class WadArchive : IArchive
 		var fileLength = (int)tempStreamReader.BaseStream.Length;
 
 		Buffer = new byte[fileLength];
-		tempStreamReader.BaseStream.Read( Buffer, 0, fileLength );
+		tempStreamReader.BaseStream.ReadExactly( Buffer, 0, fileLength );
 		tempStreamReader.Close();
 
 		memoryStream = new ExpandedMemoryStream( Buffer );

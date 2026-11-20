@@ -27,6 +27,6 @@ public partial class Image : Panel
 	{
 		var material = Material.UI;
 		material.Set( "Color", Texture );
-		Graphics.Quad( Rect, UvRect, material );
+		Graphics2D.Quad( Rect, UvRect, material );
 	}
 }

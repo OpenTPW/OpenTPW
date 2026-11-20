@@ -1,5 +1,4 @@
 ﻿using Veldrid;
-using Veldrid.StartupUtilities;
 
 namespace OpenTPW;
 
@@ -121,7 +120,7 @@ public partial class Renderer
 
 		OnWindowResized( Window.Size );
 
-		while ( Window.SdlWindow.Exists )
+		while ( Window.Exists )
 		{
 			Update();
 		}
@@ -137,7 +136,7 @@ public partial class Renderer
 		CommandList.Begin();
 	}
 
-	private void PostRender()
+	private void PostRender( double frameBegin )
 	{
 		CommandList.SetFramebuffer( MultisampledFramebuffer ); // Use MSAA framebuffer
 		CommandList.SetViewport( 0, new Viewport( 0, 0, MultisampledFramebuffer.Width, MultisampledFramebuffer.Height, 0, 1 ) );
@@ -148,7 +147,9 @@ public partial class Renderer
 
 		// Render level to MSAA buffer
 		CommandList.PushDebugGroup( "Main Render" );
+		double renderBegin = Mark();
 		OnRender?.Invoke();
+		AddRender( Mark() - renderBegin );
 		CommandList.PopDebugGroup();
 
 		// Resolve MSAA to non-MSAA texture
@@ -166,16 +167,24 @@ public partial class Renderer
 
 		CommandList.End();
 
-		Device.SubmitCommands( CommandList );
+		Submissions++;
+		FrameEnd( frameBegin );
+		double presentBegin = Mark();
+		SubmitFrame( CommandList );
 		Device.SwapBuffers();
+		AddPresent( Mark() - presentBegin );
 	}
 
 	private void Update()
 	{
+		double frameBegin = FrameBegin();
 		float deltaTime = (float)(DateTime.Now - _lastFrame).TotalSeconds;
 		_lastFrame = DateTime.Now;
 
-		InputSnapshot inputSnapshot = Window.SdlWindow.PumpEvents();
+		// Complete the previous submission before events can resize GPU resources.
+		BeginFrame();
+		InputSnapshot inputSnapshot = Window.PumpEvents();
+		if ( !Window.Exists ) return;
 
 		Time.Update( deltaTime );
 		Input.UpdateFrom( inputSnapshot );
@@ -184,16 +193,20 @@ public partial class Renderer
 			Editor.Instance.shouldRender = !Editor.Instance.shouldRender;
 		if ( Editor.Instance.shouldRender )
 			Editor.Instance.UpdateFrom( inputSnapshot );
+		else
+			imGuiRenderer.Update( Math.Max( deltaTime, 0.001f ), inputSnapshot );
 
-		PreRender();
 		PreUpdate?.Invoke();
 
+		double updateBegin = Mark();
 		OnUpdate?.Invoke();
+		AddUpdate( Mark() - updateBegin );
+		// A HUD callback can close the native window during this update.
+		if ( !Window.Exists ) return;
 
-		PostRender();
+		PreRender();
+		PostRender( frameBegin );
 		PostUpdate?.Invoke();
-
-		ProcessDeletionQueue();
 	}
 
 	private void CreateGraphicsDevice()
@@ -208,12 +221,13 @@ public partial class Renderer
 			HasMainSwapchain = true
 		};
 
-		var swapchainSource = VeldridStartup.GetSwapchainSource( Window.SdlWindow );
+		var swapchainSource = Window.CreateSwapchainSource();
 		Device = GraphicsDevice.CreateVulkan( swapchainDescription: new SwapchainDescription( swapchainSource, (uint)(Window.Size.X), (uint)(Window.Size.Y), options.SwapchainDepthFormat, options.SyncToVerticalBlank, options.SwapchainSrgbFormat ), options: options );
 	}
 
 	public void OnWindowResized( Point2 newSize )
 	{
+		Device.WaitForIdle();
 		var dpiScale = 1.0f;
 		Device.MainSwapchain.Resize( (uint)(newSize.X * dpiScale), (uint)(newSize.Y * dpiScale) );
 
@@ -243,6 +257,7 @@ public partial class Renderer
 		action( commandList );
 
 		commandList.End();
+		Submissions++;
 		Device.SubmitCommands( commandList );
 
 		ScheduleDelete( commandList.Dispose );

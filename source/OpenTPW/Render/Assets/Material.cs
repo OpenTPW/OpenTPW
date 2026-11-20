@@ -11,7 +11,10 @@ public enum MaterialFlags
 	DisableDepthTest,
 	DisableDepthWrite,
 
-	DisableDepth = DisableDepthTest | DisableDepthWrite
+	DisableDepth = DisableDepthTest | DisableDepthWrite,
+	DisableCulling = 4,
+	Additive = 8,
+	InvertDestination = 16
 }
 
 public partial class Material : Asset
@@ -35,8 +38,13 @@ public partial class Material : Asset
 	}
 
 	protected Material( string shaderPath, Type uniformBufferType, MaterialFlags flags = MaterialFlags.None )
+		: this( new Shader( shaderPath ), uniformBufferType, flags )
 	{
-		Shader = new Shader( shaderPath );
+	}
+
+	protected Material( Shader shader, Type uniformBufferType, MaterialFlags flags = MaterialFlags.None )
+	{
+		Shader = shader;
 		Shader.OnRecompile += () => SetupResources( flags );
 		UniformBufferType = uniformBufferType;
 
@@ -44,7 +52,19 @@ public partial class Material : Asset
 		SetupResources( flags );
 	}
 
-	private DeviceBuffer ScratchBuffer;
+	// Resource sets keyed by the exact resources bound. Frame buffers are reused in the same order every
+	// frame, so the same combinations recur and sets need not be created and destroyed per draw.
+	private readonly Dictionary<ResourceKey, ResourceSet[]> resourceSets = new();
+
+	private sealed class ResourceKey( BindableResource[] resources ) : IEquatable<ResourceKey>
+	{
+		private readonly BindableResource[] resources = resources;
+		private readonly int hash = resources.Aggregate( 17, ( h, r ) => h * 31 + System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode( r ) );
+		public bool Equals( ResourceKey? other ) => other != null && other.resources.Length == resources.Length
+			&& resources.Zip( other.resources ).All( pair => ReferenceEquals( pair.First, pair.Second ) );
+		public override bool Equals( object? obj ) => Equals( obj as ResourceKey );
+		public override int GetHashCode() => hash;
+	}
 
 	private static readonly Sampler[] Samplers =
 	[
@@ -53,6 +73,7 @@ public partial class Material : Asset
 		CreateSampler( SamplerType.Point ),
 		CreateSampler( SamplerType.AnisotropicWrap ),
 		CreateSampler( SamplerType.AnisotropicRepeat ),
+		CreateSampler( SamplerType.PointWrap ),
 	];
 
 	private static Sampler CreateSampler( SamplerType type )
@@ -61,14 +82,14 @@ public partial class Material : Asset
 		{
 			SamplerType.Anisotropic or SamplerType.AnisotropicWrap or SamplerType.AnisotropicRepeat => SamplerFilter.Anisotropic,
 			SamplerType.Linear => SamplerFilter.MinLinear_MagLinear_MipLinear,
-			SamplerType.Point => SamplerFilter.MinPoint_MagPoint_MipPoint,
+			SamplerType.Point or SamplerType.PointWrap => SamplerFilter.MinPoint_MagPoint_MipPoint,
 			_ => throw new NotImplementedException()
 		};
 
 		var samplerAddressMode = type switch
 		{
 			SamplerType.Anisotropic or SamplerType.Linear or SamplerType.Point => SamplerAddressMode.Clamp,
-			SamplerType.AnisotropicWrap => SamplerAddressMode.Wrap,
+			SamplerType.AnisotropicWrap or SamplerType.PointWrap => SamplerAddressMode.Wrap,
 			SamplerType.AnisotropicRepeat => SamplerAddressMode.Mirror,
 			_ => throw new NotImplementedException()
 		};
@@ -89,45 +110,30 @@ public partial class Material : Asset
 		return Device.ResourceFactory.CreateSampler( samplerDescription );
 	}
 
-	private void ClearBoundResources()
-	{
-		return;
-
-		if ( _boundResources.Count > 0 )
-		{
-			_boundResources.Clear();
-		}
-	}
-
 	public void Set<T>( string name, T obj ) where T : unmanaged
 	{
-		Render.ImmediateSubmit( cmd =>
-		{
-			cmd.UpdateBuffer( ScratchBuffer, 0, [obj] );
-			_boundResources[name] = ScratchBuffer;
-		} );
-
-		Render.ScheduleDelete( ClearBoundResources );
+		Render.BufferUploads++;
+		// Each draw gets its own frame buffer: draws record now but execute after the whole frame is
+		// recorded, so a buffer shared by every draw of this material would hold only the last value.
+		var buffer = Render.RentFrameBuffer( BufferUsage.UniformBuffer, (uint)System.Runtime.CompilerServices.Unsafe.SizeOf<T>() );
+		Renderer.Write<T>( buffer, [obj] );
+		_boundResources[name] = buffer;
 	}
 
-	public void Set( string name, Texture[] texture )
+	public void Set( string name, Texture[] texture, SamplerType sampler = SamplerType.AnisotropicWrap )
 	{
 		for ( int i = 0; i < texture.Length; i++ )
 		{
 			_boundResources[name + $"{i}"] = texture[i].NativeTexture;
 		}
 
-		_boundResources["s_" + name] = Samplers[(int)SamplerType.AnisotropicWrap];
-
-		Render.ScheduleDelete( ClearBoundResources );
+		_boundResources["s_" + name] = Samplers[(int)sampler];
 	}
 
-	public void Set( string name, Texture texture )
+	public void Set( string name, Texture texture, SamplerType? sampler = null )
 	{
 		_boundResources[name] = texture.NativeTexture;
-		_boundResources["s_" + name] = Samplers[(int)texture.SamplerType];
-
-		Render.ScheduleDelete( ClearBoundResources );
+		_boundResources["s_" + name] = Samplers[(int)(sampler ?? texture.SamplerType)];
 	}
 
 	internal ResourceLayout[] CreateResourceLayouts()
@@ -170,14 +176,23 @@ public partial class Material : Asset
 		return resourceSetDescriptions.Select( x => Device.ResourceFactory.CreateResourceSet( x ) ).ToArray();
 	}
 
-	internal void CreateEphemeralResourceSet( out ResourceSet[] resourceSets )
+	/// <summary>Resource sets for the resources bound now, created once per combination.</summary>
+	internal ResourceSet[] GetResourceSets()
 	{
-		// Create a set
-		var newResourceSets = CreateResourceSets();
-		resourceSets = newResourceSets;
-
-		// Mark set for death
-		Render.ScheduleDelete( () => DestroyResourceSets( newResourceSets ) );
+		var bound = Shader.ResourceLayouts.SelectMany( layout => layout.Elements ).Select( element =>
+			_boundResources.TryGetValue( element.Name, out var resource ) ? resource
+				: throw new Exception( $"{element.Name} wasn't bound at draw time!" ) ).ToArray();
+		var key = new ResourceKey( bound );
+		if ( resourceSets.TryGetValue( key, out var sets ) ) return sets;
+		if ( resourceSets.Count >= 256 )
+		{
+			// A changing draw order can produce new combinations; release old ones after this frame.
+			var stale = resourceSets.Values.ToArray();
+			resourceSets.Clear();
+			Render.ScheduleDelete( () => { foreach ( var item in stale ) DestroyResourceSets( item ); } );
+		}
+		resourceSets.Add( key, sets = CreateResourceSets() );
+		return sets;
 	}
 
 	private static void DestroyResourceSets( ResourceSet[] resourceSets )
@@ -208,7 +223,7 @@ public partial class Material : Asset
 		//
 		var pipelineDescription = new GraphicsPipelineDescription()
 		{
-			BlendState = BlendStateDescription.SingleAlphaBlend,
+			BlendState = BlendState( flags ),
 
 			DepthStencilState = new DepthStencilStateDescription(
 				!flags.HasFlag( MaterialFlags.DisableDepthTest ),
@@ -217,7 +232,7 @@ public partial class Material : Asset
 			),
 
 			RasterizerState = new RasterizerStateDescription(
-				FaceCullMode.Back,
+				flags.HasFlag( MaterialFlags.DisableCulling ) ? FaceCullMode.None : FaceCullMode.Back,
 				PolygonFillMode.Solid,
 				FrontFace.Clockwise,
 				true,
@@ -231,10 +246,27 @@ public partial class Material : Asset
 		};
 
 		Pipeline = Device.ResourceFactory.CreateGraphicsPipeline( pipelineDescription );
-
-		var bufferDescription = new BufferDescription( 16 * 128, BufferUsage.UniformBuffer | BufferUsage.Dynamic );
-		ScratchBuffer = Device.ResourceFactory.CreateBuffer( bufferDescription );
 	}
+
+	internal static BlendStateDescription BlendState( MaterialFlags flags ) => (flags & (MaterialFlags.Additive | MaterialFlags.InvertDestination)) != 0
+		? new BlendStateDescription
+		{
+			BlendFactor = RgbaFloat.Black,
+			AttachmentStates = [new BlendAttachmentDescription
+			{
+				BlendEnabled = true,
+				SourceColorFactor = flags.HasFlag( MaterialFlags.InvertDestination ) ? BlendFactor.InverseDestinationColor : BlendFactor.SourceAlpha,
+				DestinationColorFactor = flags.HasFlag( MaterialFlags.InvertDestination ) ? BlendFactor.Zero : BlendFactor.One,
+				ColorFunction = BlendFunction.Add,
+				SourceAlphaFactor = flags.HasFlag( MaterialFlags.InvertDestination ) ? BlendFactor.InverseDestinationAlpha : BlendFactor.SourceAlpha,
+				DestinationAlphaFactor = flags.HasFlag( MaterialFlags.InvertDestination ) ? BlendFactor.Zero : BlendFactor.One,
+				AlphaFunction = BlendFunction.Add
+			}]
+		} : BlendStateDescription.SingleAlphaBlend;
 }
 
-public class Material<T>( string shaderPath, MaterialFlags flags = MaterialFlags.None ) : Material( shaderPath, typeof( T ), flags );
+public class Material<T> : Material
+{
+	public Material( string shaderPath, MaterialFlags flags = MaterialFlags.None ) : base( shaderPath, typeof( T ), flags ) { }
+	public Material( Shader shader, MaterialFlags flags = MaterialFlags.None ) : base( shader, typeof( T ), flags ) { }
+}
